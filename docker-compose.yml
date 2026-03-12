@@ -1,0 +1,23 @@
+services:
+  postgres:
+    image: postgres:18.3
+    container_name: yoobu-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: yoobu
+      POSTGRES_USER: yoobu
+      POSTGRES_PASSWORD: yoobu
+      TZ: UTC
+    ports:
+      - "5432:5432"
+    volumes:
+      - yoobu-postgres-data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U yoobu -d yoobu"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+volumes:
+  yoobu-postgres-data:
