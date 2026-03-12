@@ -13,27 +13,19 @@ import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 @Service
+@RequiredArgsConstructor
 public class BookingService {
 
     private final BookingRepository bookingRepository;
     private final BookingItemRepository bookingItemRepository;
     private final CatalogServiceRepository catalogServiceRepository;
-
-    public BookingService(
-            BookingRepository bookingRepository,
-            BookingItemRepository bookingItemRepository,
-            CatalogServiceRepository catalogServiceRepository
-    ) {
-        this.bookingRepository = bookingRepository;
-        this.bookingItemRepository = bookingItemRepository;
-        this.catalogServiceRepository = catalogServiceRepository;
-    }
 
     @Transactional
     public BookingResponse createFoodOrder(CreateBookingRequest request, Long telegramUserId) {

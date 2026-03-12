@@ -3,16 +3,14 @@ package com.yoobu.api.catalog;
 import com.yoobu.api.catalog.dto.ServiceResponse;
 import com.yoobu.api.tenant.TenantContext;
 import java.util.List;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 @Service
+@RequiredArgsConstructor
 public class CatalogQueryService {
 
     private final CatalogServiceRepository catalogServiceRepository;
-
-    public CatalogQueryService(CatalogServiceRepository catalogServiceRepository) {
-        this.catalogServiceRepository = catalogServiceRepository;
-    }
 
     public List<ServiceResponse> getActiveServices() {
         return catalogServiceRepository.findByTenantIdAndActiveTrueAndDeletedAtIsNullOrderBySortOrderAscIdAsc(

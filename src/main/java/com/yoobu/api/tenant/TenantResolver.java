@@ -2,19 +2,17 @@ package com.yoobu.api.tenant;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.HandlerInterceptor;
 
 @Component
+@RequiredArgsConstructor
 public class TenantResolver implements HandlerInterceptor {
 
     private final TenantRepository tenantRepository;
-
-    public TenantResolver(TenantRepository tenantRepository) {
-        this.tenantRepository = tenantRepository;
-    }
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {

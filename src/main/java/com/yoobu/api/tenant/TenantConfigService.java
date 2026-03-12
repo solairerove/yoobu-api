@@ -4,16 +4,14 @@ import com.yoobu.api.tenant.dto.TenantConfigResponse;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 @Service
+@RequiredArgsConstructor
 public class TenantConfigService {
 
     private final TenantConfigRepository tenantConfigRepository;
-
-    public TenantConfigService(TenantConfigRepository tenantConfigRepository) {
-        this.tenantConfigRepository = tenantConfigRepository;
-    }
 
     public TenantConfigResponse getCurrentTenantConfig() {
         Tenant tenant = TenantContext.getCurrentTenant();

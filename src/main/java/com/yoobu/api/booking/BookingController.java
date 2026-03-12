@@ -4,6 +4,7 @@ import com.yoobu.api.booking.dto.BookingResponse;
 import com.yoobu.api.booking.dto.CreateBookingRequest;
 import jakarta.validation.Valid;
 import java.util.List;
+import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -14,15 +15,12 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/t/{slug}/bookings")
+@RequiredArgsConstructor
 public class BookingController {
 
     private static final String TELEGRAM_USER_HEADER = "X-Telegram-User-Id";
 
     private final BookingService bookingService;
-
-    public BookingController(BookingService bookingService) {
-        this.bookingService = bookingService;
-    }
 
     @PostMapping
     public BookingResponse createBooking(
