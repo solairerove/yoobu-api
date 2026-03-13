@@ -7,16 +7,9 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.yoobu.api.IntegrationTestSupport;
-import com.yoobu.api.tenant.TenantType;
-import com.yoobu.api.tenant.dto.CreateTenantRequest;
-import java.nio.charset.StandardCharsets;
-import java.util.Base64;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.TestPropertySource;
-import org.springframework.test.web.servlet.MockMvc;
 
 @TestPropertySource(properties = {
         "app.superadmin.username=test-superadmin",
@@ -24,26 +17,25 @@ import org.springframework.test.web.servlet.MockMvc;
 })
 class SuperAdminTenantControllerIT extends IntegrationTestSupport {
 
-    @Autowired
-    private MockMvc mockMvc;
+    @Test
+    void superAdminCanAuthenticateAgainstProtectedEndpoint() throws Exception {
+        mockMvc.perform(get("/superadmin/tenants")
+                        .header(AUTHORIZATION, basicAuth("test-superadmin", "test-password")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(0));
+    }
 
-    @Autowired
-    private ObjectMapper objectMapper;
+    @Test
+    void superAdminCannotAuthenticateWithInvalidCredentials() throws Exception {
+        mockMvc.perform(get("/superadmin/tenants")
+                        .header(AUTHORIZATION, basicAuth("test-superadmin", "wrong-password")))
+                .andExpect(status().isUnauthorized())
+                .andExpect(status().reason("Invalid superadmin credentials"));
+    }
 
     @Test
     void superAdminCanCreateTenantAndReadItBack() throws Exception {
-        CreateTenantRequest request = new CreateTenantRequest(
-                "tenant-it",
-                "Tenant Integration Test",
-                TenantType.FOOD_ORDER,
-                "bot-token",
-                123456789L,
-                "Europe/Warsaw",
-                "#112233",
-                "https://cdn.example.com/logo.png",
-                "Hello from test",
-                "admin",
-                "secret");
+        var request = foodOrderTenant("tenant-it", "Tenant Integration Test", "bot-token", "admin", "secret");
 
         mockMvc.perform(post("/superadmin/tenants")
                         .header(AUTHORIZATION, basicAuth("test-superadmin", "test-password"))
@@ -68,10 +60,5 @@ class SuperAdminTenantControllerIT extends IntegrationTestSupport {
                 .andExpect(jsonPath("$[0].active").value(true))
                 .andExpect(jsonPath("$[0].timezone").value("Europe/Warsaw"))
                 .andExpect(jsonPath("$[0].createdAt").isString());
-    }
-
-    private String basicAuth(String username, String password) {
-        String value = username + ":" + password;
-        return "Basic " + Base64.getEncoder().encodeToString(value.getBytes(StandardCharsets.UTF_8));
     }
 }
