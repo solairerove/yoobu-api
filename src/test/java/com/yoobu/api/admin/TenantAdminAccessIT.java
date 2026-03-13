@@ -37,6 +37,15 @@ class TenantAdminAccessIT extends IntegrationTestSupport {
                 .andExpect(status().reason("Invalid admin credentials"));
     }
 
+    @Test
+    void tenantCannotAccessAdminEndpointWithoutCredentials() throws Exception {
+        createTenant("tenant-auth", "Tenant Auth", "bot-auth", "tenant-admin", "tenant-secret");
+
+        mockMvc.perform(get("/admin/tenant-auth/services"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(status().reason("Missing Basic authorization header"));
+    }
+
     private void createTenant(
             String slug,
             String name,

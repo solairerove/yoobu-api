@@ -69,10 +69,21 @@ public abstract class IntegrationTestSupport {
             String adminUsername,
             String adminPassword
     ) {
+        return tenant(slug, name, TenantType.FOOD_ORDER, botToken, adminUsername, adminPassword);
+    }
+
+    protected CreateTenantRequest tenant(
+            String slug,
+            String name,
+            TenantType type,
+            String botToken,
+            String adminUsername,
+            String adminPassword
+    ) {
         return new CreateTenantRequest(
                 slug,
                 name,
-                TenantType.FOOD_ORDER,
+                type,
                 botToken,
                 123456789L,
                 "Europe/Warsaw",

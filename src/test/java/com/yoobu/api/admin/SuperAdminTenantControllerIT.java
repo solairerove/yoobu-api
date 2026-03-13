@@ -34,6 +34,13 @@ class SuperAdminTenantControllerIT extends IntegrationTestSupport {
     }
 
     @Test
+    void superAdminCannotAccessProtectedEndpointWithoutCredentials() throws Exception {
+        mockMvc.perform(get("/superadmin/tenants"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(status().reason("Missing Basic authorization header"));
+    }
+
+    @Test
     void superAdminCanCreateTenantAndReadItBack() throws Exception {
         var request = foodOrderTenant("tenant-it", "Tenant Integration Test", "bot-token", "admin", "secret");
 
@@ -60,5 +67,23 @@ class SuperAdminTenantControllerIT extends IntegrationTestSupport {
                 .andExpect(jsonPath("$[0].active").value(true))
                 .andExpect(jsonPath("$[0].timezone").value("Europe/Warsaw"))
                 .andExpect(jsonPath("$[0].createdAt").isString());
+    }
+
+    @Test
+    void superAdminCannotCreateTwoTenantsWithSameSlug() throws Exception {
+        var request = foodOrderTenant("duplicate-tenant", "Duplicate Tenant", "bot-token", "admin", "secret");
+
+        mockMvc.perform(post("/superadmin/tenants")
+                        .header(AUTHORIZATION, basicAuth("test-superadmin", "test-password"))
+                        .contentType(APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(post("/superadmin/tenants")
+                        .header(AUTHORIZATION, basicAuth("test-superadmin", "test-password"))
+                        .contentType(APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isConflict())
+                .andExpect(status().reason("Tenant slug already exists"));
     }
 }
