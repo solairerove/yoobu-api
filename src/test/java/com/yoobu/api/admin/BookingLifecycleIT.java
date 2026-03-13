@@ -22,7 +22,7 @@ class BookingLifecycleIT extends IntegrationTestSupport {
 
     @Test
     void customerCanCreateReadListAndCancelOwnBooking() throws Exception {
-        createTenant("food-tenant", "Food Tenant", "food-bot", "food-admin", "food-secret");
+        createFoodOrderTenant("food-tenant", "Food Tenant", "food-bot", "food-admin", "food-secret");
         long serviceId = createService("food-tenant", "food-admin", "food-secret", "Pizza", "12.50")
                 .get("id").asLong();
 
@@ -54,7 +54,7 @@ class BookingLifecycleIT extends IntegrationTestSupport {
 
     @Test
     void customerCannotReadAnotherUsersBooking() throws Exception {
-        createTenant("food-tenant", "Food Tenant", "food-bot", "food-admin", "food-secret");
+        createFoodOrderTenant("food-tenant", "Food Tenant", "food-bot", "food-admin", "food-secret");
         long serviceId = createService("food-tenant", "food-admin", "food-secret", "Pizza", "12.50")
                 .get("id").asLong();
         long bookingId = createBooking("food-tenant", 101L, serviceId, 1).get("id").asLong();
@@ -67,7 +67,7 @@ class BookingLifecycleIT extends IntegrationTestSupport {
 
     @Test
     void adminCanListReadAndUpdateBookingStatus() throws Exception {
-        createTenant("food-tenant", "Food Tenant", "food-bot", "food-admin", "food-secret");
+        createFoodOrderTenant("food-tenant", "Food Tenant", "food-bot", "food-admin", "food-secret");
         long serviceId = createService("food-tenant", "food-admin", "food-secret", "Pizza", "12.50")
                 .get("id").asLong();
         long bookingId = createBooking("food-tenant", 101L, serviceId, 1).get("id").asLong();
@@ -100,7 +100,7 @@ class BookingLifecycleIT extends IntegrationTestSupport {
 
     @Test
     void completedBookingCannotBeCancelled() throws Exception {
-        createTenant("food-tenant", "Food Tenant", "food-bot", "food-admin", "food-secret");
+        createFoodOrderTenant("food-tenant", "Food Tenant", "food-bot", "food-admin", "food-secret");
         long serviceId = createService("food-tenant", "food-admin", "food-secret", "Pizza", "12.50")
                 .get("id").asLong();
         long bookingId = createBooking("food-tenant", 101L, serviceId, 1).get("id").asLong();
@@ -111,79 +111,5 @@ class BookingLifecycleIT extends IntegrationTestSupport {
                         .header("X-Telegram-User-Id", telegramUserId(101)))
                 .andExpect(status().isConflict())
                 .andExpect(status().reason("Completed booking cannot be cancelled"));
-    }
-
-    private void createTenant(
-            String slug,
-            String name,
-            String botToken,
-            String adminUsername,
-            String adminPassword
-    ) throws Exception {
-        mockMvc.perform(post("/superadmin/tenants")
-                        .header(AUTHORIZATION, basicAuth("test-superadmin", "test-password"))
-                        .contentType(APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(
-                                foodOrderTenant(slug, name, botToken, adminUsername, adminPassword))))
-                .andExpect(status().isOk());
-    }
-
-    private JsonNode createService(
-            String slug,
-            String adminUsername,
-            String adminPassword,
-            String name,
-            String price
-    ) throws Exception {
-        return readJson(mockMvc.perform(post("/admin/" + slug + "/services")
-                        .header(AUTHORIZATION, basicAuth(adminUsername, adminPassword))
-                        .contentType(APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(serviceRequest(name, price))))
-                .andExpect(status().isCreated())
-                .andReturn());
-    }
-
-    private JsonNode createBooking(String slug, long telegramUserId, long serviceId, int quantity) throws Exception {
-        return readJson(mockMvc.perform(post("/t/" + slug + "/bookings")
-                        .header("X-Telegram-User-Id", telegramUserId(telegramUserId))
-                        .contentType(APPLICATION_JSON)
-                        .content(bookingPayload(serviceId, quantity)))
-                .andExpect(status().isOk())
-                .andReturn());
-    }
-
-    private void updateBookingStatus(
-            String slug,
-            String adminUsername,
-            String adminPassword,
-            long bookingId,
-            BookingStatus statusValue
-    ) throws Exception {
-        mockMvc.perform(put("/admin/" + slug + "/bookings/" + bookingId + "/status")
-                        .header(AUTHORIZATION, basicAuth(adminUsername, adminPassword))
-                        .contentType(APPLICATION_JSON)
-                        .content("""
-                                {
-                                  "status": "%s"
-                                }
-                                """.formatted(statusValue.name())))
-                .andExpect(status().isOk());
-    }
-
-    private String bookingPayload(long serviceId, int quantity) {
-        return """
-                {
-                  "customerName": "Alice",
-                  "customerPhone": "+48123456789",
-                  "deliveryDate": "%s",
-                  "note": "Leave at the door",
-                  "items": [
-                    {
-                      "serviceId": %d,
-                      "quantity": %d
-                    }
-                  ]
-                }
-                """.formatted(tomorrow(), serviceId, quantity);
     }
 }

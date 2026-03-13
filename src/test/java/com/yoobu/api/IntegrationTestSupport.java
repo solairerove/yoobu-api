@@ -1,8 +1,15 @@
 package com.yoobu.api;
 
+import static org.springframework.http.HttpHeaders.AUTHORIZATION;
+import static org.springframework.http.MediaType.APPLICATION_JSON;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.yoobu.api.catalog.dto.AdminUpsertServiceRequest;
+import com.yoobu.api.booking.BookingStatus;
 import com.yoobu.api.tenant.TenantType;
 import com.yoobu.api.tenant.dto.CreateTenantRequest;
 import java.math.BigDecimal;
@@ -113,5 +120,109 @@ public abstract class IntegrationTestSupport {
 
     protected LocalDate tomorrow() {
         return LocalDate.now().plusDays(1);
+    }
+
+    protected JsonNode createFoodOrderTenant(
+            String slug,
+            String name,
+            String botToken,
+            String adminUsername,
+            String adminPassword
+    ) throws Exception {
+        return createTenant(slug, name, TenantType.FOOD_ORDER, botToken, adminUsername, adminPassword);
+    }
+
+    protected JsonNode createTenant(
+            String slug,
+            String name,
+            TenantType type,
+            String botToken,
+            String adminUsername,
+            String adminPassword
+    ) throws Exception {
+        return readJson(mockMvc.perform(post("/superadmin/tenants")
+                        .header(AUTHORIZATION, basicAuth("test-superadmin", "test-password"))
+                        .contentType(APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(
+                                tenant(slug, name, type, botToken, adminUsername, adminPassword))))
+                .andExpect(status().isOk())
+                .andReturn());
+    }
+
+    protected JsonNode createService(
+            String slug,
+            String adminUsername,
+            String adminPassword,
+            String name,
+            String price
+    ) throws Exception {
+        return readJson(mockMvc.perform(post("/admin/" + slug + "/services")
+                        .header(AUTHORIZATION, basicAuth(adminUsername, adminPassword))
+                        .contentType(APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(serviceRequest(name, price))))
+                .andExpect(status().isCreated())
+                .andReturn());
+    }
+
+    protected JsonNode createBooking(String slug, long telegramUserId, long serviceId, int quantity) throws Exception {
+        return readJson(mockMvc.perform(post("/t/" + slug + "/bookings")
+                        .header("X-Telegram-User-Id", telegramUserId(telegramUserId))
+                        .contentType(APPLICATION_JSON)
+                        .content(bookingPayload(serviceId, quantity)))
+                .andExpect(status().isOk())
+                .andReturn());
+    }
+
+    protected void updateBookingStatus(
+            String slug,
+            String adminUsername,
+            String adminPassword,
+            long bookingId,
+            BookingStatus statusValue
+    ) throws Exception {
+        mockMvc.perform(put("/admin/" + slug + "/bookings/" + bookingId + "/status")
+                        .header(AUTHORIZATION, basicAuth(adminUsername, adminPassword))
+                        .contentType(APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "status": "%s"
+                                }
+                                """.formatted(statusValue.name())))
+                .andExpect(status().isOk());
+    }
+
+    protected void updateBookingStatus(
+            String slug,
+            String adminUsername,
+            String adminPassword,
+            long bookingId,
+            String statusValue
+    ) throws Exception {
+        mockMvc.perform(put("/admin/" + slug + "/bookings/" + bookingId + "/status")
+                        .header(AUTHORIZATION, basicAuth(adminUsername, adminPassword))
+                        .contentType(APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "status": "%s"
+                                }
+                                """.formatted(statusValue)))
+                .andExpect(status().isOk());
+    }
+
+    protected String bookingPayload(long serviceId, int quantity) {
+        return """
+                {
+                  "customerName": "Alice",
+                  "customerPhone": "+48123456789",
+                  "deliveryDate": "%s",
+                  "note": "Leave at the door",
+                  "items": [
+                    {
+                      "serviceId": %d,
+                      "quantity": %d
+                    }
+                  ]
+                }
+                """.formatted(tomorrow(), serviceId, quantity);
     }
 }

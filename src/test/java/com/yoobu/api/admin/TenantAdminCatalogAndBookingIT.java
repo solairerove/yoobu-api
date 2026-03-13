@@ -20,7 +20,7 @@ class TenantAdminCatalogAndBookingIT extends IntegrationTestSupport {
 
     @Test
     void tenantCanCreateServiceAndCustomerCanViewAndBookIt() throws Exception {
-        createTenant("food-tenant", "Food Tenant", "food-bot-token", "food-admin", "food-secret");
+        createFoodOrderTenant("food-tenant", "Food Tenant", "food-bot-token", "food-admin", "food-secret");
 
         JsonNode service = createService("food-tenant", "food-admin", "food-secret", "Pizza", "12.50");
         long serviceId = service.get("id").asLong();
@@ -68,33 +68,4 @@ class TenantAdminCatalogAndBookingIT extends IntegrationTestSupport {
                 .andExpect(jsonPath("$[0].items[0].serviceName").value("Pizza"));
     }
 
-    private void createTenant(
-            String slug,
-            String name,
-            String botToken,
-            String adminUsername,
-            String adminPassword
-    ) throws Exception {
-        mockMvc.perform(post("/superadmin/tenants")
-                        .header(AUTHORIZATION, basicAuth("test-superadmin", "test-password"))
-                        .contentType(APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(
-                                foodOrderTenant(slug, name, botToken, adminUsername, adminPassword))))
-                .andExpect(status().isOk());
-    }
-
-    private JsonNode createService(
-            String slug,
-            String adminUsername,
-            String adminPassword,
-            String name,
-            String price
-    ) throws Exception {
-        return readJson(mockMvc.perform(post("/admin/" + slug + "/services")
-                        .header(AUTHORIZATION, basicAuth(adminUsername, adminPassword))
-                        .contentType(APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(serviceRequest(name, price))))
-                .andExpect(status().isCreated())
-                .andReturn());
-    }
 }

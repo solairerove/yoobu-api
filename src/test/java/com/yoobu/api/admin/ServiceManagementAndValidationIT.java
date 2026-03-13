@@ -22,7 +22,7 @@ class ServiceManagementAndValidationIT extends IntegrationTestSupport {
 
     @Test
     void tenantPublicConfigReturnsConfiguredBranding() throws Exception {
-        createTenant("food-tenant", "Food Tenant", "food-bot", "food-admin", "food-secret");
+        createFoodOrderTenant("food-tenant", "Food Tenant", "food-bot", "food-admin", "food-secret");
 
         mockMvc.perform(get("/t/food-tenant/config"))
                 .andExpect(status().isOk())
@@ -36,7 +36,7 @@ class ServiceManagementAndValidationIT extends IntegrationTestSupport {
 
     @Test
     void tenantAdminCanUpdateService() throws Exception {
-        createTenant("food-tenant", "Food Tenant", "food-bot", "food-admin", "food-secret");
+        createFoodOrderTenant("food-tenant", "Food Tenant", "food-bot", "food-admin", "food-secret");
         long serviceId = createService("food-tenant", "food-admin", "food-secret", "Pizza", "12.50")
                 .get("id").asLong();
 
@@ -72,7 +72,7 @@ class ServiceManagementAndValidationIT extends IntegrationTestSupport {
 
     @Test
     void repeatedDeleteOfServiceReturnsNotFound() throws Exception {
-        createTenant("food-tenant", "Food Tenant", "food-bot", "food-admin", "food-secret");
+        createFoodOrderTenant("food-tenant", "Food Tenant", "food-bot", "food-admin", "food-secret");
         long serviceId = createService("food-tenant", "food-admin", "food-secret", "Pizza", "12.50")
                 .get("id").asLong();
 
@@ -88,7 +88,7 @@ class ServiceManagementAndValidationIT extends IntegrationTestSupport {
 
     @Test
     void adminCanFilterBookingsByStatus() throws Exception {
-        createTenant("food-tenant", "Food Tenant", "food-bot", "food-admin", "food-secret");
+        createFoodOrderTenant("food-tenant", "Food Tenant", "food-bot", "food-admin", "food-secret");
         long serviceId = createService("food-tenant", "food-admin", "food-secret", "Pizza", "12.50")
                 .get("id").asLong();
 
@@ -114,7 +114,7 @@ class ServiceManagementAndValidationIT extends IntegrationTestSupport {
 
     @Test
     void createServiceValidationRejectsMalformedPayload() throws Exception {
-        createTenant("food-tenant", "Food Tenant", "food-bot", "food-admin", "food-secret");
+        createFoodOrderTenant("food-tenant", "Food Tenant", "food-bot", "food-admin", "food-secret");
 
         mockMvc.perform(post("/admin/food-tenant/services")
                         .header(AUTHORIZATION, basicAuth("food-admin", "food-secret"))
@@ -130,7 +130,7 @@ class ServiceManagementAndValidationIT extends IntegrationTestSupport {
 
     @Test
     void createBookingValidationRejectsMalformedPayload() throws Exception {
-        createTenant("food-tenant", "Food Tenant", "food-bot", "food-admin", "food-secret");
+        createFoodOrderTenant("food-tenant", "Food Tenant", "food-bot", "food-admin", "food-secret");
 
         mockMvc.perform(post("/t/food-tenant/bookings")
                         .header("X-Telegram-User-Id", telegramUserId(101))
@@ -144,79 +144,5 @@ class ServiceManagementAndValidationIT extends IntegrationTestSupport {
                                 }
                                 """))
                 .andExpect(status().isBadRequest());
-    }
-
-    private void createTenant(
-            String slug,
-            String name,
-            String botToken,
-            String adminUsername,
-            String adminPassword
-    ) throws Exception {
-        mockMvc.perform(post("/superadmin/tenants")
-                        .header(AUTHORIZATION, basicAuth("test-superadmin", "test-password"))
-                        .contentType(APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(
-                                foodOrderTenant(slug, name, botToken, adminUsername, adminPassword))))
-                .andExpect(status().isOk());
-    }
-
-    private JsonNode createService(
-            String slug,
-            String adminUsername,
-            String adminPassword,
-            String name,
-            String price
-    ) throws Exception {
-        return readJson(mockMvc.perform(post("/admin/" + slug + "/services")
-                        .header(AUTHORIZATION, basicAuth(adminUsername, adminPassword))
-                        .contentType(APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(serviceRequest(name, price))))
-                .andExpect(status().isCreated())
-                .andReturn());
-    }
-
-    private JsonNode createBooking(String slug, long telegramUserId, long serviceId, int quantity) throws Exception {
-        return readJson(mockMvc.perform(post("/t/" + slug + "/bookings")
-                        .header("X-Telegram-User-Id", telegramUserId(telegramUserId))
-                        .contentType(APPLICATION_JSON)
-                        .content(bookingPayload(serviceId, quantity)))
-                .andExpect(status().isOk())
-                .andReturn());
-    }
-
-    private void updateBookingStatus(
-            String slug,
-            String adminUsername,
-            String adminPassword,
-            long bookingId,
-            String statusValue
-    ) throws Exception {
-        mockMvc.perform(put("/admin/" + slug + "/bookings/" + bookingId + "/status")
-                        .header(AUTHORIZATION, basicAuth(adminUsername, adminPassword))
-                        .contentType(APPLICATION_JSON)
-                        .content("""
-                                {
-                                  "status": "%s"
-                                }
-                                """.formatted(statusValue)))
-                .andExpect(status().isOk());
-    }
-
-    private String bookingPayload(long serviceId, int quantity) {
-        return """
-                {
-                  "customerName": "Alice",
-                  "customerPhone": "+48123456789",
-                  "deliveryDate": "%s",
-                  "note": "Leave at the door",
-                  "items": [
-                    {
-                      "serviceId": %d,
-                      "quantity": %d
-                    }
-                  ]
-                }
-                """.formatted(tomorrow(), serviceId, quantity);
     }
 }
