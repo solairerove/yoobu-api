@@ -1,6 +1,7 @@
 package com.yoobu.api.config;
 
 import com.yoobu.api.admin.AdminAuthInterceptor;
+import com.yoobu.api.admin.SuperAdminAuthInterceptor;
 import com.yoobu.api.tenant.TenantResolver;
 import com.yoobu.api.telegram.TelegramUserArgumentResolver;
 import java.util.List;
@@ -15,6 +16,7 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 public class WebConfig implements WebMvcConfigurer {
 
     private final AdminAuthInterceptor adminAuthInterceptor;
+    private final SuperAdminAuthInterceptor superAdminAuthInterceptor;
     private final TenantResolver tenantResolver;
     private final TelegramUserArgumentResolver telegramUserArgumentResolver;
 
@@ -25,6 +27,9 @@ public class WebConfig implements WebMvcConfigurer {
 
         registry.addInterceptor(adminAuthInterceptor)
                 .addPathPatterns("/admin/*/**");
+
+        registry.addInterceptor(superAdminAuthInterceptor)
+                .addPathPatterns("/superadmin/**");
     }
 
     @Override

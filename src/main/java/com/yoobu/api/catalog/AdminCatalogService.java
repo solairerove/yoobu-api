@@ -1,0 +1,110 @@
+package com.yoobu.api.catalog;
+
+import com.yoobu.api.catalog.dto.AdminUpsertServiceRequest;
+import com.yoobu.api.catalog.dto.ServiceResponse;
+import com.yoobu.api.tenant.Tenant;
+import com.yoobu.api.tenant.TenantContext;
+import com.yoobu.api.tenant.TenantType;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
+import java.util.List;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
+import org.springframework.web.server.ResponseStatusException;
+
+@Service
+@RequiredArgsConstructor
+public class AdminCatalogService {
+
+    private final CatalogServiceRepository catalogServiceRepository;
+
+    @Transactional(readOnly = true)
+    public List<ServiceResponse> getAdminServices() {
+        requireFoodOrderTenant();
+        return catalogServiceRepository.findByTenantIdAndDeletedAtIsNullOrderBySortOrderAscIdAsc(
+                        TenantContext.getRequiredTenantId())
+                .stream()
+                .map(this::toResponse)
+                .toList();
+    }
+
+    @Transactional
+    public ServiceResponse createService(AdminUpsertServiceRequest request) {
+        Tenant tenant = requireFoodOrderTenant();
+        OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
+
+        CatalogService service = new CatalogService();
+        service.setTenant(tenant);
+        applyRequest(service, request);
+        service.setActive(request.active() == null || request.active());
+        service.setCreatedAt(now);
+        service.setUpdatedAt(now);
+
+        return toResponse(catalogServiceRepository.save(service));
+    }
+
+    @Transactional
+    public ServiceResponse updateService(Long serviceId, AdminUpsertServiceRequest request) {
+        requireFoodOrderTenant();
+
+        CatalogService service = catalogServiceRepository.findByIdAndTenantIdAndDeletedAtIsNull(
+                        serviceId, TenantContext.getRequiredTenantId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Service not found"));
+
+        applyRequest(service, request);
+        service.setActive(request.active() == null || request.active());
+        service.setUpdatedAt(OffsetDateTime.now(ZoneOffset.UTC));
+
+        return toResponse(catalogServiceRepository.save(service));
+    }
+
+    @Transactional
+    public void deactivateService(Long serviceId) {
+        requireFoodOrderTenant();
+
+        CatalogService service = catalogServiceRepository.findByIdAndTenantIdAndDeletedAtIsNull(
+                        serviceId, TenantContext.getRequiredTenantId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Service not found"));
+
+        OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
+        service.setActive(false);
+        service.setDeletedAt(now);
+        service.setUpdatedAt(now);
+        catalogServiceRepository.save(service);
+    }
+
+    private Tenant requireFoodOrderTenant() {
+        Tenant tenant = TenantContext.getCurrentTenant();
+        if (tenant == null) {
+            throw new IllegalStateException("Tenant context is not available");
+        }
+        if (tenant.getType() != TenantType.FOOD_ORDER) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Tenant does not support food ordering");
+        }
+        return tenant;
+    }
+
+    private void applyRequest(CatalogService service, AdminUpsertServiceRequest request) {
+        service.setName(request.name());
+        service.setDescription(request.description());
+        service.setPrice(request.price());
+        service.setUnit(StringUtils.hasText(request.unit()) ? request.unit() : "шт");
+        service.setDurationMinutes(request.durationMinutes());
+        service.setSortOrder(request.sortOrder() == null ? 0 : request.sortOrder());
+    }
+
+    private ServiceResponse toResponse(CatalogService service) {
+        return new ServiceResponse(
+                service.getId(),
+                service.getName(),
+                service.getDescription(),
+                service.getPrice(),
+                service.getUnit(),
+                service.getDurationMinutes(),
+                service.getSortOrder()
+        );
+    }
+}

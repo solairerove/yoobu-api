@@ -8,5 +8,9 @@ public interface CatalogServiceRepository extends JpaRepository<CatalogService, 
 
     List<CatalogService> findByTenantIdAndActiveTrueAndDeletedAtIsNullOrderBySortOrderAscIdAsc(Long tenantId);
 
+    List<CatalogService> findByTenantIdAndDeletedAtIsNullOrderBySortOrderAscIdAsc(Long tenantId);
+
     Optional<CatalogService> findByIdAndTenantIdAndActiveTrueAndDeletedAtIsNull(Long id, Long tenantId);
+
+    Optional<CatalogService> findByIdAndTenantIdAndDeletedAtIsNull(Long id, Long tenantId);
 }
