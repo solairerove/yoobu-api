@@ -1,11 +1,11 @@
 package com.yoobu.api.admin;
 
+import com.yoobu.api.config.SecurityProperties;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
@@ -18,16 +18,14 @@ public class SuperAdminAuthInterceptor implements HandlerInterceptor {
 
     private static final String BASIC_PREFIX = "Basic ";
 
-    @Value("${app.superadmin.username}")
-    private String username;
-
-    @Value("${app.superadmin.password}")
-    private String password;
+    private final SecurityProperties securityProperties;
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {
         Credentials credentials = extractCredentials(request);
-        if (!username.equals(credentials.username()) || !password.equals(credentials.password())) {
+        SecurityProperties.SuperAdmin superAdmin = securityProperties.getSuperadmin();
+        if (!superAdmin.getUsername().equals(credentials.username())
+                || !superAdmin.getPassword().equals(credentials.password())) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid superadmin credentials");
         }
         return true;
