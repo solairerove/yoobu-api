@@ -10,6 +10,7 @@ import com.yoobu.api.tenant.Tenant;
 import com.yoobu.api.tenant.TenantContext;
 import com.yoobu.api.tenant.TenantType;
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
@@ -97,6 +98,41 @@ public class BookingService {
         }
 
         booking.setStatus(BookingStatus.CANCELLED);
+        booking.setUpdatedAt(OffsetDateTime.now(ZoneOffset.UTC));
+
+        return toResponse(bookingRepository.save(booking));
+    }
+
+    @Transactional(readOnly = true)
+    public List<BookingResponse> getAdminBookings(BookingStatus status, LocalDate deliveryDate) {
+        requireFoodOrderTenant();
+
+        return bookingRepository.findAdminBookings(TenantContext.getRequiredTenantId(), status, deliveryDate)
+                .stream()
+                .map(this::toResponse)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public BookingResponse getAdminBooking(Long bookingId) {
+        requireFoodOrderTenant();
+
+        Booking booking = bookingRepository.findByIdAndTenantIdAndDeletedAtIsNull(
+                        bookingId, TenantContext.getRequiredTenantId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Booking not found"));
+
+        return toResponse(booking);
+    }
+
+    @Transactional
+    public BookingResponse updateBookingStatus(Long bookingId, BookingStatus status) {
+        requireFoodOrderTenant();
+
+        Booking booking = bookingRepository.findByIdAndTenantIdAndDeletedAtIsNull(
+                        bookingId, TenantContext.getRequiredTenantId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Booking not found"));
+
+        booking.setStatus(status);
         booking.setUpdatedAt(OffsetDateTime.now(ZoneOffset.UTC));
 
         return toResponse(bookingRepository.save(booking));
