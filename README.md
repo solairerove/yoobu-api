@@ -19,5 +19,6 @@ OS name: "mac os x", version: "26.3.1", arch: "aarch64", family: "mac"
 ### How to run
 
 ```shell
+mvn clean verify
 mvn clean install && java -jar target/yoobu-api-0.0.1-SNAPSHOT.jar --spring.profiles.active=dev
 ```
