@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create Tenant | Superadmin</title>
+    <link rel="stylesheet" th:href="@{/css/admin-panel.css}">
+</head>
+<body>
+<div class="shell shell-narrow">
+    <header class="page-header">
+        <div>
+            <p class="eyebrow">Superadmin panel</p>
+            <h1>Create tenant</h1>
+        </div>
+        <nav class="nav">
+            <a class="nav-link" th:href="@{/superadmin/panel/tenants}">Tenants</a>
+            <a class="nav-link active" th:href="@{/superadmin/panel/tenants/new}">Create tenant</a>
+        </nav>
+    </header>
+
+    <section class="card">
+        <form method="post" th:action="@{/superadmin/panel/tenants}" th:object="${tenantForm}">
+            <p class="error" th:if="${formError}" th:text="${formError}">Tenant error</p>
+
+            <div class="field-row">
+                <label>
+                    <span>Slug</span>
+                    <input type="text" th:field="*{slug}">
+                </label>
+                <label>
+                    <span>Name</span>
+                    <input type="text" th:field="*{name}">
+                </label>
+            </div>
+            <p class="error" th:if="${#fields.hasErrors('slug')}" th:errors="*{slug}">Slug error</p>
+            <p class="error" th:if="${#fields.hasErrors('name')}" th:errors="*{name}">Name error</p>
+
+            <div class="field-row">
+                <label>
+                    <span>Tenant type</span>
+                    <select th:field="*{type}">
+                        <option th:each="tenantType : ${tenantTypes}"
+                                th:value="${tenantType}"
+                                th:text="${tenantType}"></option>
+                    </select>
+                </label>
+                <label>
+                    <span>Timezone</span>
+                    <input type="text" th:field="*{timezone}">
+                </label>
+            </div>
+
+            <div class="field-row">
+                <label>
+                    <span>Admin username</span>
+                    <input type="text" th:field="*{adminUsername}">
+                </label>
+                <label>
+                    <span>Admin password</span>
+                    <input type="text" th:field="*{adminPassword}">
+                </label>
+            </div>
+            <p class="error" th:if="${#fields.hasErrors('adminUsername')}" th:errors="*{adminUsername}">Admin user error</p>
+            <p class="error" th:if="${#fields.hasErrors('adminPassword')}" th:errors="*{adminPassword}">Admin password error</p>
+
+            <div class="field-row">
+                <label>
+                    <span>Bot token</span>
+                    <input type="text" th:field="*{botToken}">
+                </label>
+                <label>
+                    <span>Owner Telegram ID</span>
+                    <input type="number" th:field="*{ownerTelegramId}">
+                </label>
+            </div>
+
+            <div class="field-row">
+                <label>
+                    <span>Primary color</span>
+                    <input type="text" th:field="*{primaryColor}" placeholder="#112233">
+                </label>
+                <label>
+                    <span>Logo URL</span>
+                    <input type="text" th:field="*{logoUrl}">
+                </label>
+            </div>
+
+            <label>
+                <span>Welcome message</span>
+                <textarea rows="4" th:field="*{welcomeMessage}"></textarea>
+            </label>
+
+            <div class="actions">
+                <a class="secondary-link" th:href="@{/superadmin/panel/tenants}">Cancel</a>
+                <button type="submit">Create tenant</button>
+            </div>
+        </form>
+    </section>
+</div>
+</body>
+</html>

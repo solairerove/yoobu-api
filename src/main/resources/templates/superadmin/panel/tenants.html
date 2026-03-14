@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tenants | Superadmin</title>
+    <link rel="stylesheet" th:href="@{/css/admin-panel.css}">
+</head>
+<body>
+<div class="shell">
+    <header class="page-header">
+        <div>
+            <p class="eyebrow">Superadmin panel</p>
+            <h1>Tenants</h1>
+        </div>
+        <nav class="nav">
+            <a class="nav-link active" th:href="@{/superadmin/panel/tenants}">Tenants</a>
+            <a class="nav-link" th:href="@{/superadmin/panel/tenants/new}">Create tenant</a>
+        </nav>
+    </header>
+
+    <section class="toolbar">
+        <a class="button-link" th:href="@{/superadmin/panel/tenants/new}">New tenant</a>
+    </section>
+
+    <section class="card">
+        <table>
+            <thead>
+            <tr>
+                <th>Name</th>
+                <th>Slug</th>
+                <th>Type</th>
+                <th>Timezone</th>
+                <th>Created</th>
+                <th></th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:if="${#lists.isEmpty(tenants)}">
+                <td colspan="6" class="empty">No tenants yet.</td>
+            </tr>
+            <tr th:each="tenant : ${tenants}">
+                <td th:text="${tenant.name}">Dark Kitchen</td>
+                <td th:text="${tenant.slug}">dark-kitchen</td>
+                <td th:text="${tenant.type}">FOOD_ORDER</td>
+                <td th:text="${tenant.timezone}">Asia/Ho_Chi_Minh</td>
+                <td th:text="${tenant.createdAt}">2026-03-14T00:00Z</td>
+                <td>
+                    <a th:href="@{/admin/{slug}/panel(slug=${tenant.slug})}">Open admin panel</a>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+    </section>
+</div>
+</body>
+</html>
