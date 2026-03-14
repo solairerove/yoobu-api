@@ -93,4 +93,14 @@ class AdminPanelIT extends IntegrationTestSupport {
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("CONFIRMED")));
     }
+
+    @Test
+    void superAdminCanOpenTenantAdminPanel() throws Exception {
+        createFoodOrderTenant("food-tenant", "Food Tenant", "food-bot-token", "food-admin", "food-secret");
+
+        mockMvc.perform(get("/admin/food-tenant/panel")
+                        .header(AUTHORIZATION, basicAuth("test-superadmin", "test-password")))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(header().string("Location", "/admin/food-tenant/panel/bookings"));
+    }
 }

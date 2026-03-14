@@ -30,6 +30,16 @@ class TenantAdminAccessIT extends IntegrationTestSupport {
     }
 
     @Test
+    void superAdminCanAccessTenantAdminEndpoint() throws Exception {
+        createFoodOrderTenant("tenant-auth", "Tenant Auth", "bot-auth", "tenant-admin", "tenant-secret");
+
+        mockMvc.perform(get("/admin/tenant-auth/services")
+                        .header(AUTHORIZATION, basicAuth("test-superadmin", "test-password")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(0));
+    }
+
+    @Test
     void tenantCannotAuthenticateWithInvalidCredentials() throws Exception {
         createFoodOrderTenant("tenant-auth", "Tenant Auth", "bot-auth", "tenant-admin", "tenant-secret");
 

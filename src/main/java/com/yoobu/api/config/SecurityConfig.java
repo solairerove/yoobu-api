@@ -35,9 +35,10 @@ public class SecurityConfig {
     @Bean
     TenantBasicAuthenticationFilter tenantBasicAuthenticationFilter(
             TenantConfigRepository tenantConfigRepository,
-            PasswordEncoder passwordEncoder
+            PasswordEncoder passwordEncoder,
+            SecurityProperties securityProperties
     ) {
-        return new TenantBasicAuthenticationFilter(tenantConfigRepository, passwordEncoder);
+        return new TenantBasicAuthenticationFilter(tenantConfigRepository, passwordEncoder, securityProperties);
     }
 
     @Bean

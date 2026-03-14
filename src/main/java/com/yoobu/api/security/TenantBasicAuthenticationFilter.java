@@ -1,5 +1,6 @@
 package com.yoobu.api.security;
 
+import com.yoobu.api.config.SecurityProperties;
 import com.yoobu.api.tenant.Tenant;
 import com.yoobu.api.tenant.TenantConfig;
 import com.yoobu.api.tenant.TenantConfigRepository;
@@ -30,6 +31,7 @@ public class TenantBasicAuthenticationFilter extends OncePerRequestFilter {
 
     private final TenantConfigRepository tenantConfigRepository;
     private final PasswordEncoder passwordEncoder;
+    private final SecurityProperties securityProperties;
 
     @Override
     protected void doFilterInternal(
@@ -55,17 +57,12 @@ public class TenantBasicAuthenticationFilter extends OncePerRequestFilter {
             return;
         }
 
-        if (!expectedUsername.equals(credentials.username())
-                || !passwordEncoder.matches(credentials.password(), expectedPasswordHash)) {
+        UsernamePasswordAuthenticationToken authentication = authenticate(credentials, expectedUsername, expectedPasswordHash);
+        if (authentication == null) {
             BasicAuthChallenge.send(response, realm(tenant.getSlug()), "Invalid admin credentials");
             return;
         }
 
-        UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
-                credentials.username(),
-                null,
-                AuthorityUtils.createAuthorityList("ROLE_TENANT_ADMIN")
-        );
         SecurityContextHolder.getContext().setAuthentication(authentication);
 
         try {
@@ -110,6 +107,33 @@ public class TenantBasicAuthenticationFilter extends OncePerRequestFilter {
         List<TenantConfig> configEntries = tenantConfigRepository.findByTenantId(tenantId);
         return configEntries.stream()
                 .collect(Collectors.toMap(TenantConfig::getKey, TenantConfig::getValue, (left, right) -> right));
+    }
+
+    private UsernamePasswordAuthenticationToken authenticate(
+            Credentials credentials,
+            String expectedUsername,
+            String expectedPasswordHash
+    ) {
+        if (expectedUsername.equals(credentials.username())
+                && passwordEncoder.matches(credentials.password(), expectedPasswordHash)) {
+            return new UsernamePasswordAuthenticationToken(
+                    credentials.username(),
+                    null,
+                    AuthorityUtils.createAuthorityList("ROLE_TENANT_ADMIN")
+            );
+        }
+
+        SecurityProperties.SuperAdmin superAdmin = securityProperties.getSuperadmin();
+        if (superAdmin.getUsername().equals(credentials.username())
+                && superAdmin.getPassword().equals(credentials.password())) {
+            return new UsernamePasswordAuthenticationToken(
+                    credentials.username(),
+                    null,
+                    AuthorityUtils.createAuthorityList("ROLE_SUPERADMIN")
+            );
+        }
+
+        return null;
     }
 
     private String realm(String slug) {
