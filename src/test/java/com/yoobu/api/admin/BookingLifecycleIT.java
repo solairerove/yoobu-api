@@ -53,7 +53,7 @@ class BookingLifecycleIT extends IntegrationTestSupport {
 
         JsonNode createAuditLog = latestAuditLog("booking", "CREATE");
         JsonNode createValue = objectMapper.readTree(createAuditLog.get("new_value").asText());
-        org.junit.jupiter.api.Assertions.assertEquals(101L, createAuditLog.get("actor_id").asLong());
+        org.junit.jupiter.api.Assertions.assertEquals("101", createAuditLog.get("actor_id").asText());
         org.junit.jupiter.api.Assertions.assertEquals("NEW", createValue.get("status").asText());
         org.junit.jupiter.api.Assertions.assertEquals(2, createValue.get("items").get(0).get("quantity").asInt());
 
@@ -112,7 +112,7 @@ class BookingLifecycleIT extends IntegrationTestSupport {
         JsonNode auditLog = latestAuditLog("booking", "UPDATE_STATUS");
         JsonNode oldValue = objectMapper.readTree(auditLog.get("old_value").asText());
         JsonNode newValue = objectMapper.readTree(auditLog.get("new_value").asText());
-        org.junit.jupiter.api.Assertions.assertTrue(auditLog.get("actor_id").isNull());
+        org.junit.jupiter.api.Assertions.assertEquals("food-admin", auditLog.get("actor_id").asText());
         org.junit.jupiter.api.Assertions.assertEquals("NEW", oldValue.get("status").asText());
         org.junit.jupiter.api.Assertions.assertEquals("CONFIRMED", newValue.get("status").asText());
     }

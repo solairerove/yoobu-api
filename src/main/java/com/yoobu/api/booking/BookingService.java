@@ -76,7 +76,7 @@ public class BookingService {
                 tenant.getId(),
                 ENTITY_NAME,
                 persistedBooking.getId(),
-                telegramUserId,
+                telegramUserId.toString(),
                 toAuditSnapshot(persistedBooking, bookingItems)
         );
 
@@ -127,7 +127,7 @@ public class BookingService {
                 ENTITY_NAME,
                 savedBooking.getId(),
                 "CANCEL",
-                telegramUserId,
+                telegramUserId.toString(),
                 oldSnapshot,
                 toAuditSnapshot(savedBooking)
         );

@@ -16,11 +16,11 @@ public class AuditLogService {
     private final AuditLogRepository auditLogRepository;
     private final ObjectMapper objectMapper;
 
-    public void logCreate(Long tenantId, String entity, Long entityId, Long actorId, Object newValue) {
+    public void logCreate(Long tenantId, String entity, Long entityId, String actorId, Object newValue) {
         log(tenantId, entity, entityId, "CREATE", actorId, null, newValue);
     }
 
-    public void logUpdate(Long tenantId, String entity, Long entityId, Long actorId, Object oldValue, Object newValue) {
+    public void logUpdate(Long tenantId, String entity, Long entityId, String actorId, Object oldValue, Object newValue) {
         log(tenantId, entity, entityId, "UPDATE", actorId, oldValue, newValue);
     }
 
@@ -29,14 +29,14 @@ public class AuditLogService {
             String entity,
             Long entityId,
             String action,
-            Long actorId,
+            String actorId,
             Object oldValue,
             Object newValue
     ) {
         log(tenantId, entity, entityId, action, actorId, oldValue, newValue);
     }
 
-    public Long currentActorId() {
+    public String currentActorId() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null) {
             return null;
@@ -44,11 +44,11 @@ public class AuditLogService {
 
         Object principal = authentication.getPrincipal();
         if (principal instanceof Number number) {
-            return number.longValue();
+            return Long.toString(number.longValue());
         }
 
-        if (principal instanceof String text && text.matches("-?\\d+")) {
-            return Long.parseLong(text);
+        if (principal instanceof String text) {
+            return text;
         }
 
         return null;
@@ -59,7 +59,7 @@ public class AuditLogService {
             String entity,
             Long entityId,
             String action,
-            Long actorId,
+            String actorId,
             Object oldValue,
             Object newValue
     ) {

@@ -36,7 +36,7 @@ public class AuditLog {
     private String action;
 
     @Column(name = "actor_id")
-    private Long actorId;
+    private String actorId;
 
     @Column(name = "old_value", columnDefinition = "TEXT")
     private String oldValue;

@@ -85,6 +85,7 @@ class SuperAdminTenantControllerIT extends IntegrationTestSupport {
         assertEquals("CREATE", auditLog.get("action").asText());
         assertEquals(1L, auditLog.get("tenant_id").asLong());
         assertEquals(1L, auditLog.get("entity_id").asLong());
+        assertEquals("test-superadmin", auditLog.get("actor_id").asText());
         assertEquals(true, objectMapper.readTree(auditLog.get("new_value").asText()).get("botTokenConfigured").asBoolean());
         assertEquals("admin", objectMapper.readTree(auditLog.get("new_value").asText()).get("adminUsername").asText());
     }
@@ -190,6 +191,7 @@ class SuperAdminTenantControllerIT extends IntegrationTestSupport {
         var auditLog = latestAuditLog("tenant", "UPDATE");
         assertEquals("UPDATE", auditLog.get("action").asText());
         assertEquals(tenantId, auditLog.get("entity_id").asLong());
+        assertEquals("test-superadmin", auditLog.get("actor_id").asText());
         assertEquals("Tenant Before", objectMapper.readTree(auditLog.get("old_value").asText()).get("name").asText());
         assertEquals("Tenant After", objectMapper.readTree(auditLog.get("new_value").asText()).get("name").asText());
         assertEquals("APPOINTMENT", objectMapper.readTree(auditLog.get("new_value").asText()).get("type").asText());

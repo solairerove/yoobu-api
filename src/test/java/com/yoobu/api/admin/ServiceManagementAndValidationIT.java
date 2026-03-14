@@ -76,6 +76,7 @@ class ServiceManagementAndValidationIT extends IntegrationTestSupport {
         org.junit.jupiter.api.Assertions.assertEquals("Pizza", oldValue.get("name").asText());
         org.junit.jupiter.api.Assertions.assertEquals("Pasta", newValue.get("name").asText());
         org.junit.jupiter.api.Assertions.assertEquals("UPDATE", auditLog.get("action").asText());
+        org.junit.jupiter.api.Assertions.assertEquals("food-admin", auditLog.get("actor_id").asText());
     }
 
     @Test
@@ -96,6 +97,7 @@ class ServiceManagementAndValidationIT extends IntegrationTestSupport {
         JsonNode auditLog = latestAuditLog("service", "DEACTIVATE");
         JsonNode newValue = objectMapper.readTree(auditLog.get("new_value").asText());
         org.junit.jupiter.api.Assertions.assertEquals(serviceId, auditLog.get("entity_id").asLong());
+        org.junit.jupiter.api.Assertions.assertEquals("food-admin", auditLog.get("actor_id").asText());
         org.junit.jupiter.api.Assertions.assertFalse(newValue.get("active").asBoolean());
         org.junit.jupiter.api.Assertions.assertFalse(newValue.get("deletedAt").isNull());
     }
