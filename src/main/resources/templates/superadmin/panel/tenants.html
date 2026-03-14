@@ -30,6 +30,7 @@
                 <th>Name</th>
                 <th>Slug</th>
                 <th>Type</th>
+                <th>Status</th>
                 <th>Timezone</th>
                 <th>Created</th>
                 <th></th>
@@ -37,7 +38,7 @@
             </thead>
             <tbody>
             <tr th:if="${#lists.isEmpty(tenants)}">
-                <td colspan="6" class="empty">No tenants yet.</td>
+                <td colspan="7" class="empty">No tenants yet.</td>
             </tr>
             <tr th:each="tenant : ${tenants}">
                 <td>
@@ -46,6 +47,11 @@
                 </td>
                 <td th:text="${tenant.slug}">dark-kitchen</td>
                 <td th:text="${tenant.type}">FOOD_ORDER</td>
+                <td>
+                    <span class="badge"
+                          th:classappend="${tenant.active} ? ' badge-success' : ' badge-muted'"
+                          th:text="${tenant.active} ? 'Active' : 'Inactive'">Active</span>
+                </td>
                 <td th:text="${tenant.timezone}">Asia/Ho_Chi_Minh</td>
                 <td th:text="${tenant.createdAt}">2026-03-14T00:00Z</td>
                 <td>

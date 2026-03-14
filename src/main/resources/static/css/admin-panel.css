@@ -180,6 +180,16 @@ thead th {
     font-weight: 700;
 }
 
+.badge-success {
+    background: #dff3e4;
+    color: #1f6a38;
+}
+
+.badge-muted {
+    background: #ede7df;
+    color: #6a5747;
+}
+
 .summary {
     display: grid;
     gap: 14px;
