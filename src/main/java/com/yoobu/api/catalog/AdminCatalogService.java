@@ -31,6 +31,17 @@ public class AdminCatalogService {
                 .toList();
     }
 
+    @Transactional(readOnly = true)
+    public ServiceResponse getAdminService(Long serviceId) {
+        requireFoodOrderTenant();
+
+        CatalogService service = catalogServiceRepository.findByIdAndTenantIdAndDeletedAtIsNull(
+                        serviceId, TenantContext.getRequiredTenantId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Service not found"));
+
+        return toResponse(service);
+    }
+
     @Transactional
     public ServiceResponse createService(AdminUpsertServiceRequest request) {
         Tenant tenant = requireFoodOrderTenant();

@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="'Booking #' + ${booking.id} + ' | ' + ${slug}">Booking detail</title>
+    <link rel="stylesheet" th:href="@{/css/admin-panel.css}">
+</head>
+<body>
+<div class="shell">
+    <header class="page-header">
+        <div>
+            <p class="eyebrow">Admin panel</p>
+            <h1 th:text="'Booking #' + ${booking.id}">Booking detail</h1>
+        </div>
+        <nav class="nav">
+            <a class="nav-link active" th:href="@{/admin/{slug}/panel/bookings(slug=${slug})}">Bookings</a>
+            <a class="nav-link" th:href="@{/admin/{slug}/panel/services(slug=${slug})}">Services</a>
+        </nav>
+    </header>
+
+    <section class="detail-grid">
+        <article class="card">
+            <h2>Summary</h2>
+            <dl class="summary">
+                <div><dt>Status</dt><dd th:text="${booking.status}">NEW</dd></div>
+                <div><dt>Customer</dt><dd th:text="${booking.customerName}">Alice</dd></div>
+                <div><dt>Delivery date</dt><dd th:text="${booking.deliveryDate}">2026-03-14</dd></div>
+                <div><dt>Total</dt><dd th:text="${booking.totalPrice}">25.00</dd></div>
+                <div><dt>Created</dt><dd th:text="${booking.createdAt}">2026-03-14T00:00Z</dd></div>
+                <div><dt>Note</dt><dd th:text="${booking.note ?: 'N/A'}">Leave at the door</dd></div>
+            </dl>
+        </article>
+
+        <article class="card">
+            <h2>Update status</h2>
+            <form method="post"
+                  th:action="@{/admin/{slug}/panel/bookings/{bookingId}/status(slug=${slug}, bookingId=${booking.id})}"
+                  th:object="${statusForm}">
+                <label>
+                    <span>Status</span>
+                    <select th:field="*{status}">
+                        <option th:each="statusOption : ${statuses}"
+                                th:value="${statusOption}"
+                                th:text="${statusOption}"></option>
+                    </select>
+                </label>
+                <p class="error" th:if="${#fields.hasErrors('status')}" th:errors="*{status}">Invalid status</p>
+                <button type="submit">Save status</button>
+            </form>
+        </article>
+    </section>
+
+    <section class="card">
+        <h2>Items</h2>
+        <table>
+            <thead>
+            <tr>
+                <th>Service</th>
+                <th>Quantity</th>
+                <th>Unit price</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="item : ${booking.items}">
+                <td th:text="${item.serviceName}">Pizza</td>
+                <td th:text="${item.quantity}">2</td>
+                <td th:text="${item.unitPrice}">12.50</td>
+            </tr>
+            </tbody>
+        </table>
+    </section>
+</div>
+</body>
+</html>

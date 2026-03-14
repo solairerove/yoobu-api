@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="${formTitle} + ' | ' + ${slug}">Service form</title>
+    <link rel="stylesheet" th:href="@{/css/admin-panel.css}">
+</head>
+<body>
+<div class="shell shell-narrow">
+    <header class="page-header">
+        <div>
+            <p class="eyebrow">Admin panel</p>
+            <h1 th:text="${formTitle}">Service form</h1>
+        </div>
+        <nav class="nav">
+            <a class="nav-link" th:href="@{/admin/{slug}/panel/bookings(slug=${slug})}">Bookings</a>
+            <a class="nav-link active" th:href="@{/admin/{slug}/panel/services(slug=${slug})}">Services</a>
+        </nav>
+    </header>
+
+    <section class="card">
+        <form method="post" th:action="${formAction}" th:object="${serviceForm}">
+            <label>
+                <span>Name</span>
+                <input type="text" th:field="*{name}">
+            </label>
+            <p class="error" th:if="${#fields.hasErrors('name')}" th:errors="*{name}">Name error</p>
+
+            <label>
+                <span>Description</span>
+                <textarea rows="4" th:field="*{description}"></textarea>
+            </label>
+
+            <div class="field-row">
+                <label>
+                    <span>Price</span>
+                    <input type="number" step="0.01" min="0" th:field="*{price}">
+                </label>
+                <label>
+                    <span>Unit</span>
+                    <input type="text" th:field="*{unit}">
+                </label>
+            </div>
+            <p class="error" th:if="${#fields.hasErrors('price')}" th:errors="*{price}">Price error</p>
+
+            <div class="field-row">
+                <label>
+                    <span>Duration minutes</span>
+                    <input type="number" min="0" th:field="*{durationMinutes}">
+                </label>
+                <label>
+                    <span>Sort order</span>
+                    <input type="number" th:field="*{sortOrder}">
+                </label>
+            </div>
+
+            <label class="checkbox">
+                <input type="checkbox" th:field="*{active}">
+                <span>Active</span>
+            </label>
+
+            <div class="actions">
+                <a class="secondary-link" th:href="@{/admin/{slug}/panel/services(slug=${slug})}">Cancel</a>
+                <button type="submit" th:text="${submitLabel}">Save</button>
+            </div>
+        </form>
+    </section>
+</div>
+</body>
+</html>

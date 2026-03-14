@@ -6,6 +6,7 @@ import com.yoobu.api.tenant.TenantConfigRepository;
 import com.yoobu.api.tenant.TenantContext;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.stream.Collectors;
 import java.util.Base64;
@@ -17,7 +18,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
-import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.HandlerInterceptor;
 
 @Component
@@ -25,6 +25,7 @@ import org.springframework.web.servlet.HandlerInterceptor;
 public class AdminAuthInterceptor implements HandlerInterceptor {
 
     private static final String BASIC_PREFIX = "Basic ";
+    private static final String REALM = "Yoobu Tenant Admin";
 
     private final TenantConfigRepository tenantConfigRepository;
     private final PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
@@ -36,27 +37,31 @@ public class AdminAuthInterceptor implements HandlerInterceptor {
             throw new IllegalStateException("Tenant context is not available");
         }
 
-        Credentials credentials = extractCredentials(request);
+        Credentials credentials = extractCredentials(request, response);
+        if (credentials == null) {
+            return false;
+        }
         Map<String, String> config = loadTenantConfig(tenant.getId());
 
         String expectedUsername = config.get("admin_username");
         String expectedPasswordHash = config.get("admin_password");
         if (expectedUsername == null || expectedPasswordHash == null) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Admin credentials are not configured");
+            return unauthorized(response, "Admin credentials are not configured");
         }
 
         if (!expectedUsername.equals(credentials.username())
                 || !passwordEncoder.matches(credentials.password(), expectedPasswordHash)) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid admin credentials");
+            return unauthorized(response, "Invalid admin credentials");
         }
 
         return true;
     }
 
-    private Credentials extractCredentials(HttpServletRequest request) {
+    private Credentials extractCredentials(HttpServletRequest request, HttpServletResponse response) {
         String authorization = request.getHeader(HttpHeaders.AUTHORIZATION);
         if (authorization == null || !authorization.startsWith(BASIC_PREFIX)) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Missing Basic authorization header");
+            unauthorized(response, "Missing Basic authorization header");
+            return null;
         }
 
         String decoded;
@@ -65,18 +70,30 @@ public class AdminAuthInterceptor implements HandlerInterceptor {
                     Base64.getDecoder().decode(authorization.substring(BASIC_PREFIX.length())),
                     StandardCharsets.UTF_8);
         } catch (IllegalArgumentException ex) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid Basic authorization header");
+            unauthorized(response, "Invalid Basic authorization header");
+            return null;
         }
 
         int separatorIndex = decoded.indexOf(':');
         if (separatorIndex <= 0) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid Basic authorization header");
+            unauthorized(response, "Invalid Basic authorization header");
+            return null;
         }
 
         return new Credentials(
                 decoded.substring(0, separatorIndex),
                 decoded.substring(separatorIndex + 1)
         );
+    }
+
+    private boolean unauthorized(HttpServletResponse response, String message) {
+        response.setHeader(HttpHeaders.WWW_AUTHENTICATE, "Basic realm=\"" + REALM + "\"");
+        try {
+            response.sendError(HttpStatus.UNAUTHORIZED.value(), message);
+        } catch (IOException ex) {
+            throw new IllegalStateException("Failed to write unauthorized response", ex);
+        }
+        return false;
     }
 
     private Map<String, String> loadTenantConfig(Long tenantId) {

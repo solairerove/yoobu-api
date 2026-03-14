@@ -3,13 +3,13 @@ package com.yoobu.api.admin;
 import com.yoobu.api.config.SecurityProperties;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
-import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.HandlerInterceptor;
 
 @Component
@@ -17,24 +17,29 @@ import org.springframework.web.servlet.HandlerInterceptor;
 public class SuperAdminAuthInterceptor implements HandlerInterceptor {
 
     private static final String BASIC_PREFIX = "Basic ";
+    private static final String REALM = "Yoobu Super Admin";
 
     private final SecurityProperties securityProperties;
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {
-        Credentials credentials = extractCredentials(request);
+        Credentials credentials = extractCredentials(request, response);
+        if (credentials == null) {
+            return false;
+        }
         SecurityProperties.SuperAdmin superAdmin = securityProperties.getSuperadmin();
         if (!superAdmin.getUsername().equals(credentials.username())
                 || !superAdmin.getPassword().equals(credentials.password())) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid superadmin credentials");
+            return unauthorized(response, "Invalid superadmin credentials");
         }
         return true;
     }
 
-    private Credentials extractCredentials(HttpServletRequest request) {
+    private Credentials extractCredentials(HttpServletRequest request, HttpServletResponse response) {
         String authorization = request.getHeader(HttpHeaders.AUTHORIZATION);
         if (authorization == null || !authorization.startsWith(BASIC_PREFIX)) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Missing Basic authorization header");
+            unauthorized(response, "Missing Basic authorization header");
+            return null;
         }
 
         String decoded;
@@ -43,15 +48,27 @@ public class SuperAdminAuthInterceptor implements HandlerInterceptor {
                     Base64.getDecoder().decode(authorization.substring(BASIC_PREFIX.length())),
                     StandardCharsets.UTF_8);
         } catch (IllegalArgumentException ex) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid Basic authorization header");
+            unauthorized(response, "Invalid Basic authorization header");
+            return null;
         }
 
         int separatorIndex = decoded.indexOf(':');
         if (separatorIndex <= 0) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid Basic authorization header");
+            unauthorized(response, "Invalid Basic authorization header");
+            return null;
         }
 
         return new Credentials(decoded.substring(0, separatorIndex), decoded.substring(separatorIndex + 1));
+    }
+
+    private boolean unauthorized(HttpServletResponse response, String message) {
+        response.setHeader(HttpHeaders.WWW_AUTHENTICATE, "Basic realm=\"" + REALM + "\"");
+        try {
+            response.sendError(HttpStatus.UNAUTHORIZED.value(), message);
+        } catch (IOException ex) {
+            throw new IllegalStateException("Failed to write unauthorized response", ex);
+        }
+        return false;
     }
 
     private record Credentials(String username, String password) {

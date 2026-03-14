@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="'Bookings | ' + ${slug}">Bookings</title>
+    <link rel="stylesheet" th:href="@{/css/admin-panel.css}">
+</head>
+<body>
+<div class="shell">
+    <header class="page-header">
+        <div>
+            <p class="eyebrow">Admin panel</p>
+            <h1 th:text="'Bookings for ' + ${slug}">Bookings</h1>
+        </div>
+        <nav class="nav">
+            <a class="nav-link active" th:href="@{/admin/{slug}/panel/bookings(slug=${slug})}">Bookings</a>
+            <a class="nav-link" th:href="@{/admin/{slug}/panel/services(slug=${slug})}">Services</a>
+        </nav>
+    </header>
+
+    <section class="card">
+        <form class="filters" method="get" th:action="@{/admin/{slug}/panel/bookings(slug=${slug})}">
+            <label>
+                <span>Status</span>
+                <select name="status">
+                    <option value="">All</option>
+                    <option th:each="statusOption : ${statuses}"
+                            th:value="${statusOption}"
+                            th:text="${statusOption}"
+                            th:selected="${statusOption == selectedStatus}"></option>
+                </select>
+            </label>
+            <label>
+                <span>Delivery date</span>
+                <input type="date" name="deliveryDate" th:value="${deliveryDate}">
+            </label>
+            <button type="submit">Filter</button>
+        </form>
+    </section>
+
+    <section class="card">
+        <table>
+            <thead>
+            <tr>
+                <th>ID</th>
+                <th>Customer</th>
+                <th>Status</th>
+                <th>Delivery</th>
+                <th>Total</th>
+                <th></th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:if="${#lists.isEmpty(bookings)}">
+                <td colspan="6" class="empty">No bookings found.</td>
+            </tr>
+            <tr th:each="booking : ${bookings}">
+                <td th:text="${booking.id}">1</td>
+                <td th:text="${booking.customerName}">Alice</td>
+                <td><span class="badge" th:text="${booking.status}">NEW</span></td>
+                <td th:text="${booking.deliveryDate}">2026-03-14</td>
+                <td th:text="${booking.totalPrice}">12.50</td>
+                <td>
+                    <a th:href="@{/admin/{slug}/panel/bookings/{bookingId}(slug=${slug}, bookingId=${booking.id})}">
+                        View
+                    </a>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+    </section>
+</div>
+</body>
+</html>
