@@ -23,7 +23,8 @@ public class CatalogQueryService {
                         service.getPrice(),
                         service.getUnit(),
                         service.getDurationMinutes(),
-                        service.getSortOrder()))
+                        service.getSortOrder(),
+                        service.isActive()))
                 .toList();
     }
 }

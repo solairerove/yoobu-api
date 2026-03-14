@@ -113,7 +113,7 @@ public class AdminPanelServiceController {
         form.setUnit(service.unit());
         form.setDurationMinutes(service.durationMinutes());
         form.setSortOrder(service.sortOrder());
-        form.setActive(true);
+        form.setActive(service.active());
         return form;
     }
 

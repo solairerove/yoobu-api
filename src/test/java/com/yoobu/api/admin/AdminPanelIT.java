@@ -103,4 +103,30 @@ class AdminPanelIT extends IntegrationTestSupport {
                 .andExpect(status().is3xxRedirection())
                 .andExpect(header().string("Location", "/admin/food-tenant/panel/bookings"));
     }
+
+    @Test
+    void editServiceFormPreservesInactiveState() throws Exception {
+        createFoodOrderTenant("food-tenant", "Food Tenant", "food-bot-token", "food-admin", "food-secret");
+
+        JsonNode service = createService("food-tenant", "food-admin", "food-secret", "Pizza", "12.50");
+        long serviceId = service.get("id").asLong();
+
+        mockMvc.perform(post("/admin/food-tenant/panel/services/" + serviceId)
+                        .header(AUTHORIZATION, basicAuth("food-admin", "food-secret"))
+                        .param("name", "Pizza")
+                        .param("description", "Thin crust")
+                        .param("price", "12.50")
+                        .param("unit", "pcs")
+                        .param("durationMinutes", "20")
+                        .param("sortOrder", "1"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(header().string("Location", "/admin/food-tenant/panel/services"));
+
+        mockMvc.perform(get("/admin/food-tenant/panel/services/" + serviceId + "/edit")
+                        .header(AUTHORIZATION, basicAuth("food-admin", "food-secret")))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("name=\"active\"")))
+                .andExpect(content().string(org.hamcrest.Matchers.not(containsString(
+                        "type=\"checkbox\" id=\"active\" name=\"active\" value=\"true\" checked=\"checked\""))));
+    }
 }

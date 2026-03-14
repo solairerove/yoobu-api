@@ -9,6 +9,7 @@ public record ServiceResponse(
         BigDecimal price,
         String unit,
         Integer durationMinutes,
-        int sortOrder
+        int sortOrder,
+        boolean active
 ) {
 }

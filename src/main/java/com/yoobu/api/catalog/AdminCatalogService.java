@@ -151,7 +151,8 @@ public class AdminCatalogService {
                 service.getPrice(),
                 service.getUnit(),
                 service.getDurationMinutes(),
-                service.getSortOrder()
+                service.getSortOrder(),
+                service.isActive()
         );
     }
 
