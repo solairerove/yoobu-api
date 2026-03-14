@@ -78,6 +78,15 @@ class SuperAdminTenantControllerIT extends IntegrationTestSupport {
                 .andExpect(jsonPath("$[0].active").value(true))
                 .andExpect(jsonPath("$[0].timezone").value("Europe/Warsaw"))
                 .andExpect(jsonPath("$[0].createdAt").isString());
+
+        var auditLog = latestAuditLog("tenant", "CREATE");
+        assertEquals(1, auditLogCount());
+        assertEquals("tenant", auditLog.get("entity").asText());
+        assertEquals("CREATE", auditLog.get("action").asText());
+        assertEquals(1L, auditLog.get("tenant_id").asLong());
+        assertEquals(1L, auditLog.get("entity_id").asLong());
+        assertEquals(true, objectMapper.readTree(auditLog.get("new_value").asText()).get("botTokenConfigured").asBoolean());
+        assertEquals("admin", objectMapper.readTree(auditLog.get("new_value").asText()).get("adminUsername").asText());
     }
 
     @Test
@@ -177,6 +186,13 @@ class SuperAdminTenantControllerIT extends IntegrationTestSupport {
                         .header(AUTHORIZATION, basicAuth("admin-after", "secret-after")))
                 .andExpect(status().isBadRequest())
                 .andExpect(status().reason("Tenant does not support food ordering"));
+
+        var auditLog = latestAuditLog("tenant", "UPDATE");
+        assertEquals("UPDATE", auditLog.get("action").asText());
+        assertEquals(tenantId, auditLog.get("entity_id").asLong());
+        assertEquals("Tenant Before", objectMapper.readTree(auditLog.get("old_value").asText()).get("name").asText());
+        assertEquals("Tenant After", objectMapper.readTree(auditLog.get("new_value").asText()).get("name").asText());
+        assertEquals("APPOINTMENT", objectMapper.readTree(auditLog.get("new_value").asText()).get("type").asText());
     }
 
     @Test

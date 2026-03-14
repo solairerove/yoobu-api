@@ -1,5 +1,6 @@
 package com.yoobu.api.catalog;
 
+import com.yoobu.api.audit.AuditLogService;
 import com.yoobu.api.catalog.dto.AdminUpsertServiceRequest;
 import com.yoobu.api.catalog.dto.ServiceResponse;
 import com.yoobu.api.tenant.Tenant;
@@ -19,6 +20,9 @@ import org.springframework.web.server.ResponseStatusException;
 @RequiredArgsConstructor
 public class AdminCatalogService {
 
+    private static final String ENTITY_NAME = "service";
+
+    private final AuditLogService auditLogService;
     private final CatalogServiceRepository catalogServiceRepository;
 
     @Transactional(readOnly = true)
@@ -54,7 +58,16 @@ public class AdminCatalogService {
         service.setCreatedAt(now);
         service.setUpdatedAt(now);
 
-        return toResponse(catalogServiceRepository.save(service));
+        CatalogService savedService = catalogServiceRepository.save(service);
+        auditLogService.logCreate(
+                tenant.getId(),
+                ENTITY_NAME,
+                savedService.getId(),
+                auditLogService.currentActorId(),
+                toAuditSnapshot(savedService)
+        );
+
+        return toResponse(savedService);
     }
 
     @Transactional
@@ -64,12 +77,23 @@ public class AdminCatalogService {
         CatalogService service = catalogServiceRepository.findByIdAndTenantIdAndDeletedAtIsNull(
                         serviceId, TenantContext.getRequiredTenantId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Service not found"));
+        ServiceAuditSnapshot oldSnapshot = toAuditSnapshot(service);
 
         applyRequest(service, request);
         service.setActive(request.active() == null || request.active());
         service.setUpdatedAt(OffsetDateTime.now(ZoneOffset.UTC));
 
-        return toResponse(catalogServiceRepository.save(service));
+        CatalogService savedService = catalogServiceRepository.save(service);
+        auditLogService.logUpdate(
+                savedService.getTenant().getId(),
+                ENTITY_NAME,
+                savedService.getId(),
+                auditLogService.currentActorId(),
+                oldSnapshot,
+                toAuditSnapshot(savedService)
+        );
+
+        return toResponse(savedService);
     }
 
     @Transactional
@@ -79,12 +103,22 @@ public class AdminCatalogService {
         CatalogService service = catalogServiceRepository.findByIdAndTenantIdAndDeletedAtIsNull(
                         serviceId, TenantContext.getRequiredTenantId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Service not found"));
+        ServiceAuditSnapshot oldSnapshot = toAuditSnapshot(service);
 
         OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
         service.setActive(false);
         service.setDeletedAt(now);
         service.setUpdatedAt(now);
-        catalogServiceRepository.save(service);
+        CatalogService savedService = catalogServiceRepository.save(service);
+        auditLogService.logAction(
+                savedService.getTenant().getId(),
+                ENTITY_NAME,
+                savedService.getId(),
+                "DEACTIVATE",
+                auditLogService.currentActorId(),
+                oldSnapshot,
+                toAuditSnapshot(savedService)
+        );
     }
 
     private Tenant requireFoodOrderTenant() {
@@ -117,5 +151,34 @@ public class AdminCatalogService {
                 service.getDurationMinutes(),
                 service.getSortOrder()
         );
+    }
+
+    private ServiceAuditSnapshot toAuditSnapshot(CatalogService service) {
+        return new ServiceAuditSnapshot(
+                service.getId(),
+                service.getTenant().getId(),
+                service.getName(),
+                service.getDescription(),
+                service.getPrice(),
+                service.getUnit(),
+                service.getDurationMinutes(),
+                service.isActive(),
+                service.getSortOrder(),
+                service.getDeletedAt()
+        );
+    }
+
+    private record ServiceAuditSnapshot(
+            Long id,
+            Long tenantId,
+            String name,
+            String description,
+            java.math.BigDecimal price,
+            String unit,
+            Integer durationMinutes,
+            boolean active,
+            int sortOrder,
+            OffsetDateTime deletedAt
+    ) {
     }
 }

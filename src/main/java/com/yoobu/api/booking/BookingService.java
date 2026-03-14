@@ -1,5 +1,6 @@
 package com.yoobu.api.booking;
 
+import com.yoobu.api.audit.AuditLogService;
 import com.yoobu.api.booking.dto.BookingItemRequest;
 import com.yoobu.api.booking.dto.BookingItemResponse;
 import com.yoobu.api.booking.dto.BookingResponse;
@@ -28,6 +29,9 @@ import org.springframework.web.server.ResponseStatusException;
 @RequiredArgsConstructor
 public class BookingService {
 
+    private static final String ENTITY_NAME = "booking";
+
+    private final AuditLogService auditLogService;
     private final BookingRepository bookingRepository;
     private final BookingItemRepository bookingItemRepository;
     private final CatalogServiceRepository catalogServiceRepository;
@@ -67,7 +71,16 @@ public class BookingService {
         savedBooking.setTotalPrice(totalPrice);
         savedBooking.setUpdatedAt(now);
 
-        return toResponse(bookingRepository.save(savedBooking), bookingItems);
+        Booking persistedBooking = bookingRepository.save(savedBooking);
+        auditLogService.logCreate(
+                tenant.getId(),
+                ENTITY_NAME,
+                persistedBooking.getId(),
+                telegramUserId,
+                toAuditSnapshot(persistedBooking, bookingItems)
+        );
+
+        return toResponse(persistedBooking, bookingItems);
     }
 
     @Transactional(readOnly = true)
@@ -104,10 +117,22 @@ public class BookingService {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Completed booking cannot be cancelled");
         }
 
+        BookingAuditSnapshot oldSnapshot = toAuditSnapshot(booking);
         booking.setStatus(BookingStatus.CANCELLED);
         booking.setUpdatedAt(OffsetDateTime.now(ZoneOffset.UTC));
 
-        return toResponse(bookingRepository.save(booking));
+        Booking savedBooking = bookingRepository.save(booking);
+        auditLogService.logAction(
+                savedBooking.getTenant().getId(),
+                ENTITY_NAME,
+                savedBooking.getId(),
+                "CANCEL",
+                telegramUserId,
+                oldSnapshot,
+                toAuditSnapshot(savedBooking)
+        );
+
+        return toResponse(savedBooking);
     }
 
     @Transactional(readOnly = true)
@@ -153,11 +178,23 @@ public class BookingService {
         Booking booking = bookingRepository.findByIdAndTenantIdAndDeletedAtIsNull(
                         bookingId, TenantContext.getRequiredTenantId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Booking not found"));
+        BookingAuditSnapshot oldSnapshot = toAuditSnapshot(booking);
 
         booking.setStatus(status);
         booking.setUpdatedAt(OffsetDateTime.now(ZoneOffset.UTC));
 
-        return toResponse(bookingRepository.save(booking));
+        Booking savedBooking = bookingRepository.save(booking);
+        auditLogService.logAction(
+                savedBooking.getTenant().getId(),
+                ENTITY_NAME,
+                savedBooking.getId(),
+                "UPDATE_STATUS",
+                auditLogService.currentActorId(),
+                oldSnapshot,
+                toAuditSnapshot(savedBooking)
+        );
+
+        return toResponse(savedBooking);
     }
 
     private Tenant requireFoodOrderTenant() {
@@ -230,5 +267,59 @@ public class BookingService {
                 itemResponses,
                 booking.getCreatedAt()
         );
+    }
+
+    private BookingAuditSnapshot toAuditSnapshot(Booking booking) {
+        return toAuditSnapshot(booking, bookingItemRepository.findByBookingIdOrderByIdAsc(booking.getId()));
+    }
+
+    private BookingAuditSnapshot toAuditSnapshot(Booking booking, List<BookingItem> items) {
+        List<BookingItemAuditSnapshot> itemSnapshots = items.stream()
+                .map(item -> new BookingItemAuditSnapshot(
+                        item.getService().getId(),
+                        item.getService().getName(),
+                        item.getQuantity(),
+                        item.getUnitPrice()
+                ))
+                .toList();
+
+        return new BookingAuditSnapshot(
+                booking.getId(),
+                booking.getTenant().getId(),
+                booking.getType(),
+                booking.getTelegramUserId(),
+                booking.getCustomerName(),
+                booking.getCustomerPhone(),
+                booking.getStatus(),
+                booking.getNote(),
+                booking.getTotalPrice(),
+                booking.getDeliveryDate(),
+                booking.getDeletedAt(),
+                itemSnapshots
+        );
+    }
+
+    private record BookingAuditSnapshot(
+            Long id,
+            Long tenantId,
+            BookingType type,
+            Long telegramUserId,
+            String customerName,
+            String customerPhone,
+            BookingStatus status,
+            String note,
+            BigDecimal totalPrice,
+            LocalDate deliveryDate,
+            OffsetDateTime deletedAt,
+            List<BookingItemAuditSnapshot> items
+    ) {
+    }
+
+    private record BookingItemAuditSnapshot(
+            Long serviceId,
+            String serviceName,
+            int quantity,
+            BigDecimal unitPrice
+    ) {
     }
 }

@@ -249,4 +249,39 @@ public abstract class IntegrationTestSupport {
                 }
                 """.formatted(deliveryDate, serviceId, quantity);
     }
+
+    protected int auditLogCount() {
+        Integer count = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM audit_log", Integer.class);
+        return count != null ? count : 0;
+    }
+
+    protected JsonNode latestAuditLog() throws Exception {
+        return latestAuditLog(null, null);
+    }
+
+    protected JsonNode latestAuditLog(String entity, String action) throws Exception {
+        StringBuilder sql = new StringBuilder("""
+                SELECT row_to_json(entry)
+                FROM (
+                    SELECT id, tenant_id, entity, entity_id, action, actor_id, old_value, new_value, created_at
+                    FROM audit_log
+                """);
+
+        if (entity != null || action != null) {
+            sql.append(" WHERE ");
+            if (entity != null) {
+                sql.append("entity = '").append(entity).append("'");
+            }
+            if (action != null) {
+                if (entity != null) {
+                    sql.append(" AND ");
+                }
+                sql.append("action = '").append(action).append("'");
+            }
+        }
+
+        sql.append(" ORDER BY id DESC LIMIT 1) entry");
+        String json = jdbcTemplate.queryForObject(sql.toString(), String.class);
+        return objectMapper.readTree(json);
+    }
 }

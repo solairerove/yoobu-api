@@ -50,6 +50,18 @@ class BookingLifecycleIT extends IntegrationTestSupport {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(bookingId))
                 .andExpect(jsonPath("$.status").value("CANCELLED"));
+
+        JsonNode createAuditLog = latestAuditLog("booking", "CREATE");
+        JsonNode createValue = objectMapper.readTree(createAuditLog.get("new_value").asText());
+        org.junit.jupiter.api.Assertions.assertEquals(101L, createAuditLog.get("actor_id").asLong());
+        org.junit.jupiter.api.Assertions.assertEquals("NEW", createValue.get("status").asText());
+        org.junit.jupiter.api.Assertions.assertEquals(2, createValue.get("items").get(0).get("quantity").asInt());
+
+        JsonNode cancelAuditLog = latestAuditLog("booking", "CANCEL");
+        JsonNode oldValue = objectMapper.readTree(cancelAuditLog.get("old_value").asText());
+        JsonNode newValue = objectMapper.readTree(cancelAuditLog.get("new_value").asText());
+        org.junit.jupiter.api.Assertions.assertEquals("NEW", oldValue.get("status").asText());
+        org.junit.jupiter.api.Assertions.assertEquals("CANCELLED", newValue.get("status").asText());
     }
 
     @Test
@@ -96,6 +108,13 @@ class BookingLifecycleIT extends IntegrationTestSupport {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(bookingId))
                 .andExpect(jsonPath("$.status").value("CONFIRMED"));
+
+        JsonNode auditLog = latestAuditLog("booking", "UPDATE_STATUS");
+        JsonNode oldValue = objectMapper.readTree(auditLog.get("old_value").asText());
+        JsonNode newValue = objectMapper.readTree(auditLog.get("new_value").asText());
+        org.junit.jupiter.api.Assertions.assertTrue(auditLog.get("actor_id").isNull());
+        org.junit.jupiter.api.Assertions.assertEquals("NEW", oldValue.get("status").asText());
+        org.junit.jupiter.api.Assertions.assertEquals("CONFIRMED", newValue.get("status").asText());
     }
 
     @Test
