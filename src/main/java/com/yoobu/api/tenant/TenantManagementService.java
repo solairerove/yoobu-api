@@ -3,9 +3,11 @@ package com.yoobu.api.tenant;
 import com.yoobu.api.tenant.dto.CreateTenantRequest;
 import com.yoobu.api.tenant.dto.TenantDetailResponse;
 import com.yoobu.api.tenant.dto.TenantSummaryResponse;
+import com.yoobu.api.tenant.dto.UpdateTenantRequest;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -75,9 +77,9 @@ public class TenantManagementService {
         tenant.setSlug(request.slug());
         tenant.setName(request.name());
         tenant.setType(request.type());
-        tenant.setBotToken(request.botToken());
+        tenant.setBotToken(normalizeOptional(request.botToken()));
         tenant.setOwnerTelegramId(request.ownerTelegramId());
-        tenant.setTimezone(StringUtils.hasText(request.timezone()) ? request.timezone() : "Asia/Ho_Chi_Minh");
+        tenant.setTimezone(normalizeTimezone(request.timezone()));
         tenant.setActive(true);
         tenant.setCreatedAt(now);
 
@@ -102,6 +104,43 @@ public class TenantManagementService {
         );
     }
 
+    @Transactional
+    public TenantSummaryResponse updateTenant(Long tenantId, UpdateTenantRequest request) {
+        Tenant tenant = tenantRepository.findById(tenantId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Tenant not found"));
+
+        tenant.setName(request.name());
+        tenant.setType(request.type());
+        tenant.setBotToken(normalizeOptional(request.botToken()));
+        tenant.setOwnerTelegramId(request.ownerTelegramId());
+        tenant.setTimezone(normalizeTimezone(request.timezone()));
+        tenant.setActive(request.active());
+
+        Tenant savedTenant = tenantRepository.save(tenant);
+
+        Map<String, TenantConfig> existingConfigs = new HashMap<>();
+        tenantConfigRepository.findByTenantId(tenantId)
+                .forEach(entry -> existingConfigs.put(entry.getKey(), entry));
+
+        upsertConfig(existingConfigs, savedTenant, "admin_username", request.adminUsername(), false);
+        if (StringUtils.hasText(request.adminPassword())) {
+            upsertConfig(existingConfigs, savedTenant, "admin_password", passwordEncoder.encode(request.adminPassword()), false);
+        }
+        upsertConfig(existingConfigs, savedTenant, "primary_color", request.primaryColor(), true);
+        upsertConfig(existingConfigs, savedTenant, "logo_url", request.logoUrl(), true);
+        upsertConfig(existingConfigs, savedTenant, "welcome_message", request.welcomeMessage(), true);
+
+        return new TenantSummaryResponse(
+                savedTenant.getId(),
+                savedTenant.getSlug(),
+                savedTenant.getName(),
+                savedTenant.getType(),
+                savedTenant.isActive(),
+                savedTenant.getTimezone(),
+                savedTenant.getCreatedAt()
+        );
+    }
+
     private void addConfig(List<TenantConfig> configs, Tenant tenant, String key, String value) {
         if (!StringUtils.hasText(value)) {
             return;
@@ -111,5 +150,39 @@ public class TenantManagementService {
         config.setKey(key);
         config.setValue(value);
         configs.add(config);
+    }
+
+    private void upsertConfig(
+            Map<String, TenantConfig> existingConfigs,
+            Tenant tenant,
+            String key,
+            String value,
+            boolean removeWhenBlank
+    ) {
+        TenantConfig existing = existingConfigs.get(key);
+        String normalizedValue = normalizeOptional(value);
+
+        if (!StringUtils.hasText(normalizedValue)) {
+            if (removeWhenBlank && existing != null) {
+                tenantConfigRepository.delete(existing);
+            }
+            return;
+        }
+
+        TenantConfig config = existing != null ? existing : new TenantConfig();
+        if (existing == null) {
+            config.setTenant(tenant);
+            config.setKey(key);
+        }
+        config.setValue(normalizedValue);
+        tenantConfigRepository.save(config);
+    }
+
+    private String normalizeOptional(String value) {
+        return StringUtils.hasText(value) ? value.trim() : null;
+    }
+
+    private String normalizeTimezone(String timezone) {
+        return StringUtils.hasText(timezone) ? timezone.trim() : "Asia/Ho_Chi_Minh";
     }
 }

@@ -62,6 +62,52 @@ class SuperAdminPanelIT extends IntegrationTestSupport {
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("Panel Tenant")))
                 .andExpect(content().string(containsString("panel-admin")))
+                .andExpect(content().string(containsString("Edit tenant")))
                 .andExpect(content().string(containsString("/t/panel-tenant/services")));
+    }
+
+    @Test
+    void superAdminPanelCanEditTenantAndRotateCredentials() throws Exception {
+        long tenantId = createFoodOrderTenant("panel-edit", "Panel Before", "bot-before", "panel-admin", "panel-secret")
+                .get("id").asLong();
+
+        mockMvc.perform(get("/superadmin/panel/tenants/" + tenantId + "/edit")
+                        .header(AUTHORIZATION, basicAuth("test-superadmin", "test-password")))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("Edit tenant")))
+                .andExpect(content().string(containsString("panel-edit")));
+
+        mockMvc.perform(post("/superadmin/panel/tenants/" + tenantId)
+                        .header(AUTHORIZATION, basicAuth("test-superadmin", "test-password"))
+                        .param("slug", "panel-edit")
+                        .param("name", "Panel After")
+                        .param("type", "FOOD_ORDER")
+                        .param("botToken", "")
+                        .param("ownerTelegramId", "")
+                        .param("timezone", "Asia/Ho_Chi_Minh")
+                        .param("primaryColor", "")
+                        .param("logoUrl", "https://cdn.example.com/panel-updated.png")
+                        .param("welcomeMessage", "Updated from panel")
+                        .param("adminUsername", "panel-admin-2")
+                        .param("adminPassword", "panel-secret-2")
+                        .param("active", "true"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(header().string("Location", "/superadmin/panel/tenants/" + tenantId));
+
+        mockMvc.perform(get("/superadmin/panel/tenants/" + tenantId)
+                        .header(AUTHORIZATION, basicAuth("test-superadmin", "test-password")))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("Panel After")))
+                .andExpect(content().string(containsString("panel-admin-2")))
+                .andExpect(content().string(containsString("Yes")))
+                .andExpect(content().string(containsString("https://cdn.example.com/panel-updated.png")));
+
+        mockMvc.perform(get("/admin/panel-edit/services")
+                        .header(AUTHORIZATION, basicAuth("panel-admin", "panel-secret")))
+                .andExpect(status().isUnauthorized());
+
+        mockMvc.perform(get("/admin/panel-edit/services")
+                        .header(AUTHORIZATION, basicAuth("panel-admin-2", "panel-secret-2")))
+                .andExpect(status().isOk());
     }
 }

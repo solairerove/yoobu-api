@@ -30,8 +30,9 @@ public class SuperAdminTenantForm {
     @NotBlank
     private String adminUsername;
 
-    @NotBlank
     private String adminPassword;
+
+    private boolean active = true;
 
     public String getSlug() {
         return slug;
@@ -119,5 +120,13 @@ public class SuperAdminTenantForm {
 
     public void setAdminPassword(String adminPassword) {
         this.adminPassword = adminPassword;
+    }
+
+    public boolean isActive() {
+        return active;
+    }
+
+    public void setActive(boolean active) {
+        this.active = active;
     }
 }

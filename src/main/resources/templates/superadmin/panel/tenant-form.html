@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Create Tenant | Superadmin</title>
+    <title th:text="${formMode == 'edit' ? 'Edit Tenant | Superadmin' : 'Create Tenant | Superadmin'}">Tenant form | Superadmin</title>
     <link rel="stylesheet" th:href="@{/css/admin-panel.css}">
 </head>
 <body>
@@ -11,22 +11,30 @@
     <header class="page-header">
         <div>
             <p class="eyebrow">Superadmin panel</p>
-            <h1>Create tenant</h1>
+            <h1 th:text="${formMode == 'edit' ? 'Edit tenant' : 'Create tenant'}">Tenant form</h1>
         </div>
         <nav class="nav">
             <a class="nav-link" th:href="@{/superadmin/panel/tenants}">Tenants</a>
-            <a class="nav-link active" th:href="@{/superadmin/panel/tenants/new}">Create tenant</a>
+            <a class="nav-link"
+               th:classappend="${formMode == 'create'} ? ' active'"
+               th:href="@{/superadmin/panel/tenants/new}">Create tenant</a>
+            <a class="nav-link"
+               th:if="${formMode == 'edit'}"
+               th:classappend="${formMode == 'edit'} ? ' active'"
+               th:href="@{/superadmin/panel/tenants/{tenantId}/edit(tenantId=${tenantId})}">Edit</a>
         </nav>
     </header>
 
     <section class="card">
-        <form method="post" th:action="@{/superadmin/panel/tenants}" th:object="${tenantForm}">
+        <form method="post"
+              th:action="${formMode == 'edit'} ? @{/superadmin/panel/tenants/{tenantId}(tenantId=${tenantId})} : @{/superadmin/panel/tenants}"
+              th:object="${tenantForm}">
             <p class="error" th:if="${formError}" th:text="${formError}">Tenant error</p>
 
             <div class="field-row">
                 <label>
                     <span>Slug</span>
-                    <input type="text" th:field="*{slug}">
+                    <input type="text" th:field="*{slug}" th:readonly="${formMode == 'edit'}">
                 </label>
                 <label>
                     <span>Name</span>
@@ -57,12 +65,12 @@
                     <input type="text" th:field="*{adminUsername}">
                 </label>
                 <label>
-                    <span>Admin password</span>
+                    <span th:text="${formMode == 'edit' ? 'Admin password (leave blank to keep)' : 'Admin password'}">Admin password</span>
                     <input type="text" th:field="*{adminPassword}">
                 </label>
             </div>
             <p class="error" th:if="${#fields.hasErrors('adminUsername')}" th:errors="*{adminUsername}">Admin user error</p>
-            <p class="error" th:if="${#fields.hasErrors('adminPassword')}" th:errors="*{adminPassword}">Admin password error</p>
+            <p class="error" th:if="${formMode == 'create' and #fields.hasErrors('adminPassword')}" th:errors="*{adminPassword}">Admin password error</p>
 
             <div class="field-row">
                 <label>
@@ -91,9 +99,15 @@
                 <textarea rows="4" th:field="*{welcomeMessage}"></textarea>
             </label>
 
+            <label th:if="${formMode == 'edit'}">
+                <span>Active</span>
+                <input type="checkbox" th:field="*{active}">
+            </label>
+
             <div class="actions">
-                <a class="secondary-link" th:href="@{/superadmin/panel/tenants}">Cancel</a>
-                <button type="submit">Create tenant</button>
+                <a class="secondary-link"
+                   th:href="${formMode == 'edit'} ? @{/superadmin/panel/tenants/{tenantId}(tenantId=${tenantId})} : @{/superadmin/panel/tenants}">Cancel</a>
+                <button type="submit" th:text="${formMode == 'edit' ? 'Save changes' : 'Create tenant'}">Submit</button>
             </div>
         </form>
     </section>
