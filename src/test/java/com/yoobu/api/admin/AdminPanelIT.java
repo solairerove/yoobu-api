@@ -66,7 +66,7 @@ class AdminPanelIT extends IntegrationTestSupport {
                         .param("unit", "bowl")
                         .param("durationMinutes", "25")
                         .param("sortOrder", "2")
-                        .param("active", "true"))
+                        .param("status", "ACTIVE"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(header().string("Location", "/admin/food-tenant/panel/services"));
 
@@ -78,7 +78,7 @@ class AdminPanelIT extends IntegrationTestSupport {
                         .param("unit", "pcs")
                         .param("durationMinutes", "20")
                         .param("sortOrder", "1")
-                        .param("active", "true"))
+                        .param("status", "ACTIVE"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(header().string("Location", "/admin/food-tenant/panel/services"));
 
@@ -118,15 +118,15 @@ class AdminPanelIT extends IntegrationTestSupport {
                         .param("price", "12.50")
                         .param("unit", "pcs")
                         .param("durationMinutes", "20")
-                        .param("sortOrder", "1"))
+                        .param("sortOrder", "1")
+                        .param("status", "INACTIVE"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(header().string("Location", "/admin/food-tenant/panel/services"));
 
         mockMvc.perform(get("/admin/food-tenant/panel/services/" + serviceId + "/edit")
                         .header(AUTHORIZATION, basicAuth("food-admin", "food-secret")))
                 .andExpect(status().isOk())
-                .andExpect(content().string(containsString("name=\"active\"")))
-                .andExpect(content().string(org.hamcrest.Matchers.not(containsString(
-                        "type=\"checkbox\" id=\"active\" name=\"active\" value=\"true\" checked=\"checked\""))));
+                .andExpect(content().string(containsString("name=\"status\"")))
+                .andExpect(content().string(containsString("value=\"INACTIVE\" selected=\"selected\"")));
     }
 }

@@ -3,6 +3,8 @@ package com.yoobu.api.catalog;
 import com.yoobu.api.tenant.Tenant;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -47,8 +49,9 @@ public class CatalogService {
     @Column(name = "duration_minutes")
     private Integer durationMinutes;
 
-    @Column(nullable = false)
-    private boolean active;
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private ServiceStatus status;
 
     @Column(name = "sort_order", nullable = false)
     private int sortOrder;

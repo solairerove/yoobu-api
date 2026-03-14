@@ -30,8 +30,8 @@ public class AdminCatalogService {
     @Transactional(readOnly = true)
     public List<ServiceResponse> getAdminServices() {
         requireFoodOrderTenant();
-        return catalogServiceRepository.findByTenantIdAndDeletedAtIsNullOrderBySortOrderAscIdAsc(
-                        TenantContext.getRequiredTenantId())
+        return catalogServiceRepository.findByTenantIdAndStatusNotOrderBySortOrderAscIdAsc(
+                        TenantContext.getRequiredTenantId(), ServiceStatus.DELETED)
                 .stream()
                 .map(this::toResponse)
                 .toList();
@@ -41,8 +41,8 @@ public class AdminCatalogService {
     public ServiceResponse getAdminService(Long serviceId) {
         requireFoodOrderTenant();
 
-        CatalogService service = catalogServiceRepository.findByIdAndTenantIdAndDeletedAtIsNull(
-                        serviceId, TenantContext.getRequiredTenantId())
+        CatalogService service = catalogServiceRepository.findByIdAndTenantIdAndStatusNot(
+                        serviceId, TenantContext.getRequiredTenantId(), ServiceStatus.DELETED)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Service not found"));
 
         return toResponse(service);
@@ -56,7 +56,8 @@ public class AdminCatalogService {
         CatalogService service = new CatalogService();
         service.setTenant(tenant);
         applyRequest(service, request);
-        service.setActive(request.active() == null || request.active());
+        service.setStatus(resolveUpsertStatus(request.status()));
+        service.setDeletedAt(null);
         service.setCreatedAt(now);
         service.setUpdatedAt(now);
 
@@ -76,13 +77,17 @@ public class AdminCatalogService {
     public ServiceResponse updateService(Long serviceId, AdminUpsertServiceRequest request) {
         requireFoodOrderTenant();
 
-        CatalogService service = catalogServiceRepository.findByIdAndTenantIdAndDeletedAtIsNull(
-                        serviceId, TenantContext.getRequiredTenantId())
+        CatalogService service = catalogServiceRepository.findByIdAndTenantIdAndStatusNot(
+                        serviceId, TenantContext.getRequiredTenantId(), ServiceStatus.DELETED)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Service not found"));
         Map<String, Object> oldSnapshot = toAuditSnapshot(service);
 
         applyRequest(service, request);
-        service.setActive(request.active() == null || request.active());
+        ServiceStatus status = resolveUpsertStatus(request.status());
+        service.setStatus(status);
+        if (status != ServiceStatus.DELETED) {
+            service.setDeletedAt(null);
+        }
         service.setUpdatedAt(OffsetDateTime.now(ZoneOffset.UTC));
 
         CatalogService savedService = catalogServiceRepository.save(service);
@@ -99,16 +104,16 @@ public class AdminCatalogService {
     }
 
     @Transactional
-    public void deactivateService(Long serviceId) {
+    public void deleteService(Long serviceId) {
         requireFoodOrderTenant();
 
-        CatalogService service = catalogServiceRepository.findByIdAndTenantIdAndDeletedAtIsNull(
-                        serviceId, TenantContext.getRequiredTenantId())
+        CatalogService service = catalogServiceRepository.findByIdAndTenantIdAndStatusNot(
+                        serviceId, TenantContext.getRequiredTenantId(), ServiceStatus.DELETED)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Service not found"));
         Map<String, Object> oldSnapshot = toAuditSnapshot(service);
 
         OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
-        service.setActive(false);
+        service.setStatus(ServiceStatus.DELETED);
         service.setDeletedAt(now);
         service.setUpdatedAt(now);
         CatalogService savedService = catalogServiceRepository.save(service);
@@ -116,11 +121,21 @@ public class AdminCatalogService {
                 savedService.getTenant().getId(),
                 ENTITY_NAME,
                 savedService.getId(),
-                "DEACTIVATE",
+                "DELETE",
                 auditLogService.currentActorId(),
                 oldSnapshot,
                 toAuditSnapshot(savedService)
         );
+    }
+
+    private ServiceStatus resolveUpsertStatus(ServiceStatus status) {
+        if (status == null) {
+            return ServiceStatus.ACTIVE;
+        }
+        if (status == ServiceStatus.DELETED) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Use delete endpoint to remove a service");
+        }
+        return status;
     }
 
     private Tenant requireFoodOrderTenant() {
@@ -152,7 +167,7 @@ public class AdminCatalogService {
                 service.getUnit(),
                 service.getDurationMinutes(),
                 service.getSortOrder(),
-                service.isActive()
+                service.getStatus()
         );
     }
 
@@ -165,7 +180,7 @@ public class AdminCatalogService {
         snapshot.put("price", service.getPrice());
         snapshot.put("unit", service.getUnit());
         snapshot.put("durationMinutes", service.getDurationMinutes());
-        snapshot.put("active", service.isActive());
+        snapshot.put("status", service.getStatus());
         snapshot.put("sortOrder", service.getSortOrder());
         snapshot.put("deletedAt", service.getDeletedAt());
         return snapshot;

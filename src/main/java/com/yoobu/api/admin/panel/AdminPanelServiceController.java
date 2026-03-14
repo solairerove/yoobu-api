@@ -1,9 +1,11 @@
 package com.yoobu.api.admin.panel;
 
 import com.yoobu.api.catalog.AdminCatalogService;
+import com.yoobu.api.catalog.ServiceStatus;
 import com.yoobu.api.catalog.dto.AdminUpsertServiceRequest;
 import com.yoobu.api.catalog.dto.ServiceResponse;
 import jakarta.validation.Valid;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -32,12 +34,8 @@ public class AdminPanelServiceController {
     public String newService(@PathVariable String slug, Model model) {
         ServiceForm form = new ServiceForm();
         form.setSortOrder(0);
-        model.addAttribute("slug", slug);
-        model.addAttribute("serviceForm", form);
-        model.addAttribute("formTitle", "New service");
-        model.addAttribute("submitLabel", "Create service");
-        model.addAttribute("formAction", "/admin/" + slug + "/panel/services");
-        return "admin/panel/service-form";
+        form.setStatus(ServiceStatus.ACTIVE);
+        return serviceFormView(slug, form, model, "New service", "Create service", null);
     }
 
     @PostMapping
@@ -84,6 +82,12 @@ public class AdminPanelServiceController {
         return "redirect:/admin/" + slug + "/panel/services";
     }
 
+    @PostMapping("/{serviceId}/delete")
+    public String deleteService(@PathVariable String slug, @PathVariable Long serviceId) {
+        adminCatalogService.deleteService(serviceId);
+        return "redirect:/admin/" + slug + "/panel/services";
+    }
+
     private String serviceFormView(
             String slug,
             ServiceForm form,
@@ -96,6 +100,8 @@ public class AdminPanelServiceController {
         model.addAttribute("serviceForm", form);
         model.addAttribute("formTitle", formTitle);
         model.addAttribute("submitLabel", submitLabel);
+        model.addAttribute("editServiceId", serviceId);
+        model.addAttribute("serviceStatuses", List.of(ServiceStatus.ACTIVE, ServiceStatus.INACTIVE));
         model.addAttribute(
                 "formAction",
                 serviceId == null
@@ -113,7 +119,7 @@ public class AdminPanelServiceController {
         form.setUnit(service.unit());
         form.setDurationMinutes(service.durationMinutes());
         form.setSortOrder(service.sortOrder());
-        form.setActive(service.active());
+        form.setStatus(service.status());
         return form;
     }
 
@@ -125,7 +131,7 @@ public class AdminPanelServiceController {
                 form.getUnit(),
                 form.getDurationMinutes(),
                 form.getSortOrder(),
-                form.isActive()
+                form.getStatus()
         );
     }
 }

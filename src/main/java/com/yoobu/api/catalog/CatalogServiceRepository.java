@@ -6,11 +6,11 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface CatalogServiceRepository extends JpaRepository<CatalogService, Long> {
 
-    List<CatalogService> findByTenantIdAndActiveTrueAndDeletedAtIsNullOrderBySortOrderAscIdAsc(Long tenantId);
+    List<CatalogService> findByTenantIdAndStatusOrderBySortOrderAscIdAsc(Long tenantId, ServiceStatus status);
 
-    List<CatalogService> findByTenantIdAndDeletedAtIsNullOrderBySortOrderAscIdAsc(Long tenantId);
+    List<CatalogService> findByTenantIdAndStatusNotOrderBySortOrderAscIdAsc(Long tenantId, ServiceStatus status);
 
-    Optional<CatalogService> findByIdAndTenantIdAndActiveTrueAndDeletedAtIsNull(Long id, Long tenantId);
+    Optional<CatalogService> findByIdAndTenantIdAndStatus(Long id, Long tenantId, ServiceStatus status);
 
-    Optional<CatalogService> findByIdAndTenantIdAndDeletedAtIsNull(Long id, Long tenantId);
+    Optional<CatalogService> findByIdAndTenantIdAndStatusNot(Long id, Long tenantId, ServiceStatus status);
 }

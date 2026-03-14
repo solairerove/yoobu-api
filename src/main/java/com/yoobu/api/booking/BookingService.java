@@ -229,8 +229,8 @@ public class BookingService {
     }
 
     private BookingItem toBookingItem(Booking booking, BookingItemRequest item, Long tenantId) {
-        CatalogService service = catalogServiceRepository.findByIdAndTenantIdAndActiveTrueAndDeletedAtIsNull(
-                        item.serviceId(), tenantId)
+        CatalogService service = catalogServiceRepository.findByIdAndTenantIdAndStatus(
+                        item.serviceId(), tenantId, com.yoobu.api.catalog.ServiceStatus.ACTIVE)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Service not found"));
 
         if (service.getPrice() == null) {

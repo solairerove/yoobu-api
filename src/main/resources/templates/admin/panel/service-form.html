@@ -55,14 +55,27 @@
                 </label>
             </div>
 
-            <label class="checkbox">
-                <input type="checkbox" th:field="*{active}">
-                <span>Active</span>
+            <label>
+                <span>Status</span>
+                <select th:field="*{status}">
+                    <option th:each="status : ${serviceStatuses}"
+                            th:value="${status}"
+                            th:text="${#strings.capitalize(#strings.toLowerCase(status.name()))}">
+                        Active
+                    </option>
+                </select>
             </label>
 
             <div class="actions">
                 <a class="secondary-link" th:href="@{/admin/{slug}/panel/services(slug=${slug})}">Cancel</a>
                 <button type="submit" th:text="${submitLabel}">Save</button>
+            </div>
+        </form>
+        <form method="post"
+              th:if="${editServiceId != null}"
+              th:action="@{/admin/{slug}/panel/services/{serviceId}/delete(slug=${slug}, serviceId=${editServiceId})}">
+            <div class="actions actions-danger">
+                <button type="submit" class="button-danger">Delete service</button>
             </div>
         </form>
     </section>

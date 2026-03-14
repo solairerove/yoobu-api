@@ -32,12 +32,13 @@
                 <th>Unit</th>
                 <th>Duration</th>
                 <th>Sort order</th>
+                <th>Status</th>
                 <th></th>
             </tr>
             </thead>
             <tbody>
             <tr th:if="${#lists.isEmpty(services)}">
-                <td colspan="6" class="empty">No services yet.</td>
+                <td colspan="7" class="empty">No services yet.</td>
             </tr>
             <tr th:each="service : ${services}">
                 <td th:text="${service.name}">Pizza</td>
@@ -45,6 +46,13 @@
                 <td th:text="${service.unit}">pcs</td>
                 <td th:text="${service.durationMinutes ?: 'N/A'}">N/A</td>
                 <td th:text="${service.sortOrder}">0</td>
+                <td>
+                    <span class="badge"
+                          th:classappend="${service.status.name() == 'ACTIVE'} ? ' badge-success' : ' badge-muted'"
+                          th:text="${#strings.capitalize(#strings.toLowerCase(service.status.name()))}">
+                        Active
+                    </span>
+                </td>
                 <td>
                     <a th:href="@{/admin/{slug}/panel/services/{serviceId}/edit(slug=${slug}, serviceId=${service.id})}">
                         Edit

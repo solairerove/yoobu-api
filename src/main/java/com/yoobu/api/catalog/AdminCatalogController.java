@@ -45,6 +45,6 @@ public class AdminCatalogController {
     @DeleteMapping("/{serviceId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void deleteService(@PathVariable Long serviceId) {
-        adminCatalogService.deactivateService(serviceId);
+        adminCatalogService.deleteService(serviceId);
     }
 }

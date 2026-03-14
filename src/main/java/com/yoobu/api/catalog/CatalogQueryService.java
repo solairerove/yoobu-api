@@ -13,8 +13,8 @@ public class CatalogQueryService {
     private final CatalogServiceRepository catalogServiceRepository;
 
     public List<ServiceResponse> getActiveServices() {
-        return catalogServiceRepository.findByTenantIdAndActiveTrueAndDeletedAtIsNullOrderBySortOrderAscIdAsc(
-                        TenantContext.getRequiredTenantId())
+        return catalogServiceRepository.findByTenantIdAndStatusOrderBySortOrderAscIdAsc(
+                        TenantContext.getRequiredTenantId(), ServiceStatus.ACTIVE)
                 .stream()
                 .map(service -> new ServiceResponse(
                         service.getId(),
@@ -24,7 +24,7 @@ public class CatalogQueryService {
                         service.getUnit(),
                         service.getDurationMinutes(),
                         service.getSortOrder(),
-                        service.isActive()))
+                        service.getStatus()))
                 .toList();
     }
 }

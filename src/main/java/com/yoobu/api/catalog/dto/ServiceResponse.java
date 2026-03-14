@@ -1,5 +1,6 @@
 package com.yoobu.api.catalog.dto;
 
+import com.yoobu.api.catalog.ServiceStatus;
 import java.math.BigDecimal;
 
 public record ServiceResponse(
@@ -10,6 +11,6 @@ public record ServiceResponse(
         String unit,
         Integer durationMinutes,
         int sortOrder,
-        boolean active
+        ServiceStatus status
 ) {
 }

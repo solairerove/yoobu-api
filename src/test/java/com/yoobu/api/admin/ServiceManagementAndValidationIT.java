@@ -52,7 +52,7 @@ class ServiceManagementAndValidationIT extends IntegrationTestSupport {
                                   "unit": "plate",
                                   "durationMinutes": 20,
                                   "sortOrder": 3,
-                                  "active": true
+                                  "status": "INACTIVE"
                                 }
                                 """))
                 .andExpect(status().isOk())
@@ -62,19 +62,32 @@ class ServiceManagementAndValidationIT extends IntegrationTestSupport {
                 .andExpect(jsonPath("$.price").value(15.75))
                 .andExpect(jsonPath("$.unit").value("plate"))
                 .andExpect(jsonPath("$.durationMinutes").value(20))
-                .andExpect(jsonPath("$.sortOrder").value(3));
+                .andExpect(jsonPath("$.sortOrder").value(3))
+                .andExpect(jsonPath("$.status").value("INACTIVE"));
+
+        mockMvc.perform(get("/admin/food-tenant/services")
+                        .header(AUTHORIZATION, basicAuth("food-admin", "food-secret")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].status").value("INACTIVE"));
 
         mockMvc.perform(get("/t/food-tenant/services"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(1))
-                .andExpect(jsonPath("$[0].name").value("Pasta"))
-                .andExpect(jsonPath("$[0].price").value(15.75));
+                .andExpect(jsonPath("$.length()").value(0));
+
+        mockMvc.perform(post("/t/food-tenant/bookings")
+                        .header("X-Telegram-User-Id", telegramUserId(101))
+                        .contentType(APPLICATION_JSON)
+                        .content(bookingPayload(serviceId, 1)))
+                .andExpect(status().isBadRequest())
+                .andExpect(status().reason("Service not found"));
 
         JsonNode auditLog = latestAuditLog("service", "UPDATE");
         JsonNode oldValue = objectMapper.readTree(auditLog.get("old_value").asText());
         JsonNode newValue = objectMapper.readTree(auditLog.get("new_value").asText());
         org.junit.jupiter.api.Assertions.assertEquals("Pizza", oldValue.get("name").asText());
         org.junit.jupiter.api.Assertions.assertEquals("Pasta", newValue.get("name").asText());
+        org.junit.jupiter.api.Assertions.assertEquals("INACTIVE", newValue.get("status").asText());
         org.junit.jupiter.api.Assertions.assertEquals("UPDATE", auditLog.get("action").asText());
         org.junit.jupiter.api.Assertions.assertEquals("food-admin", auditLog.get("actor_id").asText());
     }
@@ -94,11 +107,11 @@ class ServiceManagementAndValidationIT extends IntegrationTestSupport {
                 .andExpect(status().isNotFound())
                 .andExpect(status().reason("Service not found"));
 
-        JsonNode auditLog = latestAuditLog("service", "DEACTIVATE");
+        JsonNode auditLog = latestAuditLog("service", "DELETE");
         JsonNode newValue = objectMapper.readTree(auditLog.get("new_value").asText());
         org.junit.jupiter.api.Assertions.assertEquals(serviceId, auditLog.get("entity_id").asLong());
         org.junit.jupiter.api.Assertions.assertEquals("food-admin", auditLog.get("actor_id").asText());
-        org.junit.jupiter.api.Assertions.assertFalse(newValue.get("active").asBoolean());
+        org.junit.jupiter.api.Assertions.assertEquals("DELETED", newValue.get("status").asText());
         org.junit.jupiter.api.Assertions.assertFalse(newValue.get("deletedAt").isNull());
     }
 

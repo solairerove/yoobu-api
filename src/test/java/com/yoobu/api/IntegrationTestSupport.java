@@ -8,8 +8,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.yoobu.api.catalog.dto.AdminUpsertServiceRequest;
 import com.yoobu.api.booking.BookingStatus;
+import com.yoobu.api.catalog.ServiceStatus;
+import com.yoobu.api.catalog.dto.AdminUpsertServiceRequest;
 import com.yoobu.api.tenant.TenantType;
 import com.yoobu.api.tenant.dto.CreateTenantRequest;
 import java.math.BigDecimal;
@@ -112,7 +113,7 @@ public abstract class IntegrationTestSupport {
                 "pcs",
                 null,
                 0,
-                true
+                ServiceStatus.ACTIVE
         );
     }
 

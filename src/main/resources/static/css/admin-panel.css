@@ -83,6 +83,12 @@ button {
     color: #fff;
 }
 
+.button-danger {
+    background: #fff3ef;
+    border-color: #d16a4b;
+    color: #9b3d23;
+}
+
 .card {
     margin-top: 20px;
     padding: 20px;
@@ -145,6 +151,11 @@ textarea {
     align-items: center;
     justify-content: flex-end;
     margin-top: 20px;
+}
+
+.actions-danger {
+    justify-content: flex-start;
+    margin-top: 12px;
 }
 
 .secondary-link {

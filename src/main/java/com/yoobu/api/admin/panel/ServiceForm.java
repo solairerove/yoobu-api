@@ -1,5 +1,6 @@
 package com.yoobu.api.admin.panel;
 
+import com.yoobu.api.catalog.ServiceStatus;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import java.math.BigDecimal;
@@ -20,7 +21,8 @@ public class ServiceForm {
 
     private Integer sortOrder;
 
-    private boolean active = true;
+    @NotNull
+    private ServiceStatus status = ServiceStatus.ACTIVE;
 
     public String getName() {
         return name;
@@ -70,11 +72,11 @@ public class ServiceForm {
         this.sortOrder = sortOrder;
     }
 
-    public boolean isActive() {
-        return active;
+    public ServiceStatus getStatus() {
+        return status;
     }
 
-    public void setActive(boolean active) {
-        this.active = active;
+    public void setStatus(ServiceStatus status) {
+        this.status = status;
     }
 }
