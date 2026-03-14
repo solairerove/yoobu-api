@@ -23,3 +23,11 @@ mvn clean verify
 mvn clean install && java -jar target/yoobu-api-0.0.1-SNAPSHOT.jar --spring.profiles.active=dev
 mvn spring-boot:run
 ```
+
+### Super Admin panel
+
+http://localhost:8080/superadmin/panel
+
+### Admin panel
+
+http://localhost:8080/admin/{slug}/panel

@@ -40,7 +40,10 @@
                 <td colspan="6" class="empty">No tenants yet.</td>
             </tr>
             <tr th:each="tenant : ${tenants}">
-                <td th:text="${tenant.name}">Dark Kitchen</td>
+                <td>
+                    <a th:href="@{/superadmin/panel/tenants/{tenantId}(tenantId=${tenant.id})}"
+                       th:text="${tenant.name}">Dark Kitchen</a>
+                </td>
                 <td th:text="${tenant.slug}">dark-kitchen</td>
                 <td th:text="${tenant.type}">FOOD_ORDER</td>
                 <td th:text="${tenant.timezone}">Asia/Ho_Chi_Minh</td>

@@ -32,6 +32,12 @@ public class SuperAdminPanelController {
         return "superadmin/panel/tenants";
     }
 
+    @GetMapping("/tenants/{tenantId}")
+    public String tenantDetail(@org.springframework.web.bind.annotation.PathVariable Long tenantId, Model model) {
+        model.addAttribute("tenant", tenantManagementService.getTenant(tenantId));
+        return "superadmin/panel/tenant-detail";
+    }
+
     @GetMapping("/tenants/new")
     public String newTenant(Model model) {
         model.addAttribute("tenantForm", new SuperAdminTenantForm());

@@ -6,8 +6,10 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.yoobu.api.IntegrationTestSupport;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.context.TestPropertySource;
@@ -41,11 +43,25 @@ class SuperAdminPanelIT extends IntegrationTestSupport {
                 .andExpect(status().is3xxRedirection())
                 .andExpect(header().string("Location", "/superadmin/panel/tenants"));
 
+        JsonNode tenants = readJson(mockMvc.perform(get("/superadmin/tenants")
+                        .header(AUTHORIZATION, basicAuth("test-superadmin", "test-password")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1))
+                .andReturn());
+        long tenantId = tenants.get(0).get("id").asLong();
+
         mockMvc.perform(get("/superadmin/panel/tenants")
                         .header(AUTHORIZATION, basicAuth("test-superadmin", "test-password")))
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("Panel Tenant")))
                 .andExpect(content().string(containsString("panel-tenant")))
                 .andExpect(content().string(containsString("/admin/panel-tenant/panel")));
+
+        mockMvc.perform(get("/superadmin/panel/tenants/" + tenantId)
+                        .header(AUTHORIZATION, basicAuth("test-superadmin", "test-password")))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("Panel Tenant")))
+                .andExpect(content().string(containsString("panel-admin")))
+                .andExpect(content().string(containsString("/t/panel-tenant/services")));
     }
 }

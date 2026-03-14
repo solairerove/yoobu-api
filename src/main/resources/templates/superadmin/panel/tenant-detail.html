@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="${tenant.name} + ' | Superadmin'">Tenant detail</title>
+    <link rel="stylesheet" th:href="@{/css/admin-panel.css}">
+</head>
+<body>
+<div class="shell">
+    <header class="page-header">
+        <div>
+            <p class="eyebrow">Superadmin panel</p>
+            <h1 th:text="${tenant.name}">Tenant</h1>
+        </div>
+        <nav class="nav">
+            <a class="nav-link" th:href="@{/superadmin/panel/tenants}">Tenants</a>
+            <a class="nav-link" th:href="@{/superadmin/panel/tenants/new}">Create tenant</a>
+            <a class="nav-link active" th:href="@{/superadmin/panel/tenants/{tenantId}(tenantId=${tenant.id})}">Detail</a>
+        </nav>
+    </header>
+
+    <section class="toolbar">
+        <a class="button-link" th:href="@{/admin/{slug}/panel(slug=${tenant.slug})}">Open admin panel</a>
+    </section>
+
+    <section class="detail-grid">
+        <article class="card">
+            <h2>Tenant</h2>
+            <dl class="summary">
+                <div><dt>ID</dt><dd th:text="${tenant.id}">1</dd></div>
+                <div><dt>Slug</dt><dd th:text="${tenant.slug}">dark-kitchen</dd></div>
+                <div><dt>Type</dt><dd th:text="${tenant.type}">FOOD_ORDER</dd></div>
+                <div><dt>Timezone</dt><dd th:text="${tenant.timezone}">Asia/Ho_Chi_Minh</dd></div>
+                <div><dt>Owner Telegram ID</dt><dd th:text="${tenant.ownerTelegramId ?: 'N/A'}">N/A</dd></div>
+                <div><dt>Created</dt><dd th:text="${tenant.createdAt}">2026-03-14T00:00Z</dd></div>
+                <div><dt>Active</dt><dd th:text="${tenant.active ? 'Yes' : 'No'}">Yes</dd></div>
+            </dl>
+        </article>
+
+        <article class="card">
+            <h2>Integrations</h2>
+            <dl class="summary">
+                <div><dt>Bot token</dt><dd th:text="${tenant.botToken ?: 'N/A'}">N/A</dd></div>
+                <div><dt>Primary color</dt><dd th:text="${tenant.config['primary_color'] ?: 'N/A'}">#112233</dd></div>
+                <div><dt>Logo URL</dt><dd th:text="${tenant.config['logo_url'] ?: 'N/A'}">N/A</dd></div>
+                <div><dt>Welcome message</dt><dd th:text="${tenant.config['welcome_message'] ?: 'N/A'}">N/A</dd></div>
+                <div><dt>Admin username</dt><dd th:text="${tenant.config['admin_username'] ?: 'N/A'}">admin</dd></div>
+            </dl>
+        </article>
+    </section>
+    <section class="card">
+        <h2>Quick links</h2>
+        <div class="summary">
+            <div><dt>Tenant admin panel</dt><dd><a th:href="@{/admin/{slug}/panel(slug=${tenant.slug})}" th:text="@{/admin/{slug}/panel(slug=${tenant.slug})}">/admin/dark-kitchen/panel</a></dd></div>
+            <div><dt>Public catalog API</dt><dd><a th:href="@{/t/{slug}/services(slug=${tenant.slug})}" th:text="@{/t/{slug}/services(slug=${tenant.slug})}">/t/dark-kitchen/services</a></dd></div>
+        </div>
+    </section>
+</div>
+</body>
+</html>

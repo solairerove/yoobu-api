@@ -1,11 +1,14 @@
 package com.yoobu.api.tenant;
 
 import com.yoobu.api.tenant.dto.CreateTenantRequest;
+import com.yoobu.api.tenant.dto.TenantDetailResponse;
 import com.yoobu.api.tenant.dto.TenantSummaryResponse;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -35,6 +38,29 @@ public class TenantManagementService {
                         tenant.getTimezone(),
                         tenant.getCreatedAt()))
                 .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public TenantDetailResponse getTenant(Long tenantId) {
+        Tenant tenant = tenantRepository.findById(tenantId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Tenant not found"));
+
+        Map<String, String> config = new LinkedHashMap<>();
+        tenantConfigRepository.findByTenantId(tenantId)
+                .forEach(entry -> config.put(entry.getKey(), entry.getValue()));
+
+        return new TenantDetailResponse(
+                tenant.getId(),
+                tenant.getSlug(),
+                tenant.getName(),
+                tenant.getType(),
+                tenant.isActive(),
+                tenant.getTimezone(),
+                tenant.getBotToken(),
+                tenant.getOwnerTelegramId(),
+                tenant.getCreatedAt(),
+                config
+        );
     }
 
     @Transactional
