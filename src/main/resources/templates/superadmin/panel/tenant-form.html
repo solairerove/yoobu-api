@@ -44,8 +44,12 @@
                     <input type="text" th:field="*{name}">
                 </label>
             </div>
+            <p class="field-hint" th:if="${formMode == 'create'}">This becomes the tenant URL and cannot be changed later.</p>
             <p class="error" th:if="${#fields.hasErrors('slug')}" th:errors="*{slug}">Slug error</p>
-            <p class="error" id="slug-availability-message" th:if="${formMode == 'create'}" hidden></p>
+            <div class="slug-status" th:if="${formMode == 'create'}" hidden id="slug-availability-status" aria-live="polite">
+                <span class="badge badge-muted" id="slug-availability-badge">Pending</span>
+                <span class="slug-status-text" id="slug-availability-message"></span>
+            </div>
             <p class="error" th:if="${#fields.hasErrors('name')}" th:errors="*{name}">Name error</p>
 
             <div class="field-row">
@@ -121,10 +125,12 @@
         const form = document.querySelector('form');
         const slugInput = document.querySelector('input[name="slug"]');
         const submitButton = form?.querySelector('button[type="submit"]');
+        const status = document.getElementById('slug-availability-status');
+        const badge = document.getElementById('slug-availability-badge');
         const message = document.getElementById('slug-availability-message');
         const checkUrl = slugInput?.dataset.slugCheckUrl;
 
-        if (!form || !slugInput || !submitButton || !message || !checkUrl) {
+        if (!form || !slugInput || !submitButton || !status || !badge || !message || !checkUrl) {
             return;
         }
 
@@ -135,22 +141,23 @@
 
         const updateState = () => {
             submitButton.disabled = isChecking || !slugAvailable;
+            submitButton.textContent = isChecking || !slugAvailable ? 'Verify slug to continue' : 'Create tenant';
         };
 
-        const hideMessage = () => {
-            message.hidden = true;
-            message.textContent = '';
-        };
-
-        const showMessage = (text) => {
-            message.hidden = false;
+        const setStatus = (badgeText, badgeClass, text) => {
+            status.hidden = false;
+            badge.className = `badge ${badgeClass}`;
+            badge.textContent = badgeText;
             message.textContent = text;
         };
 
         const resetState = () => {
             isChecking = false;
             slugAvailable = false;
-            hideMessage();
+            status.hidden = true;
+            badge.className = 'badge badge-muted';
+            badge.textContent = 'Pending';
+            message.textContent = '';
             updateState();
         };
 
@@ -164,7 +171,7 @@
             const requestId = ++requestCounter;
             isChecking = true;
             slugAvailable = false;
-            showMessage('Checking tenant slug...');
+            setStatus('Checking', 'badge-muted', 'Checking tenant slug...');
             updateState();
 
             try {
@@ -186,9 +193,9 @@
                 slugAvailable = Boolean(result.available);
 
                 if (slugAvailable) {
-                    showMessage('Tenant slug is available.');
+                    setStatus('Available', 'badge-success', 'Tenant slug is available.');
                 } else {
-                    showMessage('Tenant slug already exists.');
+                    setStatus('Taken', 'badge-taken', 'Tenant slug already exists.');
                 }
                 updateState();
             } catch (error) {
@@ -198,7 +205,7 @@
 
                 isChecking = false;
                 slugAvailable = false;
-                showMessage('Unable to verify tenant slug right now.');
+                setStatus('Unavailable', 'badge-taken', 'Unable to verify tenant slug right now.');
                 updateState();
             }
         };

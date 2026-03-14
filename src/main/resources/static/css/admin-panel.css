@@ -109,6 +109,12 @@ label span {
     font-size: 14px;
 }
 
+.field-hint {
+    margin: 8px 0 0;
+    color: #6a5747;
+    font-size: 13px;
+}
+
 input,
 select,
 textarea {
@@ -171,6 +177,15 @@ thead th {
     color: #9b3d23;
 }
 
+.slug-status {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 8px;
+    color: #6a5747;
+    font-size: 14px;
+}
+
 .badge {
     display: inline-block;
     padding: 6px 10px;
@@ -188,6 +203,11 @@ thead th {
 .badge-muted {
     background: #ede7df;
     color: #6a5747;
+}
+
+.badge-taken {
+    background: #f5ddd4;
+    color: #9b3d23;
 }
 
 .summary {
