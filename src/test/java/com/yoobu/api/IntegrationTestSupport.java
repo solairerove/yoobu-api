@@ -15,6 +15,7 @@ import com.yoobu.api.tenant.dto.CreateTenantRequest;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.Base64;
 import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -33,6 +34,7 @@ import org.testcontainers.containers.PostgreSQLContainer;
 @ActiveProfiles("dev")
 public abstract class IntegrationTestSupport {
 
+    protected static final String DEFAULT_TENANT_TIMEZONE = "Europe/Warsaw";
     static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:17-alpine");
 
     static {
@@ -93,7 +95,7 @@ public abstract class IntegrationTestSupport {
                 type,
                 botToken,
                 123456789L,
-                "Europe/Warsaw",
+                DEFAULT_TENANT_TIMEZONE,
                 "#112233",
                 "https://cdn.example.com/logo.png",
                 "Hello from test",
@@ -119,7 +121,15 @@ public abstract class IntegrationTestSupport {
     }
 
     protected LocalDate tomorrow() {
-        return LocalDate.now().plusDays(1);
+        return tomorrow(DEFAULT_TENANT_TIMEZONE);
+    }
+
+    protected LocalDate tomorrow(String timezone) {
+        return LocalDate.now(ZoneId.of(timezone)).plusDays(1);
+    }
+
+    protected LocalDate yesterday(String timezone) {
+        return LocalDate.now(ZoneId.of(timezone)).minusDays(1);
     }
 
     protected JsonNode createFoodOrderTenant(
@@ -173,6 +183,16 @@ public abstract class IntegrationTestSupport {
                 .andReturn());
     }
 
+    protected JsonNode createBooking(String slug, long telegramUserId, long serviceId, int quantity, LocalDate deliveryDate)
+            throws Exception {
+        return readJson(mockMvc.perform(post("/t/" + slug + "/bookings")
+                        .header("X-Telegram-User-Id", telegramUserId(telegramUserId))
+                        .contentType(APPLICATION_JSON)
+                        .content(bookingPayload(serviceId, quantity, deliveryDate)))
+                .andExpect(status().isOk())
+                .andReturn());
+    }
+
     protected void updateBookingStatus(
             String slug,
             String adminUsername,
@@ -210,6 +230,10 @@ public abstract class IntegrationTestSupport {
     }
 
     protected String bookingPayload(long serviceId, int quantity) {
+        return bookingPayload(serviceId, quantity, tomorrow());
+    }
+
+    protected String bookingPayload(long serviceId, int quantity, LocalDate deliveryDate) {
         return """
                 {
                   "customerName": "Alice",
@@ -223,6 +247,6 @@ public abstract class IntegrationTestSupport {
                     }
                   ]
                 }
-                """.formatted(tomorrow(), serviceId, quantity);
+                """.formatted(deliveryDate, serviceId, quantity);
     }
 }

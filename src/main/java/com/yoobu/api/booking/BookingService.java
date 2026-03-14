@@ -7,13 +7,17 @@ import com.yoobu.api.booking.dto.CreateBookingRequest;
 import com.yoobu.api.catalog.CatalogService;
 import com.yoobu.api.catalog.CatalogServiceRepository;
 import com.yoobu.api.tenant.Tenant;
+import com.yoobu.api.tenant.TenantConfig;
+import com.yoobu.api.tenant.TenantConfigRepository;
 import com.yoobu.api.tenant.TenantContext;
+import com.yoobu.api.tenant.TenantTimeService;
 import com.yoobu.api.tenant.TenantType;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
+import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -27,10 +31,13 @@ public class BookingService {
     private final BookingRepository bookingRepository;
     private final BookingItemRepository bookingItemRepository;
     private final CatalogServiceRepository catalogServiceRepository;
+    private final TenantConfigRepository tenantConfigRepository;
+    private final TenantTimeService tenantTimeService;
 
     @Transactional
     public BookingResponse createFoodOrder(CreateBookingRequest request, Long telegramUserId) {
         Tenant tenant = requireFoodOrderTenant();
+        validateDeliveryDate(request.deliveryDate(), tenant);
         OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
 
         Booking booking = new Booking();
@@ -162,6 +169,25 @@ public class BookingService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Tenant does not support food ordering");
         }
         return tenant;
+    }
+
+    private void validateDeliveryDate(LocalDate deliveryDate, Tenant tenant) {
+        LocalDate earliestAllowedDate = tenantTimeService.earliestDeliveryDate(tenant, loadTenantConfig(tenant.getId()));
+        if (deliveryDate.isBefore(earliestAllowedDate)) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Delivery date must be on or after " + earliestAllowedDate
+            );
+        }
+    }
+
+    private Map<String, String> loadTenantConfig(Long tenantId) {
+        return tenantConfigRepository.findByTenantId(tenantId).stream()
+                .collect(java.util.stream.Collectors.toMap(
+                        TenantConfig::getKey,
+                        TenantConfig::getValue,
+                        (left, right) -> right
+                ));
     }
 
     private BookingItem toBookingItem(Booking booking, BookingItemRequest item, Long tenantId) {

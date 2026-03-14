@@ -11,6 +11,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.yoobu.api.IntegrationTestSupport;
+import java.time.LocalDate;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.context.TestPropertySource;
 
@@ -144,5 +145,20 @@ class ServiceManagementAndValidationIT extends IntegrationTestSupport {
                                 }
                                 """))
                 .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void createBookingRejectsPastDeliveryDateRelativeToTenantTimezone() throws Exception {
+        createFoodOrderTenant("food-tenant", "Food Tenant", "food-bot", "food-admin", "food-secret");
+        long serviceId = createService("food-tenant", "food-admin", "food-secret", "Pizza", "12.50")
+                .get("id").asLong();
+
+        mockMvc.perform(post("/t/food-tenant/bookings")
+                        .header("X-Telegram-User-Id", telegramUserId(101))
+                        .contentType(APPLICATION_JSON)
+                        .content(bookingPayload(serviceId, 1, yesterday(DEFAULT_TENANT_TIMEZONE))))
+                .andExpect(status().isBadRequest())
+                .andExpect(status().reason("Delivery date must be on or after " + LocalDate.now(
+                        java.time.ZoneId.of(DEFAULT_TENANT_TIMEZONE))));
     }
 }
