@@ -110,4 +110,25 @@ class SuperAdminPanelIT extends IntegrationTestSupport {
                         .header(AUTHORIZATION, basicAuth("panel-admin-2", "panel-secret-2")))
                 .andExpect(status().isOk());
     }
+
+    @Test
+    void superAdminPanelRejectsDuplicateSlugOnCreateForm() throws Exception {
+        createFoodOrderTenant("panel-duplicate", "Existing Tenant", "bot-existing", "existing-admin", "existing-secret");
+
+        mockMvc.perform(post("/superadmin/panel/tenants")
+                        .header(AUTHORIZATION, basicAuth("test-superadmin", "test-password"))
+                        .param("slug", "panel-duplicate")
+                        .param("name", "New Panel Tenant")
+                        .param("type", "FOOD_ORDER")
+                        .param("botToken", "panel-bot")
+                        .param("ownerTelegramId", "123456")
+                        .param("timezone", "Asia/Ho_Chi_Minh")
+                        .param("primaryColor", "#112233")
+                        .param("logoUrl", "https://cdn.example.com/logo.png")
+                        .param("welcomeMessage", "Hello from panel")
+                        .param("adminUsername", "panel-admin")
+                        .param("adminPassword", "panel-secret"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("Tenant slug already exists")));
+    }
 }

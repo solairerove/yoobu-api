@@ -59,6 +59,9 @@ public class SuperAdminPanelController {
         if (!StringUtils.hasText(form.getAdminPassword())) {
             bindingResult.rejectValue("adminPassword", "tenantForm.adminPassword", "must not be blank");
         }
+        if (StringUtils.hasText(form.getSlug()) && !tenantManagementService.isSlugAvailable(form.getSlug())) {
+            bindingResult.rejectValue("slug", "tenantForm.slug", "Tenant slug already exists");
+        }
 
         if (bindingResult.hasErrors()) {
             return populateFormModel(model, "create");

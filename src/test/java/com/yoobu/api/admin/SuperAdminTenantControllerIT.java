@@ -81,6 +81,25 @@ class SuperAdminTenantControllerIT extends IntegrationTestSupport {
     }
 
     @Test
+    void superAdminCanCheckTenantSlugAvailabilityBeforeCreation() throws Exception {
+        createFoodOrderTenant("availability-tenant", "Availability Tenant", "bot", "admin", "secret");
+
+        mockMvc.perform(get("/superadmin/tenants/slug-availability")
+                        .header(AUTHORIZATION, basicAuth("test-superadmin", "test-password"))
+                        .param("slug", "available-tenant"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.slug").value("available-tenant"))
+                .andExpect(jsonPath("$.available").value(true));
+
+        mockMvc.perform(get("/superadmin/tenants/slug-availability")
+                        .header(AUTHORIZATION, basicAuth("test-superadmin", "test-password"))
+                        .param("slug", "availability-tenant"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.slug").value("availability-tenant"))
+                .andExpect(jsonPath("$.available").value(false));
+    }
+
+    @Test
     void superAdminCannotCreateTwoTenantsWithSameSlug() throws Exception {
         var request = foodOrderTenant("duplicate-tenant", "Duplicate Tenant", "bot-token", "admin", "secret");
 

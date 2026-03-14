@@ -65,6 +65,12 @@ public class TenantManagementService {
         );
     }
 
+    @Transactional(readOnly = true)
+    public boolean isSlugAvailable(String slug) {
+        String normalizedSlug = normalizeOptional(slug);
+        return StringUtils.hasText(normalizedSlug) && !tenantRepository.existsBySlug(normalizedSlug);
+    }
+
     @Transactional
     public TenantSummaryResponse createTenant(CreateTenantRequest request) {
         if (tenantRepository.existsBySlug(request.slug())) {

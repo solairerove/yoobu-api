@@ -34,7 +34,10 @@
             <div class="field-row">
                 <label>
                     <span>Slug</span>
-                    <input type="text" th:field="*{slug}" th:readonly="${formMode == 'edit'}">
+                    <input type="text"
+                           th:field="*{slug}"
+                           th:readonly="${formMode == 'edit'}"
+                           th:attr="data-slug-check-url=${formMode == 'create'} ? @{/superadmin/tenants/slug-availability} : null">
                 </label>
                 <label>
                     <span>Name</span>
@@ -42,6 +45,7 @@
                 </label>
             </div>
             <p class="error" th:if="${#fields.hasErrors('slug')}" th:errors="*{slug}">Slug error</p>
+            <p class="error" id="slug-availability-message" th:if="${formMode == 'create'}" hidden></p>
             <p class="error" th:if="${#fields.hasErrors('name')}" th:errors="*{name}">Name error</p>
 
             <div class="field-row">
@@ -112,5 +116,111 @@
         </form>
     </section>
 </div>
+<script th:if="${formMode == 'create'}">
+    (() => {
+        const form = document.querySelector('form');
+        const slugInput = document.querySelector('input[name="slug"]');
+        const submitButton = form?.querySelector('button[type="submit"]');
+        const message = document.getElementById('slug-availability-message');
+        const checkUrl = slugInput?.dataset.slugCheckUrl;
+
+        if (!form || !slugInput || !submitButton || !message || !checkUrl) {
+            return;
+        }
+
+        let requestCounter = 0;
+        let debounceTimer;
+        let slugAvailable = false;
+        let isChecking = false;
+
+        const updateState = () => {
+            submitButton.disabled = isChecking || !slugAvailable;
+        };
+
+        const hideMessage = () => {
+            message.hidden = true;
+            message.textContent = '';
+        };
+
+        const showMessage = (text) => {
+            message.hidden = false;
+            message.textContent = text;
+        };
+
+        const resetState = () => {
+            isChecking = false;
+            slugAvailable = false;
+            hideMessage();
+            updateState();
+        };
+
+        const checkSlug = async () => {
+            const slug = slugInput.value.trim();
+            if (!slug) {
+                resetState();
+                return;
+            }
+
+            const requestId = ++requestCounter;
+            isChecking = true;
+            slugAvailable = false;
+            showMessage('Checking tenant slug...');
+            updateState();
+
+            try {
+                const response = await fetch(`${checkUrl}?slug=${encodeURIComponent(slug)}`, {
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                });
+                if (!response.ok) {
+                    throw new Error('Slug check failed');
+                }
+
+                const result = await response.json();
+                if (requestId != requestCounter) {
+                    return;
+                }
+
+                isChecking = false;
+                slugAvailable = Boolean(result.available);
+
+                if (slugAvailable) {
+                    showMessage('Tenant slug is available.');
+                } else {
+                    showMessage('Tenant slug already exists.');
+                }
+                updateState();
+            } catch (error) {
+                if (requestId != requestCounter) {
+                    return;
+                }
+
+                isChecking = false;
+                slugAvailable = false;
+                showMessage('Unable to verify tenant slug right now.');
+                updateState();
+            }
+        };
+
+        slugInput.addEventListener('input', () => {
+            clearTimeout(debounceTimer);
+            debounceTimer = window.setTimeout(checkSlug, 300);
+        });
+
+        slugInput.addEventListener('blur', () => {
+            clearTimeout(debounceTimer);
+            void checkSlug();
+        });
+
+        form.addEventListener('submit', (event) => {
+            if (isChecking || !slugAvailable) {
+                event.preventDefault();
+            }
+        });
+
+        resetState();
+    })();
+</script>
 </body>
 </html>
