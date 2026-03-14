@@ -1,9 +1,11 @@
 package com.yoobu.api.admin;
 
 import static org.springframework.http.HttpHeaders.AUTHORIZATION;
+import static org.springframework.http.HttpHeaders.WWW_AUTHENTICATE;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -30,6 +32,7 @@ class SuperAdminTenantControllerIT extends IntegrationTestSupport {
         mockMvc.perform(get("/superadmin/tenants")
                         .header(AUTHORIZATION, basicAuth("test-superadmin", "wrong-password")))
                 .andExpect(status().isUnauthorized())
+                .andExpect(header().string(WWW_AUTHENTICATE, "Basic realm=\"Yoobu Super Admin\""))
                 .andExpect(status().reason("Invalid superadmin credentials"));
     }
 
@@ -37,6 +40,7 @@ class SuperAdminTenantControllerIT extends IntegrationTestSupport {
     void superAdminCannotAccessProtectedEndpointWithoutCredentials() throws Exception {
         mockMvc.perform(get("/superadmin/tenants"))
                 .andExpect(status().isUnauthorized())
+                .andExpect(header().string(WWW_AUTHENTICATE, "Basic realm=\"Yoobu Super Admin\""))
                 .andExpect(status().reason("Missing Basic authorization header"));
     }
 

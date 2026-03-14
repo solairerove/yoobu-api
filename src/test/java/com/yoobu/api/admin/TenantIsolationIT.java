@@ -1,9 +1,11 @@
 package com.yoobu.api.admin;
 
 import static org.springframework.http.HttpHeaders.AUTHORIZATION;
+import static org.springframework.http.HttpHeaders.WWW_AUTHENTICATE;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -32,6 +34,7 @@ class TenantIsolationIT extends IntegrationTestSupport {
         mockMvc.perform(get("/admin/tenant-two/services")
                         .header(AUTHORIZATION, basicAuth("admin-one", "secret-one")))
                 .andExpect(status().isUnauthorized())
+                .andExpect(header().string(WWW_AUTHENTICATE, "Basic realm=\"Yoobu Tenant Admin: tenant-two\""))
                 .andExpect(status().reason("Invalid admin credentials"));
 
         mockMvc.perform(post("/admin/tenant-two/services")
@@ -39,6 +42,7 @@ class TenantIsolationIT extends IntegrationTestSupport {
                         .contentType(APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(serviceRequest("Sneaky", "1.00"))))
                 .andExpect(status().isUnauthorized())
+                .andExpect(header().string(WWW_AUTHENTICATE, "Basic realm=\"Yoobu Tenant Admin: tenant-two\""))
                 .andExpect(status().reason("Invalid admin credentials"));
 
         mockMvc.perform(get("/t/tenant-one/services"))
