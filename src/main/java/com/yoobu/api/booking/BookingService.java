@@ -107,7 +107,22 @@ public class BookingService {
     public List<BookingResponse> getAdminBookings(BookingStatus status, LocalDate deliveryDate) {
         requireFoodOrderTenant();
 
-        return bookingRepository.findAdminBookings(TenantContext.getRequiredTenantId(), status, deliveryDate)
+        Long tenantId = TenantContext.getRequiredTenantId();
+        List<Booking> bookings;
+
+        if (status != null && deliveryDate != null) {
+            bookings = bookingRepository.findByTenantIdAndDeletedAtIsNullAndStatusAndDeliveryDateOrderByCreatedAtDesc(
+                    tenantId, status, deliveryDate);
+        } else if (status != null) {
+            bookings = bookingRepository.findByTenantIdAndDeletedAtIsNullAndStatusOrderByCreatedAtDesc(tenantId, status);
+        } else if (deliveryDate != null) {
+            bookings = bookingRepository.findByTenantIdAndDeletedAtIsNullAndDeliveryDateOrderByCreatedAtDesc(
+                    tenantId, deliveryDate);
+        } else {
+            bookings = bookingRepository.findByTenantIdAndDeletedAtIsNullOrderByCreatedAtDesc(tenantId);
+        }
+
+        return bookings
                 .stream()
                 .map(this::toResponse)
                 .toList();

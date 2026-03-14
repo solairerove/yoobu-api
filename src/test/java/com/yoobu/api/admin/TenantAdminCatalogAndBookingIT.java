@@ -24,6 +24,7 @@ class TenantAdminCatalogAndBookingIT extends IntegrationTestSupport {
 
         JsonNode service = createService("food-tenant", "food-admin", "food-secret", "Pizza", "12.50");
         long serviceId = service.get("id").asLong();
+        String deliveryDate = tomorrow().toString();
 
         mockMvc.perform(get("/t/food-tenant/services"))
                 .andExpect(status().isOk())
@@ -44,7 +45,7 @@ class TenantAdminCatalogAndBookingIT extends IntegrationTestSupport {
                     }
                   ]
                 }
-                """.formatted(tomorrow(), serviceId);
+                """.formatted(deliveryDate, serviceId);
 
         mockMvc.perform(post("/t/food-tenant/bookings")
                         .header("X-Telegram-User-Id", telegramUserId(777))
@@ -66,6 +67,16 @@ class TenantAdminCatalogAndBookingIT extends IntegrationTestSupport {
                 .andExpect(jsonPath("$.length()").value(1))
                 .andExpect(jsonPath("$[0].customerName").value("Alice"))
                 .andExpect(jsonPath("$[0].items[0].serviceName").value("Pizza"));
+
+        mockMvc.perform(get("/admin/food-tenant/bookings")
+                        .param("status", "NEW")
+                        .param("deliveryDate", deliveryDate)
+                        .header(AUTHORIZATION, basicAuth("food-admin", "food-secret")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].status").value("NEW"))
+                .andExpect(jsonPath("$[0].deliveryDate").value(deliveryDate))
+                .andExpect(jsonPath("$[0].customerName").value("Alice"));
     }
 
 }
