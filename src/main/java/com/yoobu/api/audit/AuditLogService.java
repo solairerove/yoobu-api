@@ -2,8 +2,14 @@ package com.yoobu.api.audit;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.lang.reflect.Array;
+import java.time.temporal.TemporalAccessor;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -81,9 +87,49 @@ public class AuditLogService {
         }
 
         try {
-            return objectMapper.writeValueAsString(value);
+            return objectMapper.writeValueAsString(normalize(value));
         } catch (JsonProcessingException ex) {
             throw new IllegalStateException("Failed to serialize audit payload", ex);
         }
+    }
+
+    private Object normalize(Object value) {
+        if (value == null
+                || value instanceof String
+                || value instanceof Number
+                || value instanceof Boolean) {
+            return value;
+        }
+
+        if (value instanceof Enum<?> enumValue) {
+            return enumValue.name();
+        }
+
+        if (value instanceof TemporalAccessor) {
+            return value.toString();
+        }
+
+        if (value instanceof Map<?, ?> mapValue) {
+            Map<String, Object> normalized = new LinkedHashMap<>();
+            mapValue.forEach((key, nestedValue) -> normalized.put(String.valueOf(key), normalize(nestedValue)));
+            return normalized;
+        }
+
+        if (value instanceof Iterable<?> iterable) {
+            List<Object> normalized = new ArrayList<>();
+            iterable.forEach(item -> normalized.add(normalize(item)));
+            return normalized;
+        }
+
+        if (value.getClass().isArray()) {
+            int length = Array.getLength(value);
+            List<Object> normalized = new ArrayList<>(length);
+            for (int index = 0; index < length; index++) {
+                normalized.add(normalize(Array.get(value, index)));
+            }
+            return normalized;
+        }
+
+        return String.valueOf(value);
     }
 }

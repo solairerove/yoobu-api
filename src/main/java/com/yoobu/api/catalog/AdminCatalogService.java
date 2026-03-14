@@ -8,7 +8,9 @@ import com.yoobu.api.tenant.TenantContext;
 import com.yoobu.api.tenant.TenantType;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -77,7 +79,7 @@ public class AdminCatalogService {
         CatalogService service = catalogServiceRepository.findByIdAndTenantIdAndDeletedAtIsNull(
                         serviceId, TenantContext.getRequiredTenantId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Service not found"));
-        ServiceAuditSnapshot oldSnapshot = toAuditSnapshot(service);
+        Map<String, Object> oldSnapshot = toAuditSnapshot(service);
 
         applyRequest(service, request);
         service.setActive(request.active() == null || request.active());
@@ -103,7 +105,7 @@ public class AdminCatalogService {
         CatalogService service = catalogServiceRepository.findByIdAndTenantIdAndDeletedAtIsNull(
                         serviceId, TenantContext.getRequiredTenantId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Service not found"));
-        ServiceAuditSnapshot oldSnapshot = toAuditSnapshot(service);
+        Map<String, Object> oldSnapshot = toAuditSnapshot(service);
 
         OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
         service.setActive(false);
@@ -153,32 +155,18 @@ public class AdminCatalogService {
         );
     }
 
-    private ServiceAuditSnapshot toAuditSnapshot(CatalogService service) {
-        return new ServiceAuditSnapshot(
-                service.getId(),
-                service.getTenant().getId(),
-                service.getName(),
-                service.getDescription(),
-                service.getPrice(),
-                service.getUnit(),
-                service.getDurationMinutes(),
-                service.isActive(),
-                service.getSortOrder(),
-                service.getDeletedAt()
-        );
-    }
-
-    private record ServiceAuditSnapshot(
-            Long id,
-            Long tenantId,
-            String name,
-            String description,
-            java.math.BigDecimal price,
-            String unit,
-            Integer durationMinutes,
-            boolean active,
-            int sortOrder,
-            OffsetDateTime deletedAt
-    ) {
+    private Map<String, Object> toAuditSnapshot(CatalogService service) {
+        Map<String, Object> snapshot = new LinkedHashMap<>();
+        snapshot.put("id", service.getId());
+        snapshot.put("tenantId", service.getTenant().getId());
+        snapshot.put("name", service.getName());
+        snapshot.put("description", service.getDescription());
+        snapshot.put("price", service.getPrice());
+        snapshot.put("unit", service.getUnit());
+        snapshot.put("durationMinutes", service.getDurationMinutes());
+        snapshot.put("active", service.isActive());
+        snapshot.put("sortOrder", service.getSortOrder());
+        snapshot.put("deletedAt", service.getDeletedAt());
+        return snapshot;
     }
 }

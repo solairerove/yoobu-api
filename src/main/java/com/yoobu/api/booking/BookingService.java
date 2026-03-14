@@ -17,6 +17,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
@@ -117,7 +118,7 @@ public class BookingService {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Completed booking cannot be cancelled");
         }
 
-        BookingAuditSnapshot oldSnapshot = toAuditSnapshot(booking);
+        Map<String, Object> oldSnapshot = toAuditSnapshot(booking);
         booking.setStatus(BookingStatus.CANCELLED);
         booking.setUpdatedAt(OffsetDateTime.now(ZoneOffset.UTC));
 
@@ -178,7 +179,7 @@ public class BookingService {
         Booking booking = bookingRepository.findByIdAndTenantIdAndDeletedAtIsNull(
                         bookingId, TenantContext.getRequiredTenantId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Booking not found"));
-        BookingAuditSnapshot oldSnapshot = toAuditSnapshot(booking);
+        Map<String, Object> oldSnapshot = toAuditSnapshot(booking);
 
         booking.setStatus(status);
         booking.setUpdatedAt(OffsetDateTime.now(ZoneOffset.UTC));
@@ -269,57 +270,35 @@ public class BookingService {
         );
     }
 
-    private BookingAuditSnapshot toAuditSnapshot(Booking booking) {
+    private Map<String, Object> toAuditSnapshot(Booking booking) {
         return toAuditSnapshot(booking, bookingItemRepository.findByBookingIdOrderByIdAsc(booking.getId()));
     }
 
-    private BookingAuditSnapshot toAuditSnapshot(Booking booking, List<BookingItem> items) {
-        List<BookingItemAuditSnapshot> itemSnapshots = items.stream()
-                .map(item -> new BookingItemAuditSnapshot(
-                        item.getService().getId(),
-                        item.getService().getName(),
-                        item.getQuantity(),
-                        item.getUnitPrice()
-                ))
+    private Map<String, Object> toAuditSnapshot(Booking booking, List<BookingItem> items) {
+        List<Map<String, Object>> itemSnapshots = items.stream()
+                .map(item -> {
+                    Map<String, Object> itemSnapshot = new LinkedHashMap<>();
+                    itemSnapshot.put("serviceId", item.getService().getId());
+                    itemSnapshot.put("serviceName", item.getService().getName());
+                    itemSnapshot.put("quantity", item.getQuantity());
+                    itemSnapshot.put("unitPrice", item.getUnitPrice());
+                    return itemSnapshot;
+                })
                 .toList();
 
-        return new BookingAuditSnapshot(
-                booking.getId(),
-                booking.getTenant().getId(),
-                booking.getType(),
-                booking.getTelegramUserId(),
-                booking.getCustomerName(),
-                booking.getCustomerPhone(),
-                booking.getStatus(),
-                booking.getNote(),
-                booking.getTotalPrice(),
-                booking.getDeliveryDate(),
-                booking.getDeletedAt(),
-                itemSnapshots
-        );
-    }
-
-    private record BookingAuditSnapshot(
-            Long id,
-            Long tenantId,
-            BookingType type,
-            Long telegramUserId,
-            String customerName,
-            String customerPhone,
-            BookingStatus status,
-            String note,
-            BigDecimal totalPrice,
-            LocalDate deliveryDate,
-            OffsetDateTime deletedAt,
-            List<BookingItemAuditSnapshot> items
-    ) {
-    }
-
-    private record BookingItemAuditSnapshot(
-            Long serviceId,
-            String serviceName,
-            int quantity,
-            BigDecimal unitPrice
-    ) {
+        Map<String, Object> snapshot = new LinkedHashMap<>();
+        snapshot.put("id", booking.getId());
+        snapshot.put("tenantId", booking.getTenant().getId());
+        snapshot.put("type", booking.getType());
+        snapshot.put("telegramUserId", booking.getTelegramUserId());
+        snapshot.put("customerName", booking.getCustomerName());
+        snapshot.put("customerPhone", booking.getCustomerPhone());
+        snapshot.put("status", booking.getStatus());
+        snapshot.put("note", booking.getNote());
+        snapshot.put("totalPrice", booking.getTotalPrice());
+        snapshot.put("deliveryDate", booking.getDeliveryDate());
+        snapshot.put("deletedAt", booking.getDeletedAt());
+        snapshot.put("items", itemSnapshots);
+        return snapshot;
     }
 }

@@ -129,7 +129,7 @@ public class TenantManagementService {
         Map<String, TenantConfig> existingConfigs = new HashMap<>();
         tenantConfigRepository.findByTenantId(tenantId)
                 .forEach(entry -> existingConfigs.put(entry.getKey(), entry));
-        TenantAuditSnapshot oldSnapshot = toAuditSnapshot(tenant, existingConfigs);
+        Map<String, Object> oldSnapshot = toAuditSnapshot(tenant, existingConfigs);
 
         tenant.setName(request.name());
         tenant.setType(request.type());
@@ -220,44 +220,27 @@ public class TenantManagementService {
         return values;
     }
 
-    private TenantAuditSnapshot toAuditSnapshot(Tenant tenant, Map<String, TenantConfig> configs) {
+    private Map<String, Object> toAuditSnapshot(Tenant tenant, Map<String, TenantConfig> configs) {
         Map<String, String> values = new HashMap<>();
         configs.forEach((key, config) -> values.put(key, config.getValue()));
         return toAuditSnapshotFromValues(tenant, values);
     }
 
-    private TenantAuditSnapshot toAuditSnapshotFromValues(Tenant tenant, Map<String, String> configValues) {
-        return new TenantAuditSnapshot(
-                tenant.getId(),
-                tenant.getSlug(),
-                tenant.getName(),
-                tenant.getType(),
-                tenant.isActive(),
-                tenant.getTimezone(),
-                tenant.getOwnerTelegramId(),
-                StringUtils.hasText(tenant.getBotToken()),
-                configValues.get("admin_username"),
-                configValues.containsKey("admin_password"),
-                configValues.get("primary_color"),
-                configValues.get("logo_url"),
-                configValues.get("welcome_message")
-        );
-    }
-
-    private record TenantAuditSnapshot(
-            Long id,
-            String slug,
-            String name,
-            TenantType type,
-            boolean active,
-            String timezone,
-            Long ownerTelegramId,
-            boolean botTokenConfigured,
-            String adminUsername,
-            boolean adminPasswordConfigured,
-            String primaryColor,
-            String logoUrl,
-            String welcomeMessage
-    ) {
+    private Map<String, Object> toAuditSnapshotFromValues(Tenant tenant, Map<String, String> configValues) {
+        Map<String, Object> snapshot = new LinkedHashMap<>();
+        snapshot.put("id", tenant.getId());
+        snapshot.put("slug", tenant.getSlug());
+        snapshot.put("name", tenant.getName());
+        snapshot.put("type", tenant.getType());
+        snapshot.put("active", tenant.isActive());
+        snapshot.put("timezone", tenant.getTimezone());
+        snapshot.put("ownerTelegramId", tenant.getOwnerTelegramId());
+        snapshot.put("botTokenConfigured", StringUtils.hasText(tenant.getBotToken()));
+        snapshot.put("adminUsername", configValues.get("admin_username"));
+        snapshot.put("adminPasswordConfigured", configValues.containsKey("admin_password"));
+        snapshot.put("primaryColor", configValues.get("primary_color"));
+        snapshot.put("logoUrl", configValues.get("logo_url"));
+        snapshot.put("welcomeMessage", configValues.get("welcome_message"));
+        return snapshot;
     }
 }
