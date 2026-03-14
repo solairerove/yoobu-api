@@ -1,5 +1,7 @@
 package com.yoobu.api.admin;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.springframework.http.HttpHeaders.AUTHORIZATION;
 import static org.springframework.http.HttpHeaders.WWW_AUTHENTICATE;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
@@ -13,7 +15,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.yoobu.api.IntegrationTestSupport;
 import com.yoobu.api.tenant.TenantType;
 import com.yoobu.api.tenant.dto.UpdateTenantRequest;
+import org.junit.jupiter.api.function.Executable;
 import org.junit.jupiter.api.Test;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.test.context.TestPropertySource;
 
 @TestPropertySource(properties = {
@@ -154,5 +158,106 @@ class SuperAdminTenantControllerIT extends IntegrationTestSupport {
                         .header(AUTHORIZATION, basicAuth("admin-after", "secret-after")))
                 .andExpect(status().isBadRequest())
                 .andExpect(status().reason("Tenant does not support food ordering"));
+    }
+
+    @Test
+    void superAdminCanKeepExistingPasswordWhileUpdatingOtherTenantFields() throws Exception {
+        long tenantId = createFoodOrderTenant("tenant-keep-pass", "Keep Password", "bot-token", "admin-before", "secret-before")
+                .get("id").asLong();
+
+        UpdateTenantRequest request = new UpdateTenantRequest(
+                "Keep Password Updated",
+                TenantType.FOOD_ORDER,
+                "bot-token-updated",
+                444444L,
+                "Asia/Ho_Chi_Minh",
+                "#778899",
+                "https://cdn.example.com/keep-pass.png",
+                "Password unchanged",
+                "admin-after",
+                "",
+                true
+        );
+
+        mockMvc.perform(put("/superadmin/tenants/" + tenantId)
+                        .header(AUTHORIZATION, basicAuth("test-superadmin", "test-password"))
+                        .contentType(APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.slug").value("tenant-keep-pass"))
+                .andExpect(jsonPath("$.name").value("Keep Password Updated"));
+
+        mockMvc.perform(get("/superadmin/tenants/" + tenantId)
+                        .header(AUTHORIZATION, basicAuth("test-superadmin", "test-password")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.slug").value("tenant-keep-pass"))
+                .andExpect(jsonPath("$.config.admin_username").value("admin-after"))
+                .andExpect(jsonPath("$.botToken").value("bot-token-updated"))
+                .andExpect(jsonPath("$.config.primary_color").value("#778899"));
+
+        mockMvc.perform(get("/admin/tenant-keep-pass/services")
+                        .header(AUTHORIZATION, basicAuth("admin-before", "secret-before")))
+                .andExpect(status().isUnauthorized());
+
+        mockMvc.perform(get("/admin/tenant-keep-pass/services")
+                        .header(AUTHORIZATION, basicAuth("admin-after", "secret-before")))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void superAdminCanClearOptionalTenantFieldsAndDeactivateTenant() throws Exception {
+        long tenantId = createFoodOrderTenant("tenant-clear", "Tenant Clear", "bot-clear", "admin-clear", "secret-clear")
+                .get("id").asLong();
+
+        UpdateTenantRequest request = new UpdateTenantRequest(
+                "Tenant Cleared",
+                TenantType.FOOD_ORDER,
+                "",
+                null,
+                "",
+                "",
+                "",
+                "",
+                "admin-clear",
+                "",
+                false
+        );
+
+        mockMvc.perform(put("/superadmin/tenants/" + tenantId)
+                        .header(AUTHORIZATION, basicAuth("test-superadmin", "test-password"))
+                        .contentType(APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.slug").value("tenant-clear"))
+                .andExpect(jsonPath("$.active").value(false))
+                .andExpect(jsonPath("$.timezone").value("Asia/Ho_Chi_Minh"));
+
+        mockMvc.perform(get("/superadmin/tenants/" + tenantId)
+                        .header(AUTHORIZATION, basicAuth("test-superadmin", "test-password")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.slug").value("tenant-clear"))
+                .andExpect(jsonPath("$.active").value(false))
+                .andExpect(jsonPath("$.botToken").doesNotExist())
+                .andExpect(jsonPath("$.ownerTelegramId").doesNotExist())
+                .andExpect(jsonPath("$.timezone").value("Asia/Ho_Chi_Minh"))
+                .andExpect(jsonPath("$.config.admin_username").value("admin-clear"))
+                .andExpect(jsonPath("$.config.primary_color").doesNotExist())
+                .andExpect(jsonPath("$.config.logo_url").doesNotExist())
+                .andExpect(jsonPath("$.config.welcome_message").doesNotExist());
+
+        ResponseStatusException publicAccessFailure = assertTenantNotFound(() ->
+                mockMvc.perform(get("/t/tenant-clear/services")));
+        assertEquals("Tenant not found", publicAccessFailure.getReason());
+
+        ResponseStatusException adminAccessFailure = assertTenantNotFound(() ->
+                mockMvc.perform(get("/admin/tenant-clear/services")
+                        .header(AUTHORIZATION, basicAuth("admin-clear", "secret-clear"))));
+        assertEquals("Tenant not found", adminAccessFailure.getReason());
+    }
+
+    private ResponseStatusException assertTenantNotFound(Executable executable) {
+        ResponseStatusException exception = assertThrows(ResponseStatusException.class, executable);
+        assertEquals(404, exception.getStatusCode().value());
+        return exception;
     }
 }
