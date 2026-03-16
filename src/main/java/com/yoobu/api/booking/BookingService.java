@@ -2,7 +2,6 @@ package com.yoobu.api.booking;
 
 import com.yoobu.api.audit.AuditLogService;
 import com.yoobu.api.booking.dto.BookingItemRequest;
-import com.yoobu.api.booking.dto.BookingItemResponse;
 import com.yoobu.api.booking.dto.BookingResponse;
 import com.yoobu.api.booking.dto.CreateBookingRequest;
 import com.yoobu.api.catalog.CatalogService;
@@ -35,6 +34,7 @@ public class BookingService {
     private final AuditLogService auditLogService;
     private final BookingRepository bookingRepository;
     private final BookingItemRepository bookingItemRepository;
+    private final BookingMapper bookingMapper;
     private final CatalogServiceRepository catalogServiceRepository;
     private final TenantConfigRepository tenantConfigRepository;
     private final TenantTimeService tenantTimeService;
@@ -259,24 +259,7 @@ public class BookingService {
     }
 
     private BookingResponse toResponse(Booking booking, List<BookingItem> items) {
-        List<BookingItemResponse> itemResponses = items.stream()
-                .map(item -> new BookingItemResponse(
-                        item.getService().getName(),
-                        item.getQuantity(),
-                        item.getUnitPrice()))
-                .toList();
-
-        return new BookingResponse(
-                booking.getId(),
-                booking.getType(),
-                booking.getStatus(),
-                booking.getCustomerName(),
-                booking.getTotalPrice(),
-                booking.getDeliveryDate(),
-                booking.getNote(),
-                itemResponses,
-                booking.getCreatedAt()
-        );
+        return bookingMapper.toResponse(booking, items);
     }
 
     private Map<String, Object> toAuditSnapshot(Booking booking) {

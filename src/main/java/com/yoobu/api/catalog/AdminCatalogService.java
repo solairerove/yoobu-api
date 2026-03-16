@@ -26,6 +26,7 @@ public class AdminCatalogService {
 
     private final AuditLogService auditLogService;
     private final CatalogServiceRepository catalogServiceRepository;
+    private final CatalogServiceMapper catalogServiceMapper;
 
     @Transactional(readOnly = true)
     public List<ServiceResponse> getAdminServices() {
@@ -33,7 +34,7 @@ public class AdminCatalogService {
         return catalogServiceRepository.findByTenantIdAndStatusNotOrderBySortOrderAscIdAsc(
                         TenantContext.getRequiredTenantId(), ServiceStatus.DELETED)
                 .stream()
-                .map(this::toResponse)
+                .map(catalogServiceMapper::toResponse)
                 .toList();
     }
 
@@ -45,7 +46,7 @@ public class AdminCatalogService {
                         serviceId, TenantContext.getRequiredTenantId(), ServiceStatus.DELETED)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Service not found"));
 
-        return toResponse(service);
+        return catalogServiceMapper.toResponse(service);
     }
 
     @Transactional
@@ -70,7 +71,7 @@ public class AdminCatalogService {
                 toAuditSnapshot(savedService)
         );
 
-        return toResponse(savedService);
+        return catalogServiceMapper.toResponse(savedService);
     }
 
     @Transactional
@@ -100,7 +101,7 @@ public class AdminCatalogService {
                 toAuditSnapshot(savedService)
         );
 
-        return toResponse(savedService);
+        return catalogServiceMapper.toResponse(savedService);
     }
 
     @Transactional
@@ -156,19 +157,6 @@ public class AdminCatalogService {
         service.setUnit(StringUtils.hasText(request.unit()) ? request.unit() : "шт");
         service.setDurationMinutes(request.durationMinutes());
         service.setSortOrder(request.sortOrder() == null ? 0 : request.sortOrder());
-    }
-
-    private ServiceResponse toResponse(CatalogService service) {
-        return new ServiceResponse(
-                service.getId(),
-                service.getName(),
-                service.getDescription(),
-                service.getPrice(),
-                service.getUnit(),
-                service.getDurationMinutes(),
-                service.getSortOrder(),
-                service.getStatus()
-        );
     }
 
     private Map<String, Object> toAuditSnapshot(CatalogService service) {

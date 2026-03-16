@@ -11,20 +11,13 @@ import org.springframework.stereotype.Service;
 public class CatalogQueryService {
 
     private final CatalogServiceRepository catalogServiceRepository;
+    private final CatalogServiceMapper catalogServiceMapper;
 
     public List<ServiceResponse> getActiveServices() {
         return catalogServiceRepository.findByTenantIdAndStatusOrderBySortOrderAscIdAsc(
                         TenantContext.getRequiredTenantId(), ServiceStatus.ACTIVE)
                 .stream()
-                .map(service -> new ServiceResponse(
-                        service.getId(),
-                        service.getName(),
-                        service.getDescription(),
-                        service.getPrice(),
-                        service.getUnit(),
-                        service.getDurationMinutes(),
-                        service.getSortOrder(),
-                        service.getStatus()))
+                .map(catalogServiceMapper::toResponse)
                 .toList();
     }
 }
