@@ -40,6 +40,7 @@ import org.testcontainers.containers.PostgreSQLContainer;
 @ActiveProfiles("dev")
 public abstract class IntegrationTestSupport {
 
+    private static final String TELEGRAM_USER_ID_HEADER = "X-Telegram-User-Id";
     protected static final String DEFAULT_TENANT_TIMEZONE = "Europe/Warsaw";
     protected static final String SUPERADMIN_USERNAME = "test-superadmin";
     protected static final String SUPERADMIN_PASSWORD = "test-password";
@@ -166,11 +167,10 @@ public abstract class IntegrationTestSupport {
             String adminUsername,
             String adminPassword
     ) throws Exception {
-        return readJson(mockMvc.perform(post("/superadmin/tenants")
-                        .header(AUTHORIZATION, superAdminAuth())
-                        .contentType(APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(
-                                tenant(slug, name, type, botToken, adminUsername, adminPassword))))
+        return readJson(performJson(
+                withSuperAdminAuth(post("/superadmin/tenants")),
+                tenant(slug, name, type, botToken, adminUsername, adminPassword)
+        )
                 .andExpect(status().isOk())
                 .andReturn());
     }
@@ -182,29 +182,29 @@ public abstract class IntegrationTestSupport {
             String name,
             String price
     ) throws Exception {
-        return readJson(mockMvc.perform(post("/admin/" + slug + "/services")
-                        .header(AUTHORIZATION, basicAuth(adminUsername, adminPassword))
-                        .contentType(APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(serviceRequest(name, price))))
+        return readJson(performJson(
+                withBasicAuth(post(adminPath(slug, "/services")), adminUsername, adminPassword),
+                serviceRequest(name, price)
+        )
                 .andExpect(status().isCreated())
                 .andReturn());
     }
 
     protected JsonNode createBooking(String slug, long telegramUserId, long serviceId, int quantity) throws Exception {
-        return readJson(mockMvc.perform(post("/t/" + slug + "/bookings")
-                        .header("X-Telegram-User-Id", tenantUserId(telegramUserId))
-                        .contentType(APPLICATION_JSON)
-                        .content(bookingPayload(serviceId, quantity)))
+        return readJson(performJson(
+                withTelegramUser(post(publicPath(slug, "/bookings")), telegramUserId),
+                bookingPayload(serviceId, quantity)
+        )
                 .andExpect(status().isOk())
                 .andReturn());
     }
 
     protected JsonNode createBooking(String slug, long telegramUserId, long serviceId, int quantity, LocalDate deliveryDate)
             throws Exception {
-        return readJson(mockMvc.perform(post("/t/" + slug + "/bookings")
-                        .header("X-Telegram-User-Id", tenantUserId(telegramUserId))
-                        .contentType(APPLICATION_JSON)
-                        .content(bookingPayload(serviceId, quantity, deliveryDate)))
+        return readJson(performJson(
+                withTelegramUser(post(publicPath(slug, "/bookings")), telegramUserId),
+                bookingPayload(serviceId, quantity, deliveryDate)
+        )
                 .andExpect(status().isOk())
                 .andReturn());
     }
@@ -216,15 +216,7 @@ public abstract class IntegrationTestSupport {
             long bookingId,
             BookingStatus statusValue
     ) throws Exception {
-        mockMvc.perform(put("/admin/" + slug + "/bookings/" + bookingId + "/status")
-                        .header(AUTHORIZATION, basicAuth(adminUsername, adminPassword))
-                        .contentType(APPLICATION_JSON)
-                        .content("""
-                                {
-                                  "status": "%s"
-                                }
-                                """.formatted(statusValue.name())))
-                .andExpect(status().isOk());
+        updateBookingStatus(slug, adminUsername, adminPassword, bookingId, statusValue.name());
     }
 
     protected void updateBookingStatus(
@@ -234,14 +226,14 @@ public abstract class IntegrationTestSupport {
             long bookingId,
             String statusValue
     ) throws Exception {
-        mockMvc.perform(put("/admin/" + slug + "/bookings/" + bookingId + "/status")
-                        .header(AUTHORIZATION, basicAuth(adminUsername, adminPassword))
-                        .contentType(APPLICATION_JSON)
-                        .content("""
-                                {
-                                  "status": "%s"
-                                }
-                                """.formatted(statusValue)))
+        performJson(
+                withBasicAuth(put(adminPath(slug, "/bookings/" + bookingId + "/status")), adminUsername, adminPassword),
+                """
+                        {
+                          "status": "%s"
+                        }
+                        """.formatted(statusValue)
+        )
                 .andExpect(status().isOk());
     }
 
@@ -310,11 +302,11 @@ public abstract class IntegrationTestSupport {
     }
 
     protected ResultActions getWithSuperAdminAuth(String path) throws Exception {
-        return mockMvc.perform(get(path).header(AUTHORIZATION, superAdminAuth()));
+        return mockMvc.perform(withSuperAdminAuth(get(path)));
     }
 
     protected ResultActions getWithTenantAdminAuth(String path, String username, String password) throws Exception {
-        return mockMvc.perform(get(path).header(AUTHORIZATION, basicAuth(username, password)));
+        return mockMvc.perform(withBasicAuth(get(path), username, password));
     }
 
     protected ResultActions superAdminGet(String path) throws Exception {
@@ -322,23 +314,15 @@ public abstract class IntegrationTestSupport {
     }
 
     protected ResultActions superAdminPostJson(String path, Object body) throws Exception {
-        String content = jsonBody(body);
-        return mockMvc.perform(post(path)
-                .header(AUTHORIZATION, superAdminAuth())
-                .contentType(APPLICATION_JSON)
-                .content(content));
+        return performJson(withSuperAdminAuth(post(path)), body);
     }
 
     protected ResultActions superAdminPutJson(String path, Object body) throws Exception {
-        String content = jsonBody(body);
-        return mockMvc.perform(put(path)
-                .header(AUTHORIZATION, superAdminAuth())
-                .contentType(APPLICATION_JSON)
-                .content(content));
+        return performJson(withSuperAdminAuth(put(path)), body);
     }
 
     protected ResultActions superAdminPostForm(String path, Map<String, String> form) throws Exception {
-        return mockMvc.perform(withForm(post(path).header(AUTHORIZATION, superAdminAuth()), form));
+        return mockMvc.perform(withForm(withSuperAdminAuth(post(path)), form));
     }
 
     protected ResultActions tenantAdminGet(String slug, String path, String username, String password) throws Exception {
@@ -352,11 +336,7 @@ public abstract class IntegrationTestSupport {
             String password,
             Object body
     ) throws Exception {
-        String content = jsonBody(body);
-        return mockMvc.perform(post(adminPath(slug, path))
-                .header(AUTHORIZATION, basicAuth(username, password))
-                .contentType(APPLICATION_JSON)
-                .content(content));
+        return performJson(withBasicAuth(post(adminPath(slug, path)), username, password), body);
     }
 
     protected ResultActions tenantAdminPutJson(
@@ -366,16 +346,11 @@ public abstract class IntegrationTestSupport {
             String password,
             Object body
     ) throws Exception {
-        String content = jsonBody(body);
-        return mockMvc.perform(put(adminPath(slug, path))
-                .header(AUTHORIZATION, basicAuth(username, password))
-                .contentType(APPLICATION_JSON)
-                .content(content));
+        return performJson(withBasicAuth(put(adminPath(slug, path)), username, password), body);
     }
 
     protected ResultActions tenantAdminDelete(String slug, String path, String username, String password) throws Exception {
-        return mockMvc.perform(delete(adminPath(slug, path))
-                .header(AUTHORIZATION, basicAuth(username, password)));
+        return mockMvc.perform(withBasicAuth(delete(adminPath(slug, path)), username, password));
     }
 
     protected ResultActions tenantAdminPostForm(
@@ -386,7 +361,7 @@ public abstract class IntegrationTestSupport {
             Map<String, String> form
     ) throws Exception {
         return mockMvc.perform(withForm(
-                post(adminPath(slug, path)).header(AUTHORIZATION, basicAuth(username, password)),
+                withBasicAuth(post(adminPath(slug, path)), username, password),
                 form
         ));
     }
@@ -396,15 +371,11 @@ public abstract class IntegrationTestSupport {
     }
 
     protected ResultActions tenantPublicGetAsUser(String slug, String path, long userId) throws Exception {
-        return mockMvc.perform(get(publicPath(slug, path))
-                .header("X-Telegram-User-Id", tenantUserId(userId)));
+        return mockMvc.perform(withTelegramUser(get(publicPath(slug, path)), userId));
     }
 
     protected ResultActions tenantPublicPostJson(String slug, String path, long userId, String body) throws Exception {
-        return mockMvc.perform(post(publicPath(slug, path))
-                .header("X-Telegram-User-Id", tenantUserId(userId))
-                .contentType(APPLICATION_JSON)
-                .content(body));
+        return performJson(withTelegramUser(post(publicPath(slug, path)), userId), body);
     }
 
     protected String adminPath(String slug, String path) {
@@ -433,6 +404,28 @@ public abstract class IntegrationTestSupport {
     ) {
         form.forEach(builder::param);
         return builder;
+    }
+
+    private MockHttpServletRequestBuilder withSuperAdminAuth(MockHttpServletRequestBuilder builder) {
+        return builder.header(AUTHORIZATION, superAdminAuth());
+    }
+
+    private MockHttpServletRequestBuilder withBasicAuth(
+            MockHttpServletRequestBuilder builder,
+            String username,
+            String password
+    ) {
+        return builder.header(AUTHORIZATION, basicAuth(username, password));
+    }
+
+    private MockHttpServletRequestBuilder withTelegramUser(MockHttpServletRequestBuilder builder, long userId) {
+        return builder.header(TELEGRAM_USER_ID_HEADER, tenantUserId(userId));
+    }
+
+    private ResultActions performJson(MockHttpServletRequestBuilder builder, Object body) throws Exception {
+        return mockMvc.perform(builder
+                .contentType(APPLICATION_JSON)
+                .content(jsonBody(body)));
     }
 
     private String jsonBody(Object body) throws Exception {
