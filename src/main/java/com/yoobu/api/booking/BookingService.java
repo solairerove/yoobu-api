@@ -43,7 +43,7 @@ public class BookingService {
     public BookingResponse createFoodOrder(CreateBookingRequest request, Long telegramUserId) {
         Tenant tenant = requireFoodOrderTenant();
         validateDeliveryDate(request.deliveryDate(), tenant);
-        OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
+        OffsetDateTime now = nowUtc();
 
         Booking booking = new Booking();
         booking.setTenant(tenant);
@@ -88,31 +88,23 @@ public class BookingService {
     public List<BookingResponse> getMyBookings(Long telegramUserId) {
         requireFoodOrderTenant();
 
-        return bookingRepository.findByTenantIdAndTelegramUserIdAndDeletedAtIsNullOrderByCreatedAtDesc(
-                        TenantContext.getRequiredTenantId(), telegramUserId)
-                .stream()
-                .map(this::toResponse)
-                .toList();
+        List<Booking> bookings = bookingRepository.findByTenantIdAndTelegramUserIdAndDeletedAtIsNullOrderByCreatedAtDesc(
+                TenantContext.getRequiredTenantId(),
+                telegramUserId
+        );
+        return toResponses(bookings);
     }
 
     @Transactional(readOnly = true)
     public BookingResponse getMyBooking(Long bookingId, Long telegramUserId) {
         requireFoodOrderTenant();
-
-        Booking booking = bookingRepository.findByIdAndTenantIdAndTelegramUserIdAndDeletedAtIsNull(
-                        bookingId, TenantContext.getRequiredTenantId(), telegramUserId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Booking not found"));
-
-        return toResponse(booking);
+        return toResponse(findCustomerBooking(bookingId, telegramUserId));
     }
 
     @Transactional
     public BookingResponse cancelMyBooking(Long bookingId, Long telegramUserId) {
         requireFoodOrderTenant();
-
-        Booking booking = bookingRepository.findByIdAndTenantIdAndTelegramUserIdAndDeletedAtIsNull(
-                        bookingId, TenantContext.getRequiredTenantId(), telegramUserId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Booking not found"));
+        Booking booking = findCustomerBooking(bookingId, telegramUserId);
 
         if (booking.getStatus() == BookingStatus.DONE) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Completed booking cannot be cancelled");
@@ -120,7 +112,7 @@ public class BookingService {
 
         Map<String, Object> oldSnapshot = toAuditSnapshot(booking);
         booking.setStatus(BookingStatus.CANCELLED);
-        booking.setUpdatedAt(OffsetDateTime.now(ZoneOffset.UTC));
+        booking.setUpdatedAt(nowUtc());
 
         Booking savedBooking = bookingRepository.save(booking);
         auditLogService.logAction(
@@ -155,34 +147,23 @@ public class BookingService {
             bookings = bookingRepository.findByTenantIdAndDeletedAtIsNullOrderByCreatedAtDesc(tenantId);
         }
 
-        return bookings
-                .stream()
-                .map(this::toResponse)
-                .toList();
+        return toResponses(bookings);
     }
 
     @Transactional(readOnly = true)
     public BookingResponse getAdminBooking(Long bookingId) {
         requireFoodOrderTenant();
-
-        Booking booking = bookingRepository.findByIdAndTenantIdAndDeletedAtIsNull(
-                        bookingId, TenantContext.getRequiredTenantId())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Booking not found"));
-
-        return toResponse(booking);
+        return toResponse(findAdminBooking(bookingId));
     }
 
     @Transactional
     public BookingResponse updateBookingStatus(Long bookingId, BookingStatus status) {
         requireFoodOrderTenant();
-
-        Booking booking = bookingRepository.findByIdAndTenantIdAndDeletedAtIsNull(
-                        bookingId, TenantContext.getRequiredTenantId())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Booking not found"));
+        Booking booking = findAdminBooking(bookingId);
         Map<String, Object> oldSnapshot = toAuditSnapshot(booking);
 
         booking.setStatus(status);
-        booking.setUpdatedAt(OffsetDateTime.now(ZoneOffset.UTC));
+        booking.setUpdatedAt(nowUtc());
 
         Booking savedBooking = bookingRepository.save(booking);
         auditLogService.logAction(
@@ -228,6 +209,23 @@ public class BookingService {
                 ));
     }
 
+    private Booking findCustomerBooking(Long bookingId, Long telegramUserId) {
+        return bookingRepository.findByIdAndTenantIdAndTelegramUserIdAndDeletedAtIsNull(
+                        bookingId,
+                        TenantContext.getRequiredTenantId(),
+                        telegramUserId
+                )
+                .orElseThrow(this::bookingNotFound);
+    }
+
+    private Booking findAdminBooking(Long bookingId) {
+        return bookingRepository.findByIdAndTenantIdAndDeletedAtIsNull(
+                        bookingId,
+                        TenantContext.getRequiredTenantId()
+                )
+                .orElseThrow(this::bookingNotFound);
+    }
+
     private BookingItem toBookingItem(Booking booking, BookingItemRequest item, Long tenantId) {
         CatalogService service = catalogServiceRepository.findByIdAndTenantIdAndStatus(
                         item.serviceId(), tenantId, com.yoobu.api.catalog.ServiceStatus.ACTIVE)
@@ -247,6 +245,17 @@ public class BookingService {
 
     private BookingResponse toResponse(Booking booking) {
         return toResponse(booking, bookingItemRepository.findByBookingIdOrderByIdAsc(booking.getId()));
+    }
+
+    private List<BookingResponse> toResponses(List<Booking> bookings) {
+        if (bookings.isEmpty()) {
+            return List.of();
+        }
+
+        Map<Long, List<BookingItem>> itemsByBookingId = loadItemsByBookingId(bookings);
+        return bookings.stream()
+                .map(booking -> toResponse(booking, itemsByBookingId.getOrDefault(booking.getId(), List.of())))
+                .toList();
     }
 
     private BookingResponse toResponse(Booking booking, List<BookingItem> items) {
@@ -300,5 +309,26 @@ public class BookingService {
         snapshot.put("deletedAt", booking.getDeletedAt());
         snapshot.put("items", itemSnapshots);
         return snapshot;
+    }
+
+    private Map<Long, List<BookingItem>> loadItemsByBookingId(List<Booking> bookings) {
+        List<Long> bookingIds = bookings.stream()
+                .map(Booking::getId)
+                .toList();
+
+        return bookingItemRepository.findByBookingIdInOrderByBookingIdAscIdAsc(bookingIds).stream()
+                .collect(java.util.stream.Collectors.groupingBy(
+                        item -> item.getBooking().getId(),
+                        LinkedHashMap::new,
+                        java.util.stream.Collectors.toList()
+                ));
+    }
+
+    private ResponseStatusException bookingNotFound() {
+        return new ResponseStatusException(HttpStatus.NOT_FOUND, "Booking not found");
+    }
+
+    private OffsetDateTime nowUtc() {
+        return OffsetDateTime.now(ZoneOffset.UTC);
     }
 }
