@@ -19,44 +19,46 @@ import org.springframework.test.context.TestPropertySource;
 })
 class TenantAdminAccessIT extends IntegrationTestSupport {
 
+    private static final String TENANT_SLUG = "tenant-auth";
+    private static final String TENANT_SERVICES_PATH = "/admin/" + TENANT_SLUG + "/services";
+
     @Test
     void createdTenantCanAuthenticateWithValidCredentials() throws Exception {
-        createFoodOrderTenant("tenant-auth", "Tenant Auth", "bot-auth", "tenant-admin", "tenant-secret");
+        createFoodOrderTenant(TENANT_SLUG, "Tenant Auth", "bot-auth", "tenant-admin", "tenant-secret");
 
-        mockMvc.perform(get("/admin/tenant-auth/services")
-                        .header(AUTHORIZATION, basicAuth("tenant-admin", "tenant-secret")))
+        getWithTenantAdminAuth(TENANT_SERVICES_PATH, "tenant-admin", "tenant-secret")
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(0));
     }
 
     @Test
     void superAdminCanAccessTenantAdminEndpoint() throws Exception {
-        createFoodOrderTenant("tenant-auth", "Tenant Auth", "bot-auth", "tenant-admin", "tenant-secret");
+        createFoodOrderTenant(TENANT_SLUG, "Tenant Auth", "bot-auth", "tenant-admin", "tenant-secret");
 
-        mockMvc.perform(get("/admin/tenant-auth/services")
-                        .header(AUTHORIZATION, basicAuth("test-superadmin", "test-password")))
+        mockMvc.perform(get(TENANT_SERVICES_PATH)
+                        .header(AUTHORIZATION, superAdminAuth()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(0));
     }
 
     @Test
     void tenantCannotAuthenticateWithInvalidCredentials() throws Exception {
-        createFoodOrderTenant("tenant-auth", "Tenant Auth", "bot-auth", "tenant-admin", "tenant-secret");
+        createFoodOrderTenant(TENANT_SLUG, "Tenant Auth", "bot-auth", "tenant-admin", "tenant-secret");
 
-        mockMvc.perform(get("/admin/tenant-auth/services")
+        mockMvc.perform(get(TENANT_SERVICES_PATH)
                         .header(AUTHORIZATION, basicAuth("tenant-admin", "wrong-secret")))
                 .andExpect(status().isUnauthorized())
-                .andExpect(header().string(WWW_AUTHENTICATE, "Basic realm=\"Yoobu Tenant Admin: tenant-auth\""))
+                .andExpect(header().string(WWW_AUTHENTICATE, "Basic realm=\"Yoobu Tenant Admin: " + TENANT_SLUG + "\""))
                 .andExpect(status().reason("Invalid admin credentials"));
     }
 
     @Test
     void tenantCannotAccessAdminEndpointWithoutCredentials() throws Exception {
-        createFoodOrderTenant("tenant-auth", "Tenant Auth", "bot-auth", "tenant-admin", "tenant-secret");
+        createFoodOrderTenant(TENANT_SLUG, "Tenant Auth", "bot-auth", "tenant-admin", "tenant-secret");
 
-        mockMvc.perform(get("/admin/tenant-auth/services"))
+        mockMvc.perform(get(TENANT_SERVICES_PATH))
                 .andExpect(status().isUnauthorized())
-                .andExpect(header().string(WWW_AUTHENTICATE, "Basic realm=\"Yoobu Tenant Admin: tenant-auth\""))
+                .andExpect(header().string(WWW_AUTHENTICATE, "Basic realm=\"Yoobu Tenant Admin: " + TENANT_SLUG + "\""))
                 .andExpect(status().reason("Missing Basic authorization header"));
     }
 }

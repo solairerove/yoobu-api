@@ -20,15 +20,18 @@ import org.springframework.test.context.TestPropertySource;
 })
 class SuperAdminPanelIT extends IntegrationTestSupport {
 
+    private static final String PANEL_ROOT = "/superadmin/panel";
+    private static final String PANEL_TENANTS_PATH = PANEL_ROOT + "/tenants";
+
     @Test
     void superAdminPanelListsAndCreatesTenants() throws Exception {
-        mockMvc.perform(get("/superadmin/panel")
-                        .header(AUTHORIZATION, basicAuth("test-superadmin", "test-password")))
+        mockMvc.perform(get(PANEL_ROOT)
+                        .header(AUTHORIZATION, superAdminAuth()))
                 .andExpect(status().is3xxRedirection())
-                .andExpect(header().string("Location", "/superadmin/panel/tenants"));
+                .andExpect(header().string("Location", PANEL_TENANTS_PATH));
 
-        mockMvc.perform(post("/superadmin/panel/tenants")
-                        .header(AUTHORIZATION, basicAuth("test-superadmin", "test-password"))
+        mockMvc.perform(post(PANEL_TENANTS_PATH)
+                        .header(AUTHORIZATION, superAdminAuth())
                         .param("slug", "panel-tenant")
                         .param("name", "Panel Tenant")
                         .param("type", "FOOD_ORDER")
@@ -41,24 +44,23 @@ class SuperAdminPanelIT extends IntegrationTestSupport {
                         .param("adminUsername", "panel-admin")
                         .param("adminPassword", "panel-secret"))
                 .andExpect(status().is3xxRedirection())
-                .andExpect(header().string("Location", "/superadmin/panel/tenants"));
+                .andExpect(header().string("Location", PANEL_TENANTS_PATH));
 
-        JsonNode tenants = readJson(mockMvc.perform(get("/superadmin/tenants")
-                        .header(AUTHORIZATION, basicAuth("test-superadmin", "test-password")))
+        JsonNode tenants = readJson(getWithSuperAdminAuth("/superadmin/tenants")
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(1))
                 .andReturn());
         long tenantId = tenants.get(0).get("id").asLong();
 
-        mockMvc.perform(get("/superadmin/panel/tenants")
-                        .header(AUTHORIZATION, basicAuth("test-superadmin", "test-password")))
+        mockMvc.perform(get(PANEL_TENANTS_PATH)
+                        .header(AUTHORIZATION, superAdminAuth()))
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("Panel Tenant")))
                 .andExpect(content().string(containsString("panel-tenant")))
                 .andExpect(content().string(containsString("/admin/panel-tenant/panel")));
 
-        mockMvc.perform(get("/superadmin/panel/tenants/" + tenantId)
-                        .header(AUTHORIZATION, basicAuth("test-superadmin", "test-password")))
+        mockMvc.perform(get(PANEL_TENANTS_PATH + "/" + tenantId)
+                        .header(AUTHORIZATION, superAdminAuth()))
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("Panel Tenant")))
                 .andExpect(content().string(containsString("panel-admin")))
@@ -71,14 +73,14 @@ class SuperAdminPanelIT extends IntegrationTestSupport {
         long tenantId = createFoodOrderTenant("panel-edit", "Panel Before", "bot-before", "panel-admin", "panel-secret")
                 .get("id").asLong();
 
-        mockMvc.perform(get("/superadmin/panel/tenants/" + tenantId + "/edit")
-                        .header(AUTHORIZATION, basicAuth("test-superadmin", "test-password")))
+        mockMvc.perform(get(PANEL_TENANTS_PATH + "/" + tenantId + "/edit")
+                        .header(AUTHORIZATION, superAdminAuth()))
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("Edit tenant")))
                 .andExpect(content().string(containsString("panel-edit")));
 
-        mockMvc.perform(post("/superadmin/panel/tenants/" + tenantId)
-                        .header(AUTHORIZATION, basicAuth("test-superadmin", "test-password"))
+        mockMvc.perform(post(PANEL_TENANTS_PATH + "/" + tenantId)
+                        .header(AUTHORIZATION, superAdminAuth())
                         .param("slug", "panel-edit")
                         .param("name", "Panel After")
                         .param("type", "FOOD_ORDER")
@@ -92,10 +94,10 @@ class SuperAdminPanelIT extends IntegrationTestSupport {
                         .param("adminPassword", "panel-secret-2")
                         .param("active", "true"))
                 .andExpect(status().is3xxRedirection())
-                .andExpect(header().string("Location", "/superadmin/panel/tenants/" + tenantId));
+                .andExpect(header().string("Location", PANEL_TENANTS_PATH + "/" + tenantId));
 
-        mockMvc.perform(get("/superadmin/panel/tenants/" + tenantId)
-                        .header(AUTHORIZATION, basicAuth("test-superadmin", "test-password")))
+        mockMvc.perform(get(PANEL_TENANTS_PATH + "/" + tenantId)
+                        .header(AUTHORIZATION, superAdminAuth()))
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("Panel After")))
                 .andExpect(content().string(containsString("panel-admin-2")))
@@ -115,8 +117,8 @@ class SuperAdminPanelIT extends IntegrationTestSupport {
     void superAdminPanelRejectsDuplicateSlugOnCreateForm() throws Exception {
         createFoodOrderTenant("panel-duplicate", "Existing Tenant", "bot-existing", "existing-admin", "existing-secret");
 
-        mockMvc.perform(post("/superadmin/panel/tenants")
-                        .header(AUTHORIZATION, basicAuth("test-superadmin", "test-password"))
+        mockMvc.perform(post(PANEL_TENANTS_PATH)
+                        .header(AUTHORIZATION, superAdminAuth())
                         .param("slug", "panel-duplicate")
                         .param("name", "New Panel Tenant")
                         .param("type", "FOOD_ORDER")

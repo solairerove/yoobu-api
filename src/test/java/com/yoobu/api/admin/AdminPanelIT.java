@@ -19,47 +19,48 @@ import org.springframework.test.context.TestPropertySource;
 })
 class AdminPanelIT extends IntegrationTestSupport {
 
+    private static final String TENANT_SLUG = "food-tenant";
+    private static final String ADMIN_USERNAME = "food-admin";
+    private static final String ADMIN_PASSWORD = "food-secret";
+    private static final String PANEL_ROOT = "/admin/" + TENANT_SLUG + "/panel";
+
     @Test
     void adminPanelPagesRenderAndFormsMutateState() throws Exception {
-        createFoodOrderTenant("food-tenant", "Food Tenant", "food-bot-token", "food-admin", "food-secret");
+        createFoodOrderTenant(TENANT_SLUG, "Food Tenant", "food-bot-token", ADMIN_USERNAME, ADMIN_PASSWORD);
 
-        JsonNode service = createService("food-tenant", "food-admin", "food-secret", "Pizza", "12.50");
+        JsonNode service = createService(TENANT_SLUG, ADMIN_USERNAME, ADMIN_PASSWORD, "Pizza", "12.50");
         long serviceId = service.get("id").asLong();
-        JsonNode booking = createBooking("food-tenant", 777L, serviceId, 2);
+        JsonNode booking = createBooking(TENANT_SLUG, 777L, serviceId, 2);
         long bookingId = booking.get("id").asLong();
 
-        mockMvc.perform(get("/admin/food-tenant/panel")
-                        .header(AUTHORIZATION, basicAuth("food-admin", "food-secret")))
+        getWithTenantAdminAuth(PANEL_ROOT, ADMIN_USERNAME, ADMIN_PASSWORD)
                 .andExpect(status().is3xxRedirection())
-                .andExpect(header().string("Location", "/admin/food-tenant/panel/bookings"));
+                .andExpect(header().string("Location", PANEL_ROOT + "/bookings"));
 
-        mockMvc.perform(get("/admin/food-tenant/panel/bookings")
-                        .header(AUTHORIZATION, basicAuth("food-admin", "food-secret")))
+        getWithTenantAdminAuth(PANEL_ROOT + "/bookings", ADMIN_USERNAME, ADMIN_PASSWORD)
                 .andExpect(status().isOk())
-                .andExpect(content().string(containsString("Bookings for food-tenant")))
+                .andExpect(content().string(containsString("Bookings for " + TENANT_SLUG)))
                 .andExpect(content().string(containsString("Alice")))
                 .andExpect(content().string(containsString("NEW")));
 
-        mockMvc.perform(get("/admin/food-tenant/panel/bookings/" + bookingId)
-                        .header(AUTHORIZATION, basicAuth("food-admin", "food-secret")))
+        getWithTenantAdminAuth(PANEL_ROOT + "/bookings/" + bookingId, ADMIN_USERNAME, ADMIN_PASSWORD)
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("Booking #" + bookingId)))
                 .andExpect(content().string(containsString("Pizza")));
 
-        mockMvc.perform(post("/admin/food-tenant/panel/bookings/" + bookingId + "/status")
-                        .header(AUTHORIZATION, basicAuth("food-admin", "food-secret"))
+        mockMvc.perform(post(PANEL_ROOT + "/bookings/" + bookingId + "/status")
+                        .header(AUTHORIZATION, basicAuth(ADMIN_USERNAME, ADMIN_PASSWORD))
                         .param("status", "CONFIRMED"))
                 .andExpect(status().is3xxRedirection())
-                .andExpect(header().string("Location", "/admin/food-tenant/panel/bookings/" + bookingId));
+                .andExpect(header().string("Location", PANEL_ROOT + "/bookings/" + bookingId));
 
-        mockMvc.perform(get("/admin/food-tenant/panel/services")
-                        .header(AUTHORIZATION, basicAuth("food-admin", "food-secret")))
+        getWithTenantAdminAuth(PANEL_ROOT + "/services", ADMIN_USERNAME, ADMIN_PASSWORD)
                 .andExpect(status().isOk())
-                .andExpect(content().string(containsString("Services for food-tenant")))
+                .andExpect(content().string(containsString("Services for " + TENANT_SLUG)))
                 .andExpect(content().string(containsString("Pizza")));
 
-        mockMvc.perform(post("/admin/food-tenant/panel/services")
-                        .header(AUTHORIZATION, basicAuth("food-admin", "food-secret"))
+        mockMvc.perform(post(PANEL_ROOT + "/services")
+                        .header(AUTHORIZATION, basicAuth(ADMIN_USERNAME, ADMIN_PASSWORD))
                         .param("name", "Pasta")
                         .param("description", "Fresh pasta")
                         .param("price", "14.50")
@@ -68,10 +69,10 @@ class AdminPanelIT extends IntegrationTestSupport {
                         .param("sortOrder", "2")
                         .param("status", "ACTIVE"))
                 .andExpect(status().is3xxRedirection())
-                .andExpect(header().string("Location", "/admin/food-tenant/panel/services"));
+                .andExpect(header().string("Location", PANEL_ROOT + "/services"));
 
-        mockMvc.perform(post("/admin/food-tenant/panel/services/" + serviceId)
-                        .header(AUTHORIZATION, basicAuth("food-admin", "food-secret"))
+        mockMvc.perform(post(PANEL_ROOT + "/services/" + serviceId)
+                        .header(AUTHORIZATION, basicAuth(ADMIN_USERNAME, ADMIN_PASSWORD))
                         .param("name", "Pizza Romana")
                         .param("description", "Thin crust")
                         .param("price", "13.50")
@@ -80,39 +81,37 @@ class AdminPanelIT extends IntegrationTestSupport {
                         .param("sortOrder", "1")
                         .param("status", "ACTIVE"))
                 .andExpect(status().is3xxRedirection())
-                .andExpect(header().string("Location", "/admin/food-tenant/panel/services"));
+                .andExpect(header().string("Location", PANEL_ROOT + "/services"));
 
-        mockMvc.perform(get("/admin/food-tenant/services")
-                        .header(AUTHORIZATION, basicAuth("food-admin", "food-secret")))
+        getWithTenantAdminAuth("/admin/" + TENANT_SLUG + "/services", ADMIN_USERNAME, ADMIN_PASSWORD)
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("Pizza Romana")))
                 .andExpect(content().string(containsString("Pasta")));
 
-        mockMvc.perform(get("/admin/food-tenant/bookings/" + bookingId)
-                        .header(AUTHORIZATION, basicAuth("food-admin", "food-secret")))
+        getWithTenantAdminAuth("/admin/" + TENANT_SLUG + "/bookings/" + bookingId, ADMIN_USERNAME, ADMIN_PASSWORD)
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("CONFIRMED")));
     }
 
     @Test
     void superAdminCanOpenTenantAdminPanel() throws Exception {
-        createFoodOrderTenant("food-tenant", "Food Tenant", "food-bot-token", "food-admin", "food-secret");
+        createFoodOrderTenant(TENANT_SLUG, "Food Tenant", "food-bot-token", ADMIN_USERNAME, ADMIN_PASSWORD);
 
-        mockMvc.perform(get("/admin/food-tenant/panel")
-                        .header(AUTHORIZATION, basicAuth("test-superadmin", "test-password")))
+        mockMvc.perform(get(PANEL_ROOT)
+                        .header(AUTHORIZATION, superAdminAuth()))
                 .andExpect(status().is3xxRedirection())
-                .andExpect(header().string("Location", "/admin/food-tenant/panel/bookings"));
+                .andExpect(header().string("Location", PANEL_ROOT + "/bookings"));
     }
 
     @Test
     void editServiceFormPreservesInactiveState() throws Exception {
-        createFoodOrderTenant("food-tenant", "Food Tenant", "food-bot-token", "food-admin", "food-secret");
+        createFoodOrderTenant(TENANT_SLUG, "Food Tenant", "food-bot-token", ADMIN_USERNAME, ADMIN_PASSWORD);
 
-        JsonNode service = createService("food-tenant", "food-admin", "food-secret", "Pizza", "12.50");
+        JsonNode service = createService(TENANT_SLUG, ADMIN_USERNAME, ADMIN_PASSWORD, "Pizza", "12.50");
         long serviceId = service.get("id").asLong();
 
-        mockMvc.perform(post("/admin/food-tenant/panel/services/" + serviceId)
-                        .header(AUTHORIZATION, basicAuth("food-admin", "food-secret"))
+        mockMvc.perform(post(PANEL_ROOT + "/services/" + serviceId)
+                        .header(AUTHORIZATION, basicAuth(ADMIN_USERNAME, ADMIN_PASSWORD))
                         .param("name", "Pizza")
                         .param("description", "Thin crust")
                         .param("price", "12.50")
@@ -121,10 +120,9 @@ class AdminPanelIT extends IntegrationTestSupport {
                         .param("sortOrder", "1")
                         .param("status", "INACTIVE"))
                 .andExpect(status().is3xxRedirection())
-                .andExpect(header().string("Location", "/admin/food-tenant/panel/services"));
+                .andExpect(header().string("Location", PANEL_ROOT + "/services"));
 
-        mockMvc.perform(get("/admin/food-tenant/panel/services/" + serviceId + "/edit")
-                        .header(AUTHORIZATION, basicAuth("food-admin", "food-secret")))
+        getWithTenantAdminAuth(PANEL_ROOT + "/services/" + serviceId + "/edit", ADMIN_USERNAME, ADMIN_PASSWORD)
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("name=\"status\"")))
                 .andExpect(content().string(containsString("value=\"INACTIVE\" selected=\"selected\"")));
