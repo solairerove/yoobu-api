@@ -1,10 +1,6 @@
 package com.yoobu.api.admin;
 
-import static org.springframework.http.HttpHeaders.AUTHORIZATION;
 import static org.springframework.http.HttpHeaders.WWW_AUTHENTICATE;
-import static org.springframework.http.MediaType.APPLICATION_JSON;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -19,54 +15,35 @@ import org.springframework.test.context.TestPropertySource;
 })
 class TenantIsolationIT extends IntegrationTestSupport {
 
+    private static final String TENANT_ONE = "tenant-one";
+    private static final String TENANT_TWO = "tenant-two";
+
     @Test
     void tenantsDoNotIntercrossServicesOrAdminAccess() throws Exception {
-        createTenant("tenant-one", "Tenant One", "bot-one", "admin-one", "secret-one");
-        createTenant("tenant-two", "Tenant Two", "bot-two", "admin-two", "secret-two");
+        createFoodOrderTenant(TENANT_ONE, "Tenant One", "bot-one", "admin-one", "secret-one");
+        createFoodOrderTenant(TENANT_TWO, "Tenant Two", "bot-two", "admin-two", "secret-two");
 
-        mockMvc.perform(post("/admin/tenant-one/services")
-                        .header(AUTHORIZATION, basicAuth("admin-one", "secret-one"))
-                        .contentType(APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(serviceRequest("Burger", "9.99"))))
+        tenantAdminPostJson(TENANT_ONE, "/services", "admin-one", "secret-one", serviceRequest("Burger", "9.99"))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.name").value("Burger"));
 
-        mockMvc.perform(get("/admin/tenant-two/services")
-                        .header(AUTHORIZATION, basicAuth("admin-one", "secret-one")))
+        tenantAdminGet(TENANT_TWO, "/services", "admin-one", "secret-one")
                 .andExpect(status().isUnauthorized())
-                .andExpect(header().string(WWW_AUTHENTICATE, "Basic realm=\"Yoobu Tenant Admin: tenant-two\""))
+                .andExpect(header().string(WWW_AUTHENTICATE, "Basic realm=\"Yoobu Tenant Admin: " + TENANT_TWO + "\""))
                 .andExpect(status().reason("Invalid admin credentials"));
 
-        mockMvc.perform(post("/admin/tenant-two/services")
-                        .header(AUTHORIZATION, basicAuth("admin-one", "secret-one"))
-                        .contentType(APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(serviceRequest("Sneaky", "1.00"))))
+        tenantAdminPostJson(TENANT_TWO, "/services", "admin-one", "secret-one", serviceRequest("Sneaky", "1.00"))
                 .andExpect(status().isUnauthorized())
-                .andExpect(header().string(WWW_AUTHENTICATE, "Basic realm=\"Yoobu Tenant Admin: tenant-two\""))
+                .andExpect(header().string(WWW_AUTHENTICATE, "Basic realm=\"Yoobu Tenant Admin: " + TENANT_TWO + "\""))
                 .andExpect(status().reason("Invalid admin credentials"));
 
-        mockMvc.perform(get("/t/tenant-one/services"))
+        tenantPublicGet(TENANT_ONE, "/services")
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(1))
                 .andExpect(jsonPath("$[0].name").value("Burger"));
 
-        mockMvc.perform(get("/t/tenant-two/services"))
+        tenantPublicGet(TENANT_TWO, "/services")
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(0));
-    }
-
-    private void createTenant(
-            String slug,
-            String name,
-            String botToken,
-            String adminUsername,
-            String adminPassword
-    ) throws Exception {
-        mockMvc.perform(post("/superadmin/tenants")
-                        .header(AUTHORIZATION, basicAuth("test-superadmin", "test-password"))
-                        .contentType(APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(
-                                foodOrderTenant(slug, name, botToken, adminUsername, adminPassword))))
-                .andExpect(status().isOk());
     }
 }

@@ -1,9 +1,5 @@
 package com.yoobu.api.admin;
 
-import static org.springframework.http.HttpHeaders.AUTHORIZATION;
-import static org.springframework.http.MediaType.APPLICATION_JSON;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -18,15 +14,19 @@ import org.springframework.test.context.TestPropertySource;
 })
 class TenantAdminCatalogAndBookingIT extends IntegrationTestSupport {
 
+    private static final String TENANT_SLUG = "food-tenant";
+    private static final String ADMIN_USERNAME = "food-admin";
+    private static final String ADMIN_PASSWORD = "food-secret";
+
     @Test
     void tenantCanCreateServiceAndCustomerCanViewAndBookIt() throws Exception {
-        createFoodOrderTenant("food-tenant", "Food Tenant", "food-bot-token", "food-admin", "food-secret");
+        createFoodOrderTenant(TENANT_SLUG, "Food Tenant", "food-bot-token", ADMIN_USERNAME, ADMIN_PASSWORD);
 
-        JsonNode service = createService("food-tenant", "food-admin", "food-secret", "Pizza", "12.50");
+        JsonNode service = createService(TENANT_SLUG, ADMIN_USERNAME, ADMIN_PASSWORD, "Pizza", "12.50");
         long serviceId = service.get("id").asLong();
         String deliveryDate = tomorrow().toString();
 
-        mockMvc.perform(get("/t/food-tenant/services"))
+        tenantPublicGet(TENANT_SLUG, "/services")
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(1))
                 .andExpect(jsonPath("$[0].id").value(serviceId))
@@ -47,10 +47,7 @@ class TenantAdminCatalogAndBookingIT extends IntegrationTestSupport {
                 }
                 """.formatted(deliveryDate, serviceId);
 
-        mockMvc.perform(post("/t/food-tenant/bookings")
-                        .header("X-Telegram-User-Id", telegramUserId(777))
-                        .contentType(APPLICATION_JSON)
-                        .content(bookingRequest))
+        tenantPublicPostJson(TENANT_SLUG, "/bookings", 777L, bookingRequest)
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.type").value("ORDER"))
                 .andExpect(jsonPath("$.status").value("NEW"))
@@ -61,17 +58,13 @@ class TenantAdminCatalogAndBookingIT extends IntegrationTestSupport {
                 .andExpect(jsonPath("$.items[0].quantity").value(2))
                 .andExpect(jsonPath("$.items[0].unitPrice").value(12.5));
 
-        mockMvc.perform(get("/admin/food-tenant/bookings")
-                        .header(AUTHORIZATION, basicAuth("food-admin", "food-secret")))
+        tenantAdminGet(TENANT_SLUG, "/bookings", ADMIN_USERNAME, ADMIN_PASSWORD)
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(1))
                 .andExpect(jsonPath("$[0].customerName").value("Alice"))
                 .andExpect(jsonPath("$[0].items[0].serviceName").value("Pizza"));
 
-        mockMvc.perform(get("/admin/food-tenant/bookings")
-                        .param("status", "NEW")
-                        .param("deliveryDate", deliveryDate)
-                        .header(AUTHORIZATION, basicAuth("food-admin", "food-secret")))
+        tenantAdminGet(TENANT_SLUG, "/bookings?status=NEW&deliveryDate=" + deliveryDate, ADMIN_USERNAME, ADMIN_PASSWORD)
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(1))
                 .andExpect(jsonPath("$[0].status").value("NEW"))

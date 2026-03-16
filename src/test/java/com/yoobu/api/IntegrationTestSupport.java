@@ -2,6 +2,8 @@ package com.yoobu.api;
 
 import static org.springframework.http.HttpHeaders.AUTHORIZATION;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -306,13 +308,88 @@ public abstract class IntegrationTestSupport {
     }
 
     protected ResultActions getWithSuperAdminAuth(String path) throws Exception {
-        return mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get(path)
-                .header(AUTHORIZATION, superAdminAuth()));
+        return mockMvc.perform(get(path).header(AUTHORIZATION, superAdminAuth()));
     }
 
     protected ResultActions getWithTenantAdminAuth(String path, String username, String password) throws Exception {
-        return mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get(path)
+        return mockMvc.perform(get(path).header(AUTHORIZATION, basicAuth(username, password)));
+    }
+
+    protected ResultActions superAdminGet(String path) throws Exception {
+        return getWithSuperAdminAuth(path);
+    }
+
+    protected ResultActions superAdminPostJson(String path, Object body) throws Exception {
+        return mockMvc.perform(post(path)
+                .header(AUTHORIZATION, superAdminAuth())
+                .contentType(APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(body)));
+    }
+
+    protected ResultActions tenantAdminGet(String slug, String path, String username, String password) throws Exception {
+        return getWithTenantAdminAuth(adminPath(slug, path), username, password);
+    }
+
+    protected ResultActions tenantAdminPostJson(
+            String slug,
+            String path,
+            String username,
+            String password,
+            Object body
+    ) throws Exception {
+        return mockMvc.perform(post(adminPath(slug, path))
+                .header(AUTHORIZATION, basicAuth(username, password))
+                .contentType(APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(body)));
+    }
+
+    protected ResultActions tenantAdminPutJson(
+            String slug,
+            String path,
+            String username,
+            String password,
+            Object body
+    ) throws Exception {
+        return mockMvc.perform(put(adminPath(slug, path))
+                .header(AUTHORIZATION, basicAuth(username, password))
+                .contentType(APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(body)));
+    }
+
+    protected ResultActions tenantAdminDelete(String slug, String path, String username, String password) throws Exception {
+        return mockMvc.perform(delete(adminPath(slug, path))
                 .header(AUTHORIZATION, basicAuth(username, password)));
+    }
+
+    protected ResultActions tenantPublicGet(String slug, String path) throws Exception {
+        return mockMvc.perform(get(publicPath(slug, path)));
+    }
+
+    protected ResultActions tenantPublicPostJson(String slug, String path, long userId, String body) throws Exception {
+        return mockMvc.perform(post(publicPath(slug, path))
+                .header("X-Telegram-User-Id", tenantUserId(userId))
+                .contentType(APPLICATION_JSON)
+                .content(body));
+    }
+
+    protected String adminPath(String slug, String path) {
+        return tenantPath("/admin", slug, path);
+    }
+
+    protected String publicPath(String slug, String path) {
+        return tenantPath("/t", slug, path);
+    }
+
+    protected String panelPath(String slug, String path) {
+        return tenantPath("/admin", slug, "/panel" + normalizePath(path));
+    }
+
+    private String tenantPath(String root, String slug, String path) {
+        return root + "/" + slug + normalizePath(path);
+    }
+
+    private String normalizePath(String path) {
+        return path.startsWith("/") ? path : "/" + path;
     }
 
     private JsonNode auditValue(JsonNode auditLog, String fieldName) throws Exception {

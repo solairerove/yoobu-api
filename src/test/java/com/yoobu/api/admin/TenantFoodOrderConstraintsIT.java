@@ -1,10 +1,5 @@
 package com.yoobu.api.admin;
 
-import static org.springframework.http.HttpHeaders.AUTHORIZATION;
-import static org.springframework.http.MediaType.APPLICATION_JSON;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -20,10 +15,13 @@ import org.springframework.test.context.TestPropertySource;
 })
 class TenantFoodOrderConstraintsIT extends IntegrationTestSupport {
 
+    private static final String APPOINTMENT_TENANT_SLUG = "appointment-tenant";
+    private static final String FOOD_TENANT_SLUG = "food-tenant";
+
     @Test
     void tenantWithUnsupportedTypeCannotCreateServicesOrBookings() throws Exception {
         createTenant(
-                "appointment-tenant",
+                APPOINTMENT_TENANT_SLUG,
                 "Appointment Tenant",
                 TenantType.APPOINTMENT,
                 "appointment-bot",
@@ -31,17 +29,17 @@ class TenantFoodOrderConstraintsIT extends IntegrationTestSupport {
                 "appointment-secret"
         );
 
-        mockMvc.perform(post("/admin/appointment-tenant/services")
-                        .header(AUTHORIZATION, basicAuth("appointment-admin", "appointment-secret"))
-                        .contentType(APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(serviceRequest("Consultation", "50.00"))))
+        tenantAdminPostJson(
+                APPOINTMENT_TENANT_SLUG,
+                "/services",
+                "appointment-admin",
+                "appointment-secret",
+                serviceRequest("Consultation", "50.00")
+        )
                 .andExpect(status().isBadRequest())
                 .andExpect(status().reason("Tenant does not support food ordering"));
 
-        mockMvc.perform(post("/t/appointment-tenant/bookings")
-                        .header("X-Telegram-User-Id", telegramUserId(123))
-                        .contentType(APPLICATION_JSON)
-                        .content(bookingPayload(999L, 1)))
+        tenantPublicPostJson(APPOINTMENT_TENANT_SLUG, "/bookings", 123L, bookingPayload(999L, 1))
                 .andExpect(status().isBadRequest())
                 .andExpect(status().reason("Tenant does not support food ordering"));
     }
@@ -49,7 +47,7 @@ class TenantFoodOrderConstraintsIT extends IntegrationTestSupport {
     @Test
     void bookingUnknownServiceIsRejected() throws Exception {
         createTenant(
-                "food-tenant",
+                FOOD_TENANT_SLUG,
                 "Food Tenant",
                 TenantType.FOOD_ORDER,
                 "food-bot",
@@ -57,10 +55,7 @@ class TenantFoodOrderConstraintsIT extends IntegrationTestSupport {
                 "food-secret"
         );
 
-        mockMvc.perform(post("/t/food-tenant/bookings")
-                        .header("X-Telegram-User-Id", telegramUserId(123))
-                        .contentType(APPLICATION_JSON)
-                        .content(bookingPayload(999L, 1)))
+        tenantPublicPostJson(FOOD_TENANT_SLUG, "/bookings", 123L, bookingPayload(999L, 1))
                 .andExpect(status().isBadRequest())
                 .andExpect(status().reason("Service not found"));
     }
@@ -68,7 +63,7 @@ class TenantFoodOrderConstraintsIT extends IntegrationTestSupport {
     @Test
     void deletedServiceDisappearsFromCatalogAndCannotBeBooked() throws Exception {
         createTenant(
-                "food-tenant",
+                FOOD_TENANT_SLUG,
                 "Food Tenant",
                 TenantType.FOOD_ORDER,
                 "food-bot",
@@ -76,21 +71,17 @@ class TenantFoodOrderConstraintsIT extends IntegrationTestSupport {
                 "food-secret"
         );
 
-        JsonNode service = createService("food-tenant", "food-admin", "food-secret", "Pizza", "12.50");
+        JsonNode service = createService(FOOD_TENANT_SLUG, "food-admin", "food-secret", "Pizza", "12.50");
         long serviceId = service.get("id").asLong();
 
-        mockMvc.perform(delete("/admin/food-tenant/services/" + serviceId)
-                        .header(AUTHORIZATION, basicAuth("food-admin", "food-secret")))
+        tenantAdminDelete(FOOD_TENANT_SLUG, "/services/" + serviceId, "food-admin", "food-secret")
                 .andExpect(status().isNoContent());
 
-        mockMvc.perform(get("/t/food-tenant/services"))
+        tenantPublicGet(FOOD_TENANT_SLUG, "/services")
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(0));
 
-        mockMvc.perform(post("/t/food-tenant/bookings")
-                        .header("X-Telegram-User-Id", telegramUserId(123))
-                        .contentType(APPLICATION_JSON)
-                        .content(bookingPayload(serviceId, 1)))
+        tenantPublicPostJson(FOOD_TENANT_SLUG, "/bookings", 123L, bookingPayload(serviceId, 1))
                 .andExpect(status().isBadRequest())
                 .andExpect(status().reason("Service not found"));
     }
@@ -117,15 +108,11 @@ class TenantFoodOrderConstraintsIT extends IntegrationTestSupport {
         JsonNode service = createService("tenant-two", "admin-two", "secret-two", "Burger", "9.99");
         long serviceId = service.get("id").asLong();
 
-        mockMvc.perform(post("/t/tenant-two/bookings")
-                        .header("X-Telegram-User-Id", telegramUserId(555))
-                        .contentType(APPLICATION_JSON)
-                        .content(bookingPayload(serviceId, 1)))
+        tenantPublicPostJson("tenant-two", "/bookings", 555L, bookingPayload(serviceId, 1))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").isNumber());
 
-        mockMvc.perform(get("/admin/tenant-two/bookings")
-                        .header(AUTHORIZATION, basicAuth("admin-one", "secret-one")))
+        tenantAdminGet("tenant-two", "/bookings", "admin-one", "secret-one")
                 .andExpect(status().isUnauthorized())
                 .andExpect(status().reason("Invalid admin credentials"));
     }
