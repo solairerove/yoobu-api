@@ -1,5 +1,6 @@
 package com.yoobu.api.admin;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.springframework.http.HttpHeaders.AUTHORIZATION;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -30,7 +31,7 @@ class BookingLifecycleIT extends IntegrationTestSupport {
         long bookingId = booking.get("id").asLong();
 
         mockMvc.perform(get("/t/food-tenant/bookings/my")
-                        .header("X-Telegram-User-Id", telegramUserId(101)))
+                        .header("X-Telegram-User-Id", tenantUserId(101)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(1))
                 .andExpect(jsonPath("$[0].id").value(bookingId))
@@ -38,7 +39,7 @@ class BookingLifecycleIT extends IntegrationTestSupport {
                 .andExpect(jsonPath("$[0].items[0].serviceName").value("Pizza"));
 
         mockMvc.perform(get("/t/food-tenant/bookings/" + bookingId)
-                        .header("X-Telegram-User-Id", telegramUserId(101)))
+                        .header("X-Telegram-User-Id", tenantUserId(101)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(bookingId))
                 .andExpect(jsonPath("$.customerName").value("Alice"))
@@ -46,22 +47,22 @@ class BookingLifecycleIT extends IntegrationTestSupport {
                 .andExpect(jsonPath("$.totalPrice").value(25.0));
 
         mockMvc.perform(post("/t/food-tenant/bookings/" + bookingId + "/cancel")
-                        .header("X-Telegram-User-Id", telegramUserId(101)))
+                        .header("X-Telegram-User-Id", tenantUserId(101)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(bookingId))
                 .andExpect(jsonPath("$.status").value("CANCELLED"));
 
         JsonNode createAuditLog = latestAuditLog("booking", "CREATE");
-        JsonNode createValue = objectMapper.readTree(createAuditLog.get("new_value").asText());
-        org.junit.jupiter.api.Assertions.assertEquals("101", createAuditLog.get("actor_id").asText());
-        org.junit.jupiter.api.Assertions.assertEquals("NEW", createValue.get("status").asText());
-        org.junit.jupiter.api.Assertions.assertEquals(2, createValue.get("items").get(0).get("quantity").asInt());
+        JsonNode createValue = newAuditValue(createAuditLog);
+        assertEquals("101", createAuditLog.get("actor_id").asText());
+        assertEquals("NEW", createValue.get("status").asText());
+        assertEquals(2, createValue.get("items").get(0).get("quantity").asInt());
 
         JsonNode cancelAuditLog = latestAuditLog("booking", "CANCEL");
-        JsonNode oldValue = objectMapper.readTree(cancelAuditLog.get("old_value").asText());
-        JsonNode newValue = objectMapper.readTree(cancelAuditLog.get("new_value").asText());
-        org.junit.jupiter.api.Assertions.assertEquals("NEW", oldValue.get("status").asText());
-        org.junit.jupiter.api.Assertions.assertEquals("CANCELLED", newValue.get("status").asText());
+        JsonNode oldValue = oldAuditValue(cancelAuditLog);
+        JsonNode newValue = newAuditValue(cancelAuditLog);
+        assertEquals("NEW", oldValue.get("status").asText());
+        assertEquals("CANCELLED", newValue.get("status").asText());
     }
 
     @Test
@@ -72,7 +73,7 @@ class BookingLifecycleIT extends IntegrationTestSupport {
         long bookingId = createBooking("food-tenant", 101L, serviceId, 1).get("id").asLong();
 
         mockMvc.perform(get("/t/food-tenant/bookings/" + bookingId)
-                        .header("X-Telegram-User-Id", telegramUserId(202)))
+                        .header("X-Telegram-User-Id", tenantUserId(202)))
                 .andExpect(status().isNotFound())
                 .andExpect(status().reason("Booking not found"));
     }
@@ -110,11 +111,11 @@ class BookingLifecycleIT extends IntegrationTestSupport {
                 .andExpect(jsonPath("$.status").value("CONFIRMED"));
 
         JsonNode auditLog = latestAuditLog("booking", "UPDATE_STATUS");
-        JsonNode oldValue = objectMapper.readTree(auditLog.get("old_value").asText());
-        JsonNode newValue = objectMapper.readTree(auditLog.get("new_value").asText());
-        org.junit.jupiter.api.Assertions.assertEquals("food-admin", auditLog.get("actor_id").asText());
-        org.junit.jupiter.api.Assertions.assertEquals("NEW", oldValue.get("status").asText());
-        org.junit.jupiter.api.Assertions.assertEquals("CONFIRMED", newValue.get("status").asText());
+        JsonNode oldValue = oldAuditValue(auditLog);
+        JsonNode newValue = newAuditValue(auditLog);
+        assertEquals("food-admin", auditLog.get("actor_id").asText());
+        assertEquals("NEW", oldValue.get("status").asText());
+        assertEquals("CONFIRMED", newValue.get("status").asText());
     }
 
     @Test
@@ -127,7 +128,7 @@ class BookingLifecycleIT extends IntegrationTestSupport {
         updateBookingStatus("food-tenant", "food-admin", "food-secret", bookingId, BookingStatus.DONE);
 
         mockMvc.perform(post("/t/food-tenant/bookings/" + bookingId + "/cancel")
-                        .header("X-Telegram-User-Id", telegramUserId(101)))
+                        .header("X-Telegram-User-Id", tenantUserId(101)))
                 .andExpect(status().isConflict())
                 .andExpect(status().reason("Completed booking cannot be cancelled"));
     }

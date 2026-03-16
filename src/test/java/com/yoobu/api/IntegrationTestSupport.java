@@ -18,6 +18,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.Base64;
+import org.springframework.test.web.servlet.ResultActions;
 import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -36,6 +37,8 @@ import org.testcontainers.containers.PostgreSQLContainer;
 public abstract class IntegrationTestSupport {
 
     protected static final String DEFAULT_TENANT_TIMEZONE = "Europe/Warsaw";
+    protected static final String SUPERADMIN_USERNAME = "test-superadmin";
+    protected static final String SUPERADMIN_PASSWORD = "test-password";
     static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:17-alpine");
 
     static {
@@ -66,6 +69,14 @@ public abstract class IntegrationTestSupport {
     protected String basicAuth(String username, String password) {
         String value = username + ":" + password;
         return "Basic " + Base64.getEncoder().encodeToString(value.getBytes(StandardCharsets.UTF_8));
+    }
+
+    protected String superAdminAuth() {
+        return basicAuth(SUPERADMIN_USERNAME, SUPERADMIN_PASSWORD);
+    }
+
+    protected String tenantUserId(long userId) {
+        return telegramUserId(userId);
     }
 
     protected JsonNode readJson(MvcResult result) throws Exception {
@@ -152,7 +163,7 @@ public abstract class IntegrationTestSupport {
             String adminPassword
     ) throws Exception {
         return readJson(mockMvc.perform(post("/superadmin/tenants")
-                        .header(AUTHORIZATION, basicAuth("test-superadmin", "test-password"))
+                        .header(AUTHORIZATION, superAdminAuth())
                         .contentType(APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(
                                 tenant(slug, name, type, botToken, adminUsername, adminPassword))))
@@ -177,7 +188,7 @@ public abstract class IntegrationTestSupport {
 
     protected JsonNode createBooking(String slug, long telegramUserId, long serviceId, int quantity) throws Exception {
         return readJson(mockMvc.perform(post("/t/" + slug + "/bookings")
-                        .header("X-Telegram-User-Id", telegramUserId(telegramUserId))
+                        .header("X-Telegram-User-Id", tenantUserId(telegramUserId))
                         .contentType(APPLICATION_JSON)
                         .content(bookingPayload(serviceId, quantity)))
                 .andExpect(status().isOk())
@@ -187,7 +198,7 @@ public abstract class IntegrationTestSupport {
     protected JsonNode createBooking(String slug, long telegramUserId, long serviceId, int quantity, LocalDate deliveryDate)
             throws Exception {
         return readJson(mockMvc.perform(post("/t/" + slug + "/bookings")
-                        .header("X-Telegram-User-Id", telegramUserId(telegramUserId))
+                        .header("X-Telegram-User-Id", tenantUserId(telegramUserId))
                         .contentType(APPLICATION_JSON)
                         .content(bookingPayload(serviceId, quantity, deliveryDate)))
                 .andExpect(status().isOk())
@@ -284,5 +295,27 @@ public abstract class IntegrationTestSupport {
         sql.append(" ORDER BY id DESC LIMIT 1) entry");
         String json = jdbcTemplate.queryForObject(sql.toString(), String.class);
         return objectMapper.readTree(json);
+    }
+
+    protected JsonNode oldAuditValue(JsonNode auditLog) throws Exception {
+        return auditValue(auditLog, "old_value");
+    }
+
+    protected JsonNode newAuditValue(JsonNode auditLog) throws Exception {
+        return auditValue(auditLog, "new_value");
+    }
+
+    protected ResultActions getWithSuperAdminAuth(String path) throws Exception {
+        return mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get(path)
+                .header(AUTHORIZATION, superAdminAuth()));
+    }
+
+    protected ResultActions getWithTenantAdminAuth(String path, String username, String password) throws Exception {
+        return mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get(path)
+                .header(AUTHORIZATION, basicAuth(username, password)));
+    }
+
+    private JsonNode auditValue(JsonNode auditLog, String fieldName) throws Exception {
+        return objectMapper.readTree(auditLog.get(fieldName).asText());
     }
 }
