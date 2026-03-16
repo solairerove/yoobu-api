@@ -22,11 +22,15 @@ import org.springframework.web.bind.annotation.RequestParam;
 @RequestMapping("/admin/{slug}/panel")
 public class AdminPanelBookingController {
 
+    private static final String BOOKINGS_VIEW = "admin/panel/bookings";
+    private static final String BOOKING_DETAIL_VIEW = "admin/panel/booking-detail";
+    private static final String STATUS_FORM_ATTRIBUTE = "statusForm";
+
     private final BookingService bookingService;
 
     @GetMapping({"", "/"})
     public String panelHome(@PathVariable String slug) {
-        return "redirect:/admin/" + slug + "/panel/bookings";
+        return bookingsRedirect(slug);
     }
 
     @GetMapping("/bookings")
@@ -41,7 +45,7 @@ public class AdminPanelBookingController {
         model.addAttribute("selectedStatus", status);
         model.addAttribute("deliveryDate", deliveryDate);
         model.addAttribute("statuses", BookingStatus.values());
-        return "admin/panel/bookings";
+        return BOOKINGS_VIEW;
     }
 
     @GetMapping("/bookings/{bookingId}")
@@ -58,7 +62,7 @@ public class AdminPanelBookingController {
     public String updateStatus(
             @PathVariable String slug,
             @PathVariable Long bookingId,
-            @Valid @ModelAttribute("statusForm") BookingStatusForm form,
+            @Valid @ModelAttribute(STATUS_FORM_ATTRIBUTE) BookingStatusForm form,
             BindingResult bindingResult,
             Model model
     ) {
@@ -67,14 +71,22 @@ public class AdminPanelBookingController {
         }
 
         bookingService.updateBookingStatus(bookingId, form.getStatus());
-        return "redirect:/admin/" + slug + "/panel/bookings/" + bookingId;
+        return bookingDetailRedirect(slug, bookingId);
     }
 
     private String bookingDetailView(String slug, BookingResponse booking, BookingStatusForm form, Model model) {
         model.addAttribute("slug", slug);
         model.addAttribute("booking", booking);
         model.addAttribute("statuses", BookingStatus.values());
-        model.addAttribute("statusForm", form);
-        return "admin/panel/booking-detail";
+        model.addAttribute(STATUS_FORM_ATTRIBUTE, form);
+        return BOOKING_DETAIL_VIEW;
+    }
+
+    private String bookingsRedirect(String slug) {
+        return "redirect:/admin/" + slug + "/panel/bookings";
+    }
+
+    private String bookingDetailRedirect(String slug, Long bookingId) {
+        return bookingsRedirect(slug) + "/" + bookingId;
     }
 }

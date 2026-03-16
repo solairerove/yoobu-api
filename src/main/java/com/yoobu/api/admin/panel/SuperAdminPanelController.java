@@ -6,6 +6,7 @@ import com.yoobu.api.tenant.dto.CreateTenantRequest;
 import com.yoobu.api.tenant.dto.TenantDetailResponse;
 import com.yoobu.api.tenant.dto.UpdateTenantRequest;
 import jakarta.validation.Valid;
+import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -23,31 +24,42 @@ import org.springframework.web.server.ResponseStatusException;
 @RequestMapping("/superadmin/panel")
 public class SuperAdminPanelController {
 
+    private static final String TENANTS_REDIRECT = "redirect:/superadmin/panel/tenants";
+    private static final String TENANTS_VIEW = "superadmin/panel/tenants";
+    private static final String TENANT_DETAIL_VIEW = "superadmin/panel/tenant-detail";
+    private static final String TENANT_FORM_VIEW = "superadmin/panel/tenant-form";
+    private static final String CREATE_MODE = "create";
+    private static final String EDIT_MODE = "edit";
+    private static final String PRIMARY_COLOR_KEY = "primary_color";
+    private static final String LOGO_URL_KEY = "logo_url";
+    private static final String WELCOME_MESSAGE_KEY = "welcome_message";
+    private static final String ADMIN_USERNAME_KEY = "admin_username";
+
     private final TenantManagementService tenantManagementService;
 
     @GetMapping({"", "/"})
     public String panelHome() {
-        return "redirect:/superadmin/panel/tenants";
+        return TENANTS_REDIRECT;
     }
 
     @GetMapping("/tenants")
     public String tenants(Model model) {
         model.addAttribute("tenants", tenantManagementService.getAllTenants());
-        return "superadmin/panel/tenants";
+        return TENANTS_VIEW;
     }
 
     @GetMapping("/tenants/{tenantId}")
-    public String tenantDetail(@org.springframework.web.bind.annotation.PathVariable Long tenantId, Model model) {
+    public String tenantDetail(@PathVariable Long tenantId, Model model) {
         model.addAttribute("tenant", tenantManagementService.getTenant(tenantId));
-        return "superadmin/panel/tenant-detail";
+        return TENANT_DETAIL_VIEW;
     }
 
     @GetMapping("/tenants/new")
     public String newTenant(Model model) {
         model.addAttribute("tenantForm", new SuperAdminTenantForm());
         model.addAttribute("tenantTypes", TenantType.values());
-        model.addAttribute("formMode", "create");
-        return "superadmin/panel/tenant-form";
+        model.addAttribute("formMode", CREATE_MODE);
+        return TENANT_FORM_VIEW;
     }
 
     @PostMapping("/tenants")
@@ -56,32 +68,26 @@ public class SuperAdminPanelController {
             BindingResult bindingResult,
             Model model
     ) {
-        if (!StringUtils.hasText(form.getAdminPassword())) {
-            bindingResult.rejectValue("adminPassword", "tenantForm.adminPassword", "must not be blank");
-        }
-        if (StringUtils.hasText(form.getSlug()) && !tenantManagementService.isSlugAvailable(form.getSlug())) {
-            bindingResult.rejectValue("slug", "tenantForm.slug", "Tenant slug already exists");
-        }
+        validateCreateForm(form, bindingResult);
 
         if (bindingResult.hasErrors()) {
-            return populateFormModel(model, "create");
+            return populateFormModel(model, CREATE_MODE);
         }
 
         try {
             tenantManagementService.createTenant(toRequest(form));
         } catch (ResponseStatusException ex) {
-            model.addAttribute("formError", ex.getReason());
-            return populateFormModel(model, "create");
+            return formError(model, CREATE_MODE, ex);
         }
 
-        return "redirect:/superadmin/panel/tenants";
+        return TENANTS_REDIRECT;
     }
 
     @GetMapping("/tenants/{tenantId}/edit")
     public String editTenant(@PathVariable Long tenantId, Model model) {
         model.addAttribute("tenantForm", toForm(tenantManagementService.getTenant(tenantId)));
         model.addAttribute("tenantId", tenantId);
-        return populateFormModel(model, "edit");
+        return populateFormModel(model, EDIT_MODE);
     }
 
     @PostMapping("/tenants/{tenantId}")
@@ -92,19 +98,16 @@ public class SuperAdminPanelController {
             Model model
     ) {
         if (bindingResult.hasErrors()) {
-            model.addAttribute("tenantId", tenantId);
-            return populateFormModel(model, "edit");
+            return populateEditFormModel(model, tenantId);
         }
 
         try {
             tenantManagementService.updateTenant(tenantId, toUpdateRequest(form));
         } catch (ResponseStatusException ex) {
-            model.addAttribute("tenantId", tenantId);
-            model.addAttribute("formError", ex.getReason());
-            return populateFormModel(model, "edit");
+            return formError(populateTenantId(model, tenantId), EDIT_MODE, ex);
         }
 
-        return "redirect:/superadmin/panel/tenants/" + tenantId;
+        return tenantDetailRedirect(tenantId);
     }
 
     private CreateTenantRequest toRequest(SuperAdminTenantForm form) {
@@ -140,6 +143,7 @@ public class SuperAdminPanelController {
     }
 
     private SuperAdminTenantForm toForm(TenantDetailResponse tenant) {
+        Map<String, String> config = tenant.config();
         SuperAdminTenantForm form = new SuperAdminTenantForm();
         form.setSlug(tenant.slug());
         form.setName(tenant.name());
@@ -147,10 +151,10 @@ public class SuperAdminPanelController {
         form.setBotToken(tenant.botToken());
         form.setOwnerTelegramId(tenant.ownerTelegramId());
         form.setTimezone(tenant.timezone());
-        form.setPrimaryColor(tenant.config().get("primary_color"));
-        form.setLogoUrl(tenant.config().get("logo_url"));
-        form.setWelcomeMessage(tenant.config().get("welcome_message"));
-        form.setAdminUsername(tenant.config().get("admin_username"));
+        form.setPrimaryColor(config.get(PRIMARY_COLOR_KEY));
+        form.setLogoUrl(config.get(LOGO_URL_KEY));
+        form.setWelcomeMessage(config.get(WELCOME_MESSAGE_KEY));
+        form.setAdminUsername(config.get(ADMIN_USERNAME_KEY));
         form.setActive(tenant.active());
         return form;
     }
@@ -158,6 +162,33 @@ public class SuperAdminPanelController {
     private String populateFormModel(Model model, String formMode) {
         model.addAttribute("tenantTypes", TenantType.values());
         model.addAttribute("formMode", formMode);
-        return "superadmin/panel/tenant-form";
+        return TENANT_FORM_VIEW;
+    }
+
+    private void validateCreateForm(SuperAdminTenantForm form, BindingResult bindingResult) {
+        if (!StringUtils.hasText(form.getAdminPassword())) {
+            bindingResult.rejectValue("adminPassword", "tenantForm.adminPassword", "must not be blank");
+        }
+        if (StringUtils.hasText(form.getSlug()) && !tenantManagementService.isSlugAvailable(form.getSlug())) {
+            bindingResult.rejectValue("slug", "tenantForm.slug", "Tenant slug already exists");
+        }
+    }
+
+    private String formError(Model model, String formMode, ResponseStatusException ex) {
+        model.addAttribute("formError", ex.getReason());
+        return populateFormModel(model, formMode);
+    }
+
+    private String populateEditFormModel(Model model, Long tenantId) {
+        return populateFormModel(populateTenantId(model, tenantId), EDIT_MODE);
+    }
+
+    private Model populateTenantId(Model model, Long tenantId) {
+        model.addAttribute("tenantId", tenantId);
+        return model;
+    }
+
+    private String tenantDetailRedirect(Long tenantId) {
+        return TENANTS_REDIRECT + "/" + tenantId;
     }
 }

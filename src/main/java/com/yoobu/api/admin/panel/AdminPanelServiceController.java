@@ -21,21 +21,26 @@ import org.springframework.web.bind.annotation.RequestMapping;
 @RequestMapping("/admin/{slug}/panel/services")
 public class AdminPanelServiceController {
 
+    private static final String SERVICES_VIEW = "admin/panel/services";
+    private static final String SERVICE_FORM_VIEW = "admin/panel/service-form";
+    private static final List<ServiceStatus> SERVICE_STATUSES = List.of(ServiceStatus.ACTIVE, ServiceStatus.INACTIVE);
+    private static final String NEW_SERVICE_TITLE = "New service";
+    private static final String CREATE_SERVICE_LABEL = "Create service";
+    private static final String EDIT_SERVICE_TITLE = "Edit service";
+    private static final String SAVE_CHANGES_LABEL = "Save changes";
+
     private final AdminCatalogService adminCatalogService;
 
     @GetMapping
     public String services(@PathVariable String slug, Model model) {
         model.addAttribute("slug", slug);
         model.addAttribute("services", adminCatalogService.getAdminServices());
-        return "admin/panel/services";
+        return SERVICES_VIEW;
     }
 
     @GetMapping("/new")
     public String newService(@PathVariable String slug, Model model) {
-        ServiceForm form = new ServiceForm();
-        form.setSortOrder(0);
-        form.setStatus(ServiceStatus.ACTIVE);
-        return serviceFormView(slug, form, model, "New service", "Create service", null);
+        return serviceFormView(slug, newServiceForm(), model, NEW_SERVICE_TITLE, CREATE_SERVICE_LABEL, null);
     }
 
     @PostMapping
@@ -46,11 +51,11 @@ public class AdminPanelServiceController {
             Model model
     ) {
         if (bindingResult.hasErrors()) {
-            return serviceFormView(slug, form, model, "New service", "Create service", null);
+            return serviceFormView(slug, form, model, NEW_SERVICE_TITLE, CREATE_SERVICE_LABEL, null);
         }
 
         adminCatalogService.createService(toRequest(form));
-        return "redirect:/admin/" + slug + "/panel/services";
+        return servicesRedirect(slug);
     }
 
     @GetMapping("/{serviceId}/edit")
@@ -60,8 +65,8 @@ public class AdminPanelServiceController {
                 slug,
                 fromResponse(service),
                 model,
-                "Edit service",
-                "Save changes",
+                EDIT_SERVICE_TITLE,
+                SAVE_CHANGES_LABEL,
                 serviceId
         );
     }
@@ -75,17 +80,17 @@ public class AdminPanelServiceController {
             Model model
     ) {
         if (bindingResult.hasErrors()) {
-            return serviceFormView(slug, form, model, "Edit service", "Save changes", serviceId);
+            return serviceFormView(slug, form, model, EDIT_SERVICE_TITLE, SAVE_CHANGES_LABEL, serviceId);
         }
 
         adminCatalogService.updateService(serviceId, toRequest(form));
-        return "redirect:/admin/" + slug + "/panel/services";
+        return servicesRedirect(slug);
     }
 
     @PostMapping("/{serviceId}/delete")
     public String deleteService(@PathVariable String slug, @PathVariable Long serviceId) {
         adminCatalogService.deleteService(serviceId);
-        return "redirect:/admin/" + slug + "/panel/services";
+        return servicesRedirect(slug);
     }
 
     private String serviceFormView(
@@ -101,14 +106,16 @@ public class AdminPanelServiceController {
         model.addAttribute("formTitle", formTitle);
         model.addAttribute("submitLabel", submitLabel);
         model.addAttribute("editServiceId", serviceId);
-        model.addAttribute("serviceStatuses", List.of(ServiceStatus.ACTIVE, ServiceStatus.INACTIVE));
-        model.addAttribute(
-                "formAction",
-                serviceId == null
-                        ? "/admin/" + slug + "/panel/services"
-                        : "/admin/" + slug + "/panel/services/" + serviceId
-        );
-        return "admin/panel/service-form";
+        model.addAttribute("serviceStatuses", SERVICE_STATUSES);
+        model.addAttribute("formAction", formAction(slug, serviceId));
+        return SERVICE_FORM_VIEW;
+    }
+
+    private ServiceForm newServiceForm() {
+        ServiceForm form = new ServiceForm();
+        form.setSortOrder(0);
+        form.setStatus(ServiceStatus.ACTIVE);
+        return form;
     }
 
     private ServiceForm fromResponse(ServiceResponse service) {
@@ -133,5 +140,17 @@ public class AdminPanelServiceController {
                 form.getSortOrder(),
                 form.getStatus()
         );
+    }
+
+    private String servicesRedirect(String slug) {
+        return "redirect:/admin/" + slug + "/panel/services";
+    }
+
+    private String formAction(String slug, Long serviceId) {
+        return serviceId == null ? servicesPath(slug) : servicesPath(slug) + "/" + serviceId;
+    }
+
+    private String servicesPath(String slug) {
+        return "/admin/" + slug + "/panel/services";
     }
 }
