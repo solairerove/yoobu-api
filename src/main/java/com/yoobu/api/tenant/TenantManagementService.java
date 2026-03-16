@@ -30,19 +30,13 @@ public class TenantManagementService {
     private final AuditLogService auditLogService;
     private final TenantRepository tenantRepository;
     private final TenantConfigRepository tenantConfigRepository;
+    private final TenantMapper tenantMapper;
     private final PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
     @Transactional(readOnly = true)
     public List<TenantSummaryResponse> getAllTenants() {
         return tenantRepository.findAllByOrderByCreatedAtDesc().stream()
-                .map(tenant -> new TenantSummaryResponse(
-                        tenant.getId(),
-                        tenant.getSlug(),
-                        tenant.getName(),
-                        tenant.getType(),
-                        tenant.isActive(),
-                        tenant.getTimezone(),
-                        tenant.getCreatedAt()))
+                .map(tenantMapper::toSummaryResponse)
                 .toList();
     }
 
@@ -55,18 +49,7 @@ public class TenantManagementService {
         tenantConfigRepository.findByTenantId(tenantId)
                 .forEach(entry -> config.put(entry.getKey(), entry.getValue()));
 
-        return new TenantDetailResponse(
-                tenant.getId(),
-                tenant.getSlug(),
-                tenant.getName(),
-                tenant.getType(),
-                tenant.isActive(),
-                tenant.getTimezone(),
-                tenant.getBotToken(),
-                tenant.getOwnerTelegramId(),
-                tenant.getCreatedAt(),
-                config
-        );
+        return tenantMapper.toDetailResponse(tenant, config);
     }
 
     @Transactional(readOnly = true)
@@ -110,15 +93,7 @@ public class TenantManagementService {
                 toAuditSnapshotFromValues(savedTenant, configMap(configs))
         );
 
-        return new TenantSummaryResponse(
-                savedTenant.getId(),
-                savedTenant.getSlug(),
-                savedTenant.getName(),
-                savedTenant.getType(),
-                savedTenant.isActive(),
-                savedTenant.getTimezone(),
-                savedTenant.getCreatedAt()
-        );
+        return tenantMapper.toSummaryResponse(savedTenant);
     }
 
     @Transactional
@@ -156,15 +131,7 @@ public class TenantManagementService {
                 toAuditSnapshot(savedTenant, existingConfigs)
         );
 
-        return new TenantSummaryResponse(
-                savedTenant.getId(),
-                savedTenant.getSlug(),
-                savedTenant.getName(),
-                savedTenant.getType(),
-                savedTenant.isActive(),
-                savedTenant.getTimezone(),
-                savedTenant.getCreatedAt()
-        );
+        return tenantMapper.toSummaryResponse(savedTenant);
     }
 
     private void addConfig(List<TenantConfig> configs, Tenant tenant, String key, String value) {

@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 public class TenantConfigService {
 
     private final TenantConfigRepository tenantConfigRepository;
+    private final TenantMapper tenantMapper;
 
     public TenantConfigResponse getCurrentTenantConfig() {
         Tenant tenant = TenantContext.getCurrentTenant();
@@ -23,13 +24,6 @@ public class TenantConfigService {
         Map<String, String> config = configEntries.stream()
                 .collect(Collectors.toMap(TenantConfig::getKey, TenantConfig::getValue, (left, right) -> right));
 
-        return new TenantConfigResponse(
-                tenant.getSlug(),
-                tenant.getName(),
-                tenant.getType(),
-                config.get("primary_color"),
-                config.get("logo_url"),
-                config.get("welcome_message")
-        );
+        return tenantMapper.toConfigResponse(tenant, config);
     }
 }
