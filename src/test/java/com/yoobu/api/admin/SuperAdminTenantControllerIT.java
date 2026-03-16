@@ -2,12 +2,8 @@ package com.yoobu.api.admin;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.springframework.http.HttpHeaders.AUTHORIZATION;
 import static org.springframework.http.HttpHeaders.WWW_AUTHENTICATE;
-import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -30,15 +26,14 @@ class SuperAdminTenantControllerIT extends IntegrationTestSupport {
 
     @Test
     void superAdminCanAuthenticateAgainstProtectedEndpoint() throws Exception {
-        getWithSuperAdminAuth(SUPERADMIN_TENANTS_PATH)
+        superAdminGet(SUPERADMIN_TENANTS_PATH)
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(0));
     }
 
     @Test
     void superAdminCannotAuthenticateWithInvalidCredentials() throws Exception {
-        mockMvc.perform(get(SUPERADMIN_TENANTS_PATH)
-                        .header(AUTHORIZATION, basicAuth(SUPERADMIN_USERNAME, "wrong-password")))
+        getWithTenantAdminAuth(SUPERADMIN_TENANTS_PATH, SUPERADMIN_USERNAME, "wrong-password")
                 .andExpect(status().isUnauthorized())
                 .andExpect(header().string(WWW_AUTHENTICATE, "Basic realm=\"Yoobu Super Admin\""))
                 .andExpect(status().reason("Invalid superadmin credentials"));
@@ -56,10 +51,7 @@ class SuperAdminTenantControllerIT extends IntegrationTestSupport {
     void superAdminCanCreateTenantAndReadItBack() throws Exception {
         var request = foodOrderTenant("tenant-it", "Tenant Integration Test", "bot-token", "admin", "secret");
 
-        mockMvc.perform(post(SUPERADMIN_TENANTS_PATH)
-                        .header(AUTHORIZATION, superAdminAuth())
-                        .contentType(APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
+        superAdminPostJson(SUPERADMIN_TENANTS_PATH, request)
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").isNumber())
                 .andExpect(jsonPath("$.slug").value("tenant-it"))
@@ -69,7 +61,7 @@ class SuperAdminTenantControllerIT extends IntegrationTestSupport {
                 .andExpect(jsonPath("$.timezone").value("Europe/Warsaw"))
                 .andExpect(jsonPath("$.createdAt").isString());
 
-        getWithSuperAdminAuth(SUPERADMIN_TENANTS_PATH)
+        superAdminGet(SUPERADMIN_TENANTS_PATH)
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(1))
                 .andExpect(jsonPath("$[0].slug").value("tenant-it"))
@@ -94,12 +86,12 @@ class SuperAdminTenantControllerIT extends IntegrationTestSupport {
     void superAdminCanCheckTenantSlugAvailabilityBeforeCreation() throws Exception {
         createFoodOrderTenant("availability-tenant", "Availability Tenant", "bot", "admin", "secret");
 
-        getWithSuperAdminAuth("/superadmin/tenants/slug-availability?slug=available-tenant")
+        superAdminGet("/superadmin/tenants/slug-availability?slug=available-tenant")
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.slug").value("available-tenant"))
                 .andExpect(jsonPath("$.available").value(true));
 
-        getWithSuperAdminAuth("/superadmin/tenants/slug-availability?slug=availability-tenant")
+        superAdminGet("/superadmin/tenants/slug-availability?slug=availability-tenant")
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.slug").value("availability-tenant"))
                 .andExpect(jsonPath("$.available").value(false));
@@ -109,16 +101,10 @@ class SuperAdminTenantControllerIT extends IntegrationTestSupport {
     void superAdminCannotCreateTwoTenantsWithSameSlug() throws Exception {
         var request = foodOrderTenant("duplicate-tenant", "Duplicate Tenant", "bot-token", "admin", "secret");
 
-        mockMvc.perform(post(SUPERADMIN_TENANTS_PATH)
-                        .header(AUTHORIZATION, superAdminAuth())
-                        .contentType(APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
+        superAdminPostJson(SUPERADMIN_TENANTS_PATH, request)
                 .andExpect(status().isOk());
 
-        mockMvc.perform(post(SUPERADMIN_TENANTS_PATH)
-                        .header(AUTHORIZATION, superAdminAuth())
-                        .contentType(APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
+        superAdminPostJson(SUPERADMIN_TENANTS_PATH, request)
                 .andExpect(status().isConflict())
                 .andExpect(status().reason("Tenant slug already exists"));
     }
@@ -128,7 +114,7 @@ class SuperAdminTenantControllerIT extends IntegrationTestSupport {
         long tenantId = createFoodOrderTenant("tenant-edit", "Tenant Before", "bot-before", "admin-before", "secret-before")
                 .get("id").asLong();
 
-        getWithSuperAdminAuth(SUPERADMIN_TENANTS_PATH + "/" + tenantId)
+        superAdminGet(SUPERADMIN_TENANTS_PATH + "/" + tenantId)
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.slug").value("tenant-edit"))
                 .andExpect(jsonPath("$.name").value("Tenant Before"))
@@ -148,10 +134,7 @@ class SuperAdminTenantControllerIT extends IntegrationTestSupport {
                 true
         );
 
-        mockMvc.perform(put(SUPERADMIN_TENANTS_PATH + "/" + tenantId)
-                        .header(AUTHORIZATION, superAdminAuth())
-                        .contentType(APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
+        superAdminPutJson(SUPERADMIN_TENANTS_PATH + "/" + tenantId, request)
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(tenantId))
                 .andExpect(jsonPath("$.slug").value("tenant-edit"))
@@ -160,7 +143,7 @@ class SuperAdminTenantControllerIT extends IntegrationTestSupport {
                 .andExpect(jsonPath("$.active").value(true))
                 .andExpect(jsonPath("$.timezone").value("Asia/Ho_Chi_Minh"));
 
-        getWithSuperAdminAuth(SUPERADMIN_TENANTS_PATH + "/" + tenantId)
+        superAdminGet(SUPERADMIN_TENANTS_PATH + "/" + tenantId)
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.slug").value("tenant-edit"))
                 .andExpect(jsonPath("$.name").value("Tenant After"))
@@ -173,12 +156,10 @@ class SuperAdminTenantControllerIT extends IntegrationTestSupport {
                 .andExpect(jsonPath("$.config.logo_url").value("https://cdn.example.com/updated-logo.png"))
                 .andExpect(jsonPath("$.config.welcome_message").value("Updated welcome"));
 
-        mockMvc.perform(get("/admin/tenant-edit/services")
-                        .header(AUTHORIZATION, basicAuth("admin-before", "secret-before")))
+        tenantAdminGet("tenant-edit", "/services", "admin-before", "secret-before")
                 .andExpect(status().isUnauthorized());
 
-        mockMvc.perform(get("/admin/tenant-edit/services")
-                        .header(AUTHORIZATION, basicAuth("admin-after", "secret-after")))
+        tenantAdminGet("tenant-edit", "/services", "admin-after", "secret-after")
                 .andExpect(status().isBadRequest())
                 .andExpect(status().reason("Tenant does not support food ordering"));
 
@@ -210,27 +191,22 @@ class SuperAdminTenantControllerIT extends IntegrationTestSupport {
                 true
         );
 
-        mockMvc.perform(put(SUPERADMIN_TENANTS_PATH + "/" + tenantId)
-                        .header(AUTHORIZATION, superAdminAuth())
-                        .contentType(APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
+        superAdminPutJson(SUPERADMIN_TENANTS_PATH + "/" + tenantId, request)
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.slug").value("tenant-keep-pass"))
                 .andExpect(jsonPath("$.name").value("Keep Password Updated"));
 
-        getWithSuperAdminAuth(SUPERADMIN_TENANTS_PATH + "/" + tenantId)
+        superAdminGet(SUPERADMIN_TENANTS_PATH + "/" + tenantId)
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.slug").value("tenant-keep-pass"))
                 .andExpect(jsonPath("$.config.admin_username").value("admin-after"))
                 .andExpect(jsonPath("$.botToken").value("bot-token-updated"))
                 .andExpect(jsonPath("$.config.primary_color").value("#778899"));
 
-        mockMvc.perform(get("/admin/tenant-keep-pass/services")
-                        .header(AUTHORIZATION, basicAuth("admin-before", "secret-before")))
+        tenantAdminGet("tenant-keep-pass", "/services", "admin-before", "secret-before")
                 .andExpect(status().isUnauthorized());
 
-        mockMvc.perform(get("/admin/tenant-keep-pass/services")
-                        .header(AUTHORIZATION, basicAuth("admin-after", "secret-before")))
+        tenantAdminGet("tenant-keep-pass", "/services", "admin-after", "secret-before")
                 .andExpect(status().isOk());
     }
 
@@ -253,16 +229,13 @@ class SuperAdminTenantControllerIT extends IntegrationTestSupport {
                 false
         );
 
-        mockMvc.perform(put(SUPERADMIN_TENANTS_PATH + "/" + tenantId)
-                        .header(AUTHORIZATION, superAdminAuth())
-                        .contentType(APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
+        superAdminPutJson(SUPERADMIN_TENANTS_PATH + "/" + tenantId, request)
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.slug").value("tenant-clear"))
                 .andExpect(jsonPath("$.active").value(false))
                 .andExpect(jsonPath("$.timezone").value("Asia/Ho_Chi_Minh"));
 
-        getWithSuperAdminAuth(SUPERADMIN_TENANTS_PATH + "/" + tenantId)
+        superAdminGet(SUPERADMIN_TENANTS_PATH + "/" + tenantId)
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.slug").value("tenant-clear"))
                 .andExpect(jsonPath("$.active").value(false))
@@ -275,12 +248,11 @@ class SuperAdminTenantControllerIT extends IntegrationTestSupport {
                 .andExpect(jsonPath("$.config.welcome_message").doesNotExist());
 
         ResponseStatusException publicAccessFailure = assertTenantNotFound(() ->
-                mockMvc.perform(get("/t/tenant-clear/services")));
+                tenantPublicGet("tenant-clear", "/services"));
         assertEquals("Tenant not found", publicAccessFailure.getReason());
 
         ResponseStatusException adminAccessFailure = assertTenantNotFound(() ->
-                mockMvc.perform(get("/admin/tenant-clear/services")
-                        .header(AUTHORIZATION, basicAuth("admin-clear", "secret-clear"))));
+                tenantAdminGet("tenant-clear", "/services", "admin-clear", "secret-clear"));
         assertEquals("Tenant not found", adminAccessFailure.getReason());
     }
 

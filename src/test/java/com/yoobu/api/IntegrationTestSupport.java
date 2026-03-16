@@ -20,6 +20,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.Base64;
+import java.util.Map;
 import org.springframework.test.web.servlet.ResultActions;
 import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -31,6 +32,7 @@ import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
+import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 import org.testcontainers.containers.PostgreSQLContainer;
 
 @SpringBootTest
@@ -320,10 +322,23 @@ public abstract class IntegrationTestSupport {
     }
 
     protected ResultActions superAdminPostJson(String path, Object body) throws Exception {
+        String content = jsonBody(body);
         return mockMvc.perform(post(path)
                 .header(AUTHORIZATION, superAdminAuth())
                 .contentType(APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(body)));
+                .content(content));
+    }
+
+    protected ResultActions superAdminPutJson(String path, Object body) throws Exception {
+        String content = jsonBody(body);
+        return mockMvc.perform(put(path)
+                .header(AUTHORIZATION, superAdminAuth())
+                .contentType(APPLICATION_JSON)
+                .content(content));
+    }
+
+    protected ResultActions superAdminPostForm(String path, Map<String, String> form) throws Exception {
+        return mockMvc.perform(withForm(post(path).header(AUTHORIZATION, superAdminAuth()), form));
     }
 
     protected ResultActions tenantAdminGet(String slug, String path, String username, String password) throws Exception {
@@ -337,10 +352,11 @@ public abstract class IntegrationTestSupport {
             String password,
             Object body
     ) throws Exception {
+        String content = jsonBody(body);
         return mockMvc.perform(post(adminPath(slug, path))
                 .header(AUTHORIZATION, basicAuth(username, password))
                 .contentType(APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(body)));
+                .content(content));
     }
 
     protected ResultActions tenantAdminPutJson(
@@ -350,10 +366,11 @@ public abstract class IntegrationTestSupport {
             String password,
             Object body
     ) throws Exception {
+        String content = jsonBody(body);
         return mockMvc.perform(put(adminPath(slug, path))
                 .header(AUTHORIZATION, basicAuth(username, password))
                 .contentType(APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(body)));
+                .content(content));
     }
 
     protected ResultActions tenantAdminDelete(String slug, String path, String username, String password) throws Exception {
@@ -361,8 +378,26 @@ public abstract class IntegrationTestSupport {
                 .header(AUTHORIZATION, basicAuth(username, password)));
     }
 
+    protected ResultActions tenantAdminPostForm(
+            String slug,
+            String path,
+            String username,
+            String password,
+            Map<String, String> form
+    ) throws Exception {
+        return mockMvc.perform(withForm(
+                post(adminPath(slug, path)).header(AUTHORIZATION, basicAuth(username, password)),
+                form
+        ));
+    }
+
     protected ResultActions tenantPublicGet(String slug, String path) throws Exception {
         return mockMvc.perform(get(publicPath(slug, path)));
+    }
+
+    protected ResultActions tenantPublicGetAsUser(String slug, String path, long userId) throws Exception {
+        return mockMvc.perform(get(publicPath(slug, path))
+                .header("X-Telegram-User-Id", tenantUserId(userId)));
     }
 
     protected ResultActions tenantPublicPostJson(String slug, String path, long userId, String body) throws Exception {
@@ -390,6 +425,18 @@ public abstract class IntegrationTestSupport {
 
     private String normalizePath(String path) {
         return path.startsWith("/") ? path : "/" + path;
+    }
+
+    private MockHttpServletRequestBuilder withForm(
+            MockHttpServletRequestBuilder builder,
+            Map<String, String> form
+    ) {
+        form.forEach(builder::param);
+        return builder;
+    }
+
+    private String jsonBody(Object body) throws Exception {
+        return body instanceof String rawJson ? rawJson : objectMapper.writeValueAsString(body);
     }
 
     private JsonNode auditValue(JsonNode auditLog, String fieldName) throws Exception {

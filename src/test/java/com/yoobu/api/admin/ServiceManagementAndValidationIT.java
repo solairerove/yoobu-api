@@ -2,12 +2,6 @@ package com.yoobu.api.admin;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.springframework.http.HttpHeaders.AUTHORIZATION;
-import static org.springframework.http.MediaType.APPLICATION_JSON;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -31,7 +25,7 @@ class ServiceManagementAndValidationIT extends IntegrationTestSupport {
     void tenantPublicConfigReturnsConfiguredBranding() throws Exception {
         createFoodOrderTenant(TENANT_SLUG, "Food Tenant", "food-bot", ADMIN_USERNAME, ADMIN_PASSWORD);
 
-        mockMvc.perform(get("/t/" + TENANT_SLUG + "/config"))
+        tenantPublicGet(TENANT_SLUG, "/config")
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.slug").value(TENANT_SLUG))
                 .andExpect(jsonPath("$.name").value("Food Tenant"))
@@ -47,20 +41,21 @@ class ServiceManagementAndValidationIT extends IntegrationTestSupport {
         long serviceId = createService(TENANT_SLUG, ADMIN_USERNAME, ADMIN_PASSWORD, "Pizza", "12.50")
                 .get("id").asLong();
 
-        mockMvc.perform(put("/admin/" + TENANT_SLUG + "/services/" + serviceId)
-                        .header(AUTHORIZATION, basicAuth(ADMIN_USERNAME, ADMIN_PASSWORD))
-                        .contentType(APPLICATION_JSON)
-                        .content("""
-                                {
-                                  "name": "Pasta",
-                                  "description": "Fresh pasta",
-                                  "price": 15.75,
-                                  "unit": "plate",
-                                  "durationMinutes": 20,
-                                  "sortOrder": 3,
-                                  "status": "INACTIVE"
-                                }
-                                """))
+        tenantAdminPutJson(
+                TENANT_SLUG,
+                "/services/" + serviceId,
+                ADMIN_USERNAME,
+                ADMIN_PASSWORD,
+                java.util.Map.of(
+                        "name", "Pasta",
+                        "description", "Fresh pasta",
+                        "price", 15.75,
+                        "unit", "plate",
+                        "durationMinutes", 20,
+                        "sortOrder", 3,
+                        "status", "INACTIVE"
+                )
+        )
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(serviceId))
                 .andExpect(jsonPath("$.name").value("Pasta"))
@@ -71,19 +66,16 @@ class ServiceManagementAndValidationIT extends IntegrationTestSupport {
                 .andExpect(jsonPath("$.sortOrder").value(3))
                 .andExpect(jsonPath("$.status").value("INACTIVE"));
 
-        getWithTenantAdminAuth("/admin/" + TENANT_SLUG + "/services", ADMIN_USERNAME, ADMIN_PASSWORD)
+        tenantAdminGet(TENANT_SLUG, "/services", ADMIN_USERNAME, ADMIN_PASSWORD)
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(1))
                 .andExpect(jsonPath("$[0].status").value("INACTIVE"));
 
-        mockMvc.perform(get("/t/" + TENANT_SLUG + "/services"))
+        tenantPublicGet(TENANT_SLUG, "/services")
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(0));
 
-        mockMvc.perform(post("/t/" + TENANT_SLUG + "/bookings")
-                        .header("X-Telegram-User-Id", tenantUserId(101))
-                        .contentType(APPLICATION_JSON)
-                        .content(bookingPayload(serviceId, 1)))
+        tenantPublicPostJson(TENANT_SLUG, "/bookings", 101L, bookingPayload(serviceId, 1))
                 .andExpect(status().isBadRequest())
                 .andExpect(status().reason("Service not found"));
 
@@ -103,12 +95,10 @@ class ServiceManagementAndValidationIT extends IntegrationTestSupport {
         long serviceId = createService(TENANT_SLUG, ADMIN_USERNAME, ADMIN_PASSWORD, "Pizza", "12.50")
                 .get("id").asLong();
 
-        mockMvc.perform(delete("/admin/" + TENANT_SLUG + "/services/" + serviceId)
-                        .header(AUTHORIZATION, basicAuth(ADMIN_USERNAME, ADMIN_PASSWORD)))
+        tenantAdminDelete(TENANT_SLUG, "/services/" + serviceId, ADMIN_USERNAME, ADMIN_PASSWORD)
                 .andExpect(status().isNoContent());
 
-        mockMvc.perform(delete("/admin/" + TENANT_SLUG + "/services/" + serviceId)
-                        .header(AUTHORIZATION, basicAuth(ADMIN_USERNAME, ADMIN_PASSWORD)))
+        tenantAdminDelete(TENANT_SLUG, "/services/" + serviceId, ADMIN_USERNAME, ADMIN_PASSWORD)
                 .andExpect(status().isNotFound())
                 .andExpect(status().reason("Service not found"));
 
@@ -131,13 +121,13 @@ class ServiceManagementAndValidationIT extends IntegrationTestSupport {
 
         updateBookingStatus(TENANT_SLUG, ADMIN_USERNAME, ADMIN_PASSWORD, secondBookingId, "CONFIRMED");
 
-        getWithTenantAdminAuth("/admin/" + TENANT_SLUG + "/bookings?status=CONFIRMED", ADMIN_USERNAME, ADMIN_PASSWORD)
+        tenantAdminGet(TENANT_SLUG, "/bookings?status=CONFIRMED", ADMIN_USERNAME, ADMIN_PASSWORD)
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(1))
                 .andExpect(jsonPath("$[0].id").value(secondBookingId))
                 .andExpect(jsonPath("$[0].status").value("CONFIRMED"));
 
-        getWithTenantAdminAuth("/admin/" + TENANT_SLUG + "/bookings?status=NEW", ADMIN_USERNAME, ADMIN_PASSWORD)
+        tenantAdminGet(TENANT_SLUG, "/bookings?status=NEW", ADMIN_USERNAME, ADMIN_PASSWORD)
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(1))
                 .andExpect(jsonPath("$[0].id").value(firstBookingId))
@@ -148,15 +138,18 @@ class ServiceManagementAndValidationIT extends IntegrationTestSupport {
     void createServiceValidationRejectsMalformedPayload() throws Exception {
         createFoodOrderTenant(TENANT_SLUG, "Food Tenant", "food-bot", ADMIN_USERNAME, ADMIN_PASSWORD);
 
-        mockMvc.perform(post("/admin/" + TENANT_SLUG + "/services")
-                        .header(AUTHORIZATION, basicAuth(ADMIN_USERNAME, ADMIN_PASSWORD))
-                        .contentType(APPLICATION_JSON)
-                        .content("""
-                                {
-                                  "name": "",
-                                  "price": null
-                                }
-                                """))
+        tenantAdminPostJson(
+                TENANT_SLUG,
+                "/services",
+                ADMIN_USERNAME,
+                ADMIN_PASSWORD,
+                """
+                        {
+                          "name": "",
+                          "price": null
+                        }
+                        """
+        )
                 .andExpect(status().isBadRequest());
     }
 
@@ -164,17 +157,19 @@ class ServiceManagementAndValidationIT extends IntegrationTestSupport {
     void createBookingValidationRejectsMalformedPayload() throws Exception {
         createFoodOrderTenant(TENANT_SLUG, "Food Tenant", "food-bot", ADMIN_USERNAME, ADMIN_PASSWORD);
 
-        mockMvc.perform(post("/t/" + TENANT_SLUG + "/bookings")
-                        .header("X-Telegram-User-Id", tenantUserId(101))
-                        .contentType(APPLICATION_JSON)
-                        .content("""
-                                {
-                                  "customerName": "",
-                                  "customerPhone": "",
-                                  "deliveryDate": null,
-                                  "items": []
-                                }
-                                """))
+        tenantPublicPostJson(
+                TENANT_SLUG,
+                "/bookings",
+                101L,
+                """
+                        {
+                          "customerName": "",
+                          "customerPhone": "",
+                          "deliveryDate": null,
+                          "items": []
+                        }
+                        """
+        )
                 .andExpect(status().isBadRequest());
     }
 
@@ -184,10 +179,7 @@ class ServiceManagementAndValidationIT extends IntegrationTestSupport {
         long serviceId = createService(TENANT_SLUG, ADMIN_USERNAME, ADMIN_PASSWORD, "Pizza", "12.50")
                 .get("id").asLong();
 
-        mockMvc.perform(post("/t/" + TENANT_SLUG + "/bookings")
-                        .header("X-Telegram-User-Id", tenantUserId(101))
-                        .contentType(APPLICATION_JSON)
-                        .content(bookingPayload(serviceId, 1, yesterday(DEFAULT_TENANT_TIMEZONE))))
+        tenantPublicPostJson(TENANT_SLUG, "/bookings", 101L, bookingPayload(serviceId, 1, yesterday(DEFAULT_TENANT_TIMEZONE)))
                 .andExpect(status().isBadRequest())
                 .andExpect(status().reason("Delivery date must be on or after " + LocalDate.now(
                         java.time.ZoneId.of(DEFAULT_TENANT_TIMEZONE))));

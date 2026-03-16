@@ -1,11 +1,6 @@
 package com.yoobu.api.admin;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.springframework.http.HttpHeaders.AUTHORIZATION;
-import static org.springframework.http.MediaType.APPLICATION_JSON;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -21,33 +16,34 @@ import org.springframework.test.context.TestPropertySource;
 })
 class BookingLifecycleIT extends IntegrationTestSupport {
 
+    private static final String TENANT_SLUG = "food-tenant";
+    private static final String ADMIN_USERNAME = "food-admin";
+    private static final String ADMIN_PASSWORD = "food-secret";
+
     @Test
     void customerCanCreateReadListAndCancelOwnBooking() throws Exception {
-        createFoodOrderTenant("food-tenant", "Food Tenant", "food-bot", "food-admin", "food-secret");
-        long serviceId = createService("food-tenant", "food-admin", "food-secret", "Pizza", "12.50")
+        createFoodOrderTenant(TENANT_SLUG, "Food Tenant", "food-bot", ADMIN_USERNAME, ADMIN_PASSWORD);
+        long serviceId = createService(TENANT_SLUG, ADMIN_USERNAME, ADMIN_PASSWORD, "Pizza", "12.50")
                 .get("id").asLong();
 
-        JsonNode booking = createBooking("food-tenant", 101L, serviceId, 2);
+        JsonNode booking = createBooking(TENANT_SLUG, 101L, serviceId, 2);
         long bookingId = booking.get("id").asLong();
 
-        mockMvc.perform(get("/t/food-tenant/bookings/my")
-                        .header("X-Telegram-User-Id", tenantUserId(101)))
+        tenantPublicGetAsUser(TENANT_SLUG, "/bookings/my", 101L)
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(1))
                 .andExpect(jsonPath("$[0].id").value(bookingId))
                 .andExpect(jsonPath("$[0].status").value("NEW"))
                 .andExpect(jsonPath("$[0].items[0].serviceName").value("Pizza"));
 
-        mockMvc.perform(get("/t/food-tenant/bookings/" + bookingId)
-                        .header("X-Telegram-User-Id", tenantUserId(101)))
+        tenantPublicGetAsUser(TENANT_SLUG, "/bookings/" + bookingId, 101L)
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(bookingId))
                 .andExpect(jsonPath("$.customerName").value("Alice"))
                 .andExpect(jsonPath("$.status").value("NEW"))
                 .andExpect(jsonPath("$.totalPrice").value(25.0));
 
-        mockMvc.perform(post("/t/food-tenant/bookings/" + bookingId + "/cancel")
-                        .header("X-Telegram-User-Id", tenantUserId(101)))
+        tenantPublicPostJson(TENANT_SLUG, "/bookings/" + bookingId + "/cancel", 101L, "")
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(bookingId))
                 .andExpect(jsonPath("$.status").value("CANCELLED"));
@@ -67,45 +63,41 @@ class BookingLifecycleIT extends IntegrationTestSupport {
 
     @Test
     void customerCannotReadAnotherUsersBooking() throws Exception {
-        createFoodOrderTenant("food-tenant", "Food Tenant", "food-bot", "food-admin", "food-secret");
-        long serviceId = createService("food-tenant", "food-admin", "food-secret", "Pizza", "12.50")
+        createFoodOrderTenant(TENANT_SLUG, "Food Tenant", "food-bot", ADMIN_USERNAME, ADMIN_PASSWORD);
+        long serviceId = createService(TENANT_SLUG, ADMIN_USERNAME, ADMIN_PASSWORD, "Pizza", "12.50")
                 .get("id").asLong();
-        long bookingId = createBooking("food-tenant", 101L, serviceId, 1).get("id").asLong();
+        long bookingId = createBooking(TENANT_SLUG, 101L, serviceId, 1).get("id").asLong();
 
-        mockMvc.perform(get("/t/food-tenant/bookings/" + bookingId)
-                        .header("X-Telegram-User-Id", tenantUserId(202)))
+        tenantPublicGetAsUser(TENANT_SLUG, "/bookings/" + bookingId, 202L)
                 .andExpect(status().isNotFound())
                 .andExpect(status().reason("Booking not found"));
     }
 
     @Test
     void adminCanListReadAndUpdateBookingStatus() throws Exception {
-        createFoodOrderTenant("food-tenant", "Food Tenant", "food-bot", "food-admin", "food-secret");
-        long serviceId = createService("food-tenant", "food-admin", "food-secret", "Pizza", "12.50")
+        createFoodOrderTenant(TENANT_SLUG, "Food Tenant", "food-bot", ADMIN_USERNAME, ADMIN_PASSWORD);
+        long serviceId = createService(TENANT_SLUG, ADMIN_USERNAME, ADMIN_PASSWORD, "Pizza", "12.50")
                 .get("id").asLong();
-        long bookingId = createBooking("food-tenant", 101L, serviceId, 1).get("id").asLong();
+        long bookingId = createBooking(TENANT_SLUG, 101L, serviceId, 1).get("id").asLong();
 
-        mockMvc.perform(get("/admin/food-tenant/bookings")
-                        .header(AUTHORIZATION, basicAuth("food-admin", "food-secret")))
+        tenantAdminGet(TENANT_SLUG, "/bookings", ADMIN_USERNAME, ADMIN_PASSWORD)
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(1))
                 .andExpect(jsonPath("$[0].id").value(bookingId))
                 .andExpect(jsonPath("$[0].status").value("NEW"));
 
-        mockMvc.perform(get("/admin/food-tenant/bookings/" + bookingId)
-                        .header(AUTHORIZATION, basicAuth("food-admin", "food-secret")))
+        tenantAdminGet(TENANT_SLUG, "/bookings/" + bookingId, ADMIN_USERNAME, ADMIN_PASSWORD)
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(bookingId))
                 .andExpect(jsonPath("$.status").value("NEW"));
 
-        mockMvc.perform(put("/admin/food-tenant/bookings/" + bookingId + "/status")
-                        .header(AUTHORIZATION, basicAuth("food-admin", "food-secret"))
-                        .contentType(APPLICATION_JSON)
-                        .content("""
-                                {
-                                  "status": "CONFIRMED"
-                                }
-                                """))
+        tenantAdminPutJson(
+                TENANT_SLUG,
+                "/bookings/" + bookingId + "/status",
+                ADMIN_USERNAME,
+                ADMIN_PASSWORD,
+                java.util.Map.of("status", "CONFIRMED")
+        )
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(bookingId))
                 .andExpect(jsonPath("$.status").value("CONFIRMED"));
@@ -113,22 +105,21 @@ class BookingLifecycleIT extends IntegrationTestSupport {
         JsonNode auditLog = latestAuditLog("booking", "UPDATE_STATUS");
         JsonNode oldValue = oldAuditValue(auditLog);
         JsonNode newValue = newAuditValue(auditLog);
-        assertEquals("food-admin", auditLog.get("actor_id").asText());
+        assertEquals(ADMIN_USERNAME, auditLog.get("actor_id").asText());
         assertEquals("NEW", oldValue.get("status").asText());
         assertEquals("CONFIRMED", newValue.get("status").asText());
     }
 
     @Test
     void completedBookingCannotBeCancelled() throws Exception {
-        createFoodOrderTenant("food-tenant", "Food Tenant", "food-bot", "food-admin", "food-secret");
-        long serviceId = createService("food-tenant", "food-admin", "food-secret", "Pizza", "12.50")
+        createFoodOrderTenant(TENANT_SLUG, "Food Tenant", "food-bot", ADMIN_USERNAME, ADMIN_PASSWORD);
+        long serviceId = createService(TENANT_SLUG, ADMIN_USERNAME, ADMIN_PASSWORD, "Pizza", "12.50")
                 .get("id").asLong();
-        long bookingId = createBooking("food-tenant", 101L, serviceId, 1).get("id").asLong();
+        long bookingId = createBooking(TENANT_SLUG, 101L, serviceId, 1).get("id").asLong();
 
-        updateBookingStatus("food-tenant", "food-admin", "food-secret", bookingId, BookingStatus.DONE);
+        updateBookingStatus(TENANT_SLUG, ADMIN_USERNAME, ADMIN_PASSWORD, bookingId, BookingStatus.DONE);
 
-        mockMvc.perform(post("/t/food-tenant/bookings/" + bookingId + "/cancel")
-                        .header("X-Telegram-User-Id", tenantUserId(101)))
+        tenantPublicPostJson(TENANT_SLUG, "/bookings/" + bookingId + "/cancel", 101L, "")
                 .andExpect(status().isConflict())
                 .andExpect(status().reason("Completed booking cannot be cancelled"));
     }
