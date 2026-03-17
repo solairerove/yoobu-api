@@ -37,7 +37,7 @@ class TenantSettingsTest {
     }
 
     @Test
-    void exposesDomainSlicesForAdminBrandingAndDelivery() {
+    void exposesDomainSlicesForAdminBrandingCheckoutAndDelivery() {
         TenantSettings settings = TenantSettings.fromMap(Map.of(
                 TenantConfigKeys.ADMIN_USERNAME, "root",
                 TenantConfigKeys.ADMIN_PASSWORD, "hash",
@@ -55,8 +55,8 @@ class TenantSettingsTest {
         assertEquals("#101010", settings.branding().primaryColor());
         assertEquals("https://cdn.example.com/logo.png", settings.branding().logoUrl());
         assertEquals("hello", settings.branding().welcomeMessage());
-        assertEquals("+84...", settings.branding().checkoutPhoneHint());
-        assertEquals("No onion, gate code", settings.branding().checkoutNoteHint());
+        assertEquals("+84...", settings.checkout().phoneHint());
+        assertEquals("No onion, gate code", settings.checkout().noteHint());
         assertEquals("18", settings.delivery().cutoffHour());
         assertEquals("30", settings.delivery().cutoffMinute());
     }

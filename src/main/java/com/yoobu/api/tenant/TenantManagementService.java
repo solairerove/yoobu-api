@@ -228,6 +228,7 @@ public class TenantManagementService {
     private Map<String, Object> toAuditSnapshot(Tenant tenant, TenantSettings settings) {
         TenantSettings.AdminSettings admin = settings.admin();
         TenantSettings.BrandingSettings branding = settings.branding();
+        TenantSettings.CheckoutSettings checkout = settings.checkout();
         Map<String, Object> snapshot = new LinkedHashMap<>();
         snapshot.put("id", tenant.getId());
         snapshot.put("slug", tenant.getSlug());
@@ -242,8 +243,8 @@ public class TenantManagementService {
         snapshot.put("primaryColor", branding.primaryColor());
         snapshot.put("logoUrl", branding.logoUrl());
         snapshot.put("welcomeMessage", branding.welcomeMessage());
-        snapshot.put("checkoutPhoneHint", branding.checkoutPhoneHint());
-        snapshot.put("checkoutNoteHint", branding.checkoutNoteHint());
+        snapshot.put("checkoutPhoneHint", checkout.phoneHint());
+        snapshot.put("checkoutNoteHint", checkout.noteHint());
         return snapshot;
     }
 }
