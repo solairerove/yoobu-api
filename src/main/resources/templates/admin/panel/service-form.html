@@ -73,6 +73,7 @@
         </form>
         <form method="post"
               th:if="${editServiceId != null}"
+              onsubmit="return confirm('Delete this service?');"
               th:action="@{/admin/{slug}/panel/services/{serviceId}/delete(slug=${slug}, serviceId=${editServiceId})}">
             <div class="actions actions-danger">
                 <button type="submit" class="button-danger">Delete service</button>

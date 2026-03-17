@@ -146,4 +146,17 @@ class AdminPanelIT extends IntegrationTestSupport {
                 .andExpect(content().string(containsString("name=\"status\"")))
                 .andExpect(content().string(containsString("value=\"INACTIVE\" selected=\"selected\"")));
     }
+
+    @Test
+    void editServiceFormRequiresDeleteConfirmation() throws Exception {
+        createFoodOrderTenant(TENANT_SLUG, "Food Tenant", "food-bot-token", ADMIN_USERNAME, ADMIN_PASSWORD);
+
+        JsonNode service = createService(TENANT_SLUG, ADMIN_USERNAME, ADMIN_PASSWORD, "Pizza", "12.50");
+        long serviceId = service.get("id").asLong();
+
+        tenantAdminGet(TENANT_SLUG, "/panel/services/" + serviceId + "/edit", ADMIN_USERNAME, ADMIN_PASSWORD)
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("onsubmit=\"return confirm('Delete this service?');\"")))
+                .andExpect(content().string(containsString("Delete service")));
+    }
 }
