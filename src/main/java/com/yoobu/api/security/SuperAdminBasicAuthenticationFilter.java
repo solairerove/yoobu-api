@@ -9,6 +9,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.AuthorityUtils;
@@ -16,6 +17,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 @RequiredArgsConstructor
+@Slf4j
 public class SuperAdminBasicAuthenticationFilter extends OncePerRequestFilter {
 
     private static final String BASIC_PREFIX = "Basic ";
@@ -37,9 +39,12 @@ public class SuperAdminBasicAuthenticationFilter extends OncePerRequestFilter {
         SecurityProperties.SuperAdmin superAdmin = securityProperties.getSuperadmin();
         if (!superAdmin.getUsername().equals(credentials.username())
                 || !superAdmin.getPassword().equals(credentials.password())) {
+            log.warn("Superadmin auth failed for path={} username={}", request.getRequestURI(), credentials.username());
             BasicAuthChallenge.send(response, REALM, "Invalid superadmin credentials");
             return;
         }
+
+        log.info("Superadmin auth succeeded for path={} username={}", request.getRequestURI(), credentials.username());
 
         UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
                 credentials.username(),
@@ -58,6 +63,7 @@ public class SuperAdminBasicAuthenticationFilter extends OncePerRequestFilter {
     private Credentials extractCredentials(HttpServletRequest request, HttpServletResponse response) throws IOException {
         String authorization = request.getHeader(HttpHeaders.AUTHORIZATION);
         if (authorization == null || !authorization.startsWith(BASIC_PREFIX)) {
+            log.warn("Superadmin auth missing/invalid Authorization header for path={}", request.getRequestURI());
             BasicAuthChallenge.send(response, REALM, "Missing Basic authorization header");
             return null;
         }
@@ -69,12 +75,14 @@ public class SuperAdminBasicAuthenticationFilter extends OncePerRequestFilter {
                     StandardCharsets.UTF_8
             );
         } catch (IllegalArgumentException ex) {
+            log.warn("Superadmin auth received undecodable Basic header for path={}", request.getRequestURI());
             BasicAuthChallenge.send(response, REALM, "Invalid Basic authorization header");
             return null;
         }
 
         int separatorIndex = decoded.indexOf(':');
         if (separatorIndex <= 0) {
+            log.warn("Superadmin auth received malformed Basic payload for path={}", request.getRequestURI());
             BasicAuthChallenge.send(response, REALM, "Invalid Basic authorization header");
             return null;
         }

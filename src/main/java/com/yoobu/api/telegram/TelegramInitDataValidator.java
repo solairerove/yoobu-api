@@ -13,6 +13,7 @@ import java.util.stream.Collectors;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
@@ -20,6 +21,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 @Component
 @RequiredArgsConstructor
+@Slf4j
 public class TelegramInitDataValidator {
 
     private static final String HMAC_SHA_256 = "HmacSHA256";
@@ -30,17 +32,20 @@ public class TelegramInitDataValidator {
     public TelegramUser validate(String rawInitData) {
         try {
             if (!StringUtils.hasText(rawInitData)) {
+                log.warn("Telegram initData validation failed: header is blank");
                 throw invalidInitData();
             }
 
             Map<String, String> params = parseQueryString(rawInitData);
             String hashHex = params.remove("hash");
             if (!StringUtils.hasText(hashHex)) {
+                log.warn("Telegram initData validation failed: hash is missing");
                 throw invalidInitData();
             }
 
             Tenant tenant = TenantContext.getCurrentTenant();
             if (tenant == null || !StringUtils.hasText(tenant.getBotToken())) {
+                log.warn("Telegram initData validation failed: tenant or bot token missing");
                 throw invalidInitData();
             }
 
@@ -56,19 +61,23 @@ public class TelegramInitDataValidator {
             byte[] actualHash = hexToBytes(hashHex);
 
             if (!MessageDigest.isEqual(expectedHash, actualHash)) {
+                log.warn("Telegram initData validation failed: signature mismatch for slug={}", tenant.getSlug());
                 throw invalidInitData();
             }
 
             String userJson = params.get("user");
             if (!StringUtils.hasText(userJson)) {
+                log.warn("Telegram initData validation failed: user payload is missing for slug={}", tenant.getSlug());
                 throw invalidInitData();
             }
 
             JsonNode userNode = objectMapper.readTree(userJson);
             if (!userNode.hasNonNull("id")) {
+                log.warn("Telegram initData validation failed: user id is missing for slug={}", tenant.getSlug());
                 throw invalidInitData();
             }
 
+            log.info("Telegram initData validation succeeded for slug={} userId={}", tenant.getSlug(), userNode.get("id").asLong());
             return new TelegramUser(
                     userNode.get("id").asLong(),
                     textOrNull(userNode, "first_name"),
@@ -78,6 +87,7 @@ public class TelegramInitDataValidator {
         } catch (ResponseStatusException ex) {
             throw ex;
         } catch (Exception ex) {
+            log.warn("Telegram initData validation failed: {}", ex.getClass().getSimpleName());
             throw invalidInitData();
         }
     }
