@@ -30,6 +30,7 @@ public class TenantManagementService {
     private final AuditLogService auditLogService;
     private final TenantRepository tenantRepository;
     private final TenantConfigRepository tenantConfigRepository;
+    private final TenantSettingsService tenantSettingsService;
     private final TenantMapper tenantMapper;
     private final PasswordEncoder passwordEncoder;
 
@@ -45,7 +46,7 @@ public class TenantManagementService {
         Tenant tenant = tenantRepository.findById(tenantId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Tenant not found"));
 
-        TenantSettings settings = TenantSettings.fromEntries(tenantConfigRepository.findByTenantId(tenantId));
+        TenantSettings settings = tenantSettingsService.getSettings(tenantId);
 
         return tenantMapper.toDetailResponse(tenant, settings.asMap());
     }

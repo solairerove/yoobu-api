@@ -7,9 +7,9 @@ import com.yoobu.api.booking.dto.CreateBookingRequest;
 import com.yoobu.api.catalog.CatalogService;
 import com.yoobu.api.catalog.CatalogServiceRepository;
 import com.yoobu.api.tenant.Tenant;
-import com.yoobu.api.tenant.TenantConfigRepository;
 import com.yoobu.api.tenant.TenantContext;
 import com.yoobu.api.tenant.TenantSettings;
+import com.yoobu.api.tenant.TenantSettingsService;
 import com.yoobu.api.tenant.TenantTimeService;
 import com.yoobu.api.tenant.TenantType;
 import java.math.BigDecimal;
@@ -36,7 +36,7 @@ public class BookingService {
     private final BookingItemRepository bookingItemRepository;
     private final BookingMapper bookingMapper;
     private final CatalogServiceRepository catalogServiceRepository;
-    private final TenantConfigRepository tenantConfigRepository;
+    private final TenantSettingsService tenantSettingsService;
     private final TenantTimeService tenantTimeService;
 
     @Transactional
@@ -188,17 +188,16 @@ public class BookingService {
     }
 
     private void validateDeliveryDate(LocalDate deliveryDate, Tenant tenant) {
-        LocalDate earliestAllowedDate = tenantTimeService.earliestDeliveryDate(tenant, loadTenantSettings(tenant.getId()));
+        LocalDate earliestAllowedDate = tenantTimeService.earliestDeliveryDate(
+                tenant,
+                tenantSettingsService.getSettings(tenant.getId())
+        );
         if (deliveryDate.isBefore(earliestAllowedDate)) {
             throw new ResponseStatusException(
                     HttpStatus.BAD_REQUEST,
                     "Delivery date must be on or after " + earliestAllowedDate
             );
         }
-    }
-
-    private TenantSettings loadTenantSettings(Long tenantId) {
-        return TenantSettings.fromEntries(tenantConfigRepository.findByTenantId(tenantId));
     }
 
     private Booking findCustomerBooking(Long bookingId, Long telegramUserId) {

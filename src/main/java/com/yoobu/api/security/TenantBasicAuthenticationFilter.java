@@ -2,9 +2,9 @@ package com.yoobu.api.security;
 
 import com.yoobu.api.config.SecurityProperties;
 import com.yoobu.api.tenant.Tenant;
-import com.yoobu.api.tenant.TenantConfigRepository;
 import com.yoobu.api.tenant.TenantContext;
 import com.yoobu.api.tenant.TenantSettings;
+import com.yoobu.api.tenant.TenantSettingsService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -26,7 +26,7 @@ public class TenantBasicAuthenticationFilter extends OncePerRequestFilter {
     private static final String BASIC_PREFIX = "Basic ";
     private static final String REALM_PREFIX = "Yoobu Tenant Admin: ";
 
-    private final TenantConfigRepository tenantConfigRepository;
+    private final TenantSettingsService tenantSettingsService;
     private final PasswordEncoder passwordEncoder;
     private final SecurityProperties securityProperties;
 
@@ -43,7 +43,7 @@ public class TenantBasicAuthenticationFilter extends OncePerRequestFilter {
             return;
         }
 
-        TenantSettings.AdminSettings admin = loadTenantSettings(tenant.getId()).admin();
+        TenantSettings.AdminSettings admin = tenantSettingsService.getSettings(tenant.getId()).admin();
         String expectedUsername = admin.username();
         String expectedPasswordHash = admin.passwordHash();
         if (expectedUsername == null || expectedPasswordHash == null) {
@@ -95,10 +95,6 @@ public class TenantBasicAuthenticationFilter extends OncePerRequestFilter {
         }
 
         return new Credentials(decoded.substring(0, separatorIndex), decoded.substring(separatorIndex + 1));
-    }
-
-    private TenantSettings loadTenantSettings(Long tenantId) {
-        return TenantSettings.fromEntries(tenantConfigRepository.findByTenantId(tenantId));
     }
 
     private UsernamePasswordAuthenticationToken authenticate(

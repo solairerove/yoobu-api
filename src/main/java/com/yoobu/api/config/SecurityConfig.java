@@ -3,8 +3,8 @@ package com.yoobu.api.config;
 import com.yoobu.api.security.SuperAdminBasicAuthenticationFilter;
 import com.yoobu.api.security.TenantBasicAuthenticationFilter;
 import com.yoobu.api.security.TenantContextFilter;
-import com.yoobu.api.tenant.TenantConfigRepository;
 import com.yoobu.api.tenant.TenantRepository;
+import com.yoobu.api.tenant.TenantSettingsService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -34,11 +34,11 @@ public class SecurityConfig {
 
     @Bean
     TenantBasicAuthenticationFilter tenantBasicAuthenticationFilter(
-            TenantConfigRepository tenantConfigRepository,
+            TenantSettingsService tenantSettingsService,
             PasswordEncoder passwordEncoder,
             SecurityProperties securityProperties
     ) {
-        return new TenantBasicAuthenticationFilter(tenantConfigRepository, passwordEncoder, securityProperties);
+        return new TenantBasicAuthenticationFilter(tenantSettingsService, passwordEncoder, securityProperties);
     }
 
     @Bean
