@@ -47,11 +47,24 @@
                 <td th:text="${service.durationMinutes ?: 'N/A'}">N/A</td>
                 <td th:text="${service.sortOrder}">0</td>
                 <td>
-                    <span class="badge"
-                          th:classappend="${service.status.name() == 'ACTIVE'} ? ' badge-success' : ' badge-muted'"
-                          th:text="${#strings.capitalize(#strings.toLowerCase(service.status.name()))}">
-                        Active
-                    </span>
+                    <form class="inline-status-form"
+                          method="post"
+                          th:action="@{/admin/{slug}/panel/services/{serviceId}/status(slug=${slug}, serviceId=${service.id})}">
+                        <label class="sr-only" th:for="${'service-status-' + service.id}">
+                            <span th:text="${'Status for service ' + service.name}">Status for service</span>
+                        </label>
+                        <select name="status"
+                                th:id="${'service-status-' + service.id}"
+                                th:classappend="${service.status.name() == 'ACTIVE'} ? ' status-select-active' : ' status-select-inactive'">
+                            <option th:each="statusOption : ${serviceStatuses}"
+                                    th:value="${statusOption}"
+                                    th:text="${#strings.capitalize(#strings.toLowerCase(statusOption.name()))}"
+                                    th:selected="${statusOption == service.status}">
+                                Active
+                            </option>
+                        </select>
+                        <button type="submit">Update</button>
+                    </form>
                 </td>
                 <td>
                     <a th:href="@{/admin/{slug}/panel/services/{serviceId}/edit(slug=${slug}, serviceId=${service.id})}">

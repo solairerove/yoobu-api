@@ -10,8 +10,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
-import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -28,6 +28,7 @@ public class AdminPanelServiceController {
     private static final String CREATE_SERVICE_LABEL = "Create service";
     private static final String EDIT_SERVICE_TITLE = "Edit service";
     private static final String SAVE_CHANGES_LABEL = "Save changes";
+    private static final String STATUS_FORM_ATTRIBUTE = "statusForm";
 
     private final AdminCatalogService adminCatalogService;
 
@@ -35,6 +36,7 @@ public class AdminPanelServiceController {
     public String services(@PathVariable String slug, Model model) {
         model.addAttribute("slug", slug);
         model.addAttribute("services", adminCatalogService.getAdminServices());
+        model.addAttribute("serviceStatuses", SERVICE_STATUSES);
         return SERVICES_VIEW;
     }
 
@@ -90,6 +92,34 @@ public class AdminPanelServiceController {
     @PostMapping("/{serviceId}/delete")
     public String deleteService(@PathVariable String slug, @PathVariable Long serviceId) {
         adminCatalogService.deleteService(serviceId);
+        return servicesRedirect(slug);
+    }
+
+    @PostMapping("/{serviceId}/status")
+    public String updateStatus(
+            @PathVariable String slug,
+            @PathVariable Long serviceId,
+            @Valid @ModelAttribute(STATUS_FORM_ATTRIBUTE) ServiceStatusForm form,
+            BindingResult bindingResult,
+            Model model
+    ) {
+        if (bindingResult.hasErrors()) {
+            model.addAttribute("slug", slug);
+            model.addAttribute("services", adminCatalogService.getAdminServices());
+            model.addAttribute("serviceStatuses", SERVICE_STATUSES);
+            return SERVICES_VIEW;
+        }
+
+        ServiceResponse service = adminCatalogService.getAdminService(serviceId);
+        adminCatalogService.updateService(serviceId, new AdminUpsertServiceRequest(
+                service.name(),
+                service.description(),
+                service.price(),
+                service.unit(),
+                service.durationMinutes(),
+                service.sortOrder(),
+                form.getStatus()
+        ));
         return servicesRedirect(slug);
     }
 

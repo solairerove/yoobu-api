@@ -67,11 +67,16 @@ public class AdminPanelBookingController {
             Model model
     ) {
         if (bindingResult.hasErrors()) {
-            return bookingDetailView(slug, bookingService.getAdminBooking(bookingId), form, model);
+            model.addAttribute("slug", slug);
+            model.addAttribute("bookings", bookingService.getAdminBookings(null, null));
+            model.addAttribute("selectedStatus", null);
+            model.addAttribute("deliveryDate", null);
+            model.addAttribute("statuses", BookingStatus.values());
+            return BOOKINGS_VIEW;
         }
 
         bookingService.updateBookingStatus(bookingId, form.getStatus());
-        return bookingDetailRedirect(slug, bookingId);
+        return bookingsRedirect(slug);
     }
 
     private String bookingDetailView(String slug, BookingResponse booking, BookingStatusForm form, Model model) {

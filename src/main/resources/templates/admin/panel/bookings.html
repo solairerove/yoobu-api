@@ -58,7 +58,22 @@
             <tr th:each="booking : ${bookings}">
                 <td th:text="${booking.id}">1</td>
                 <td th:text="${booking.customerName}">Alice</td>
-                <td><span class="badge" th:text="${booking.status}">NEW</span></td>
+                <td>
+                    <form class="inline-status-form"
+                          method="post"
+                          th:action="@{/admin/{slug}/panel/bookings/{bookingId}/status(slug=${slug}, bookingId=${booking.id})}">
+                        <label class="sr-only" th:for="${'booking-status-' + booking.id}">
+                            <span th:text="${'Status for booking ' + booking.id}">Status for booking</span>
+                        </label>
+                        <select name="status" th:id="${'booking-status-' + booking.id}">
+                            <option th:each="statusOption : ${statuses}"
+                                    th:value="${statusOption}"
+                                    th:text="${statusOption}"
+                                    th:selected="${statusOption == booking.status}"></option>
+                        </select>
+                        <button type="submit">Update</button>
+                    </form>
+                </td>
                 <td th:text="${booking.deliveryDate}">2026-03-14</td>
                 <td th:text="${booking.totalPrice}">12.50</td>
                 <td>
