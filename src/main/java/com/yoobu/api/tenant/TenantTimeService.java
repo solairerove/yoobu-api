@@ -24,10 +24,10 @@ public class TenantTimeService {
         return now(tenant).toLocalDate();
     }
 
-    public LocalDate earliestDeliveryDate(Tenant tenant, Map<String, String> config) {
+    public LocalDate earliestDeliveryDate(Tenant tenant, TenantSettings settings) {
         ZonedDateTime now = now(tenant);
         LocalDate today = now.toLocalDate();
-        LocalTime cutoff = cutoffTime(config);
+        LocalTime cutoff = cutoffTime(settings);
 
         if (cutoff != null && !now.toLocalTime().isBefore(cutoff)) {
             return today.plusDays(1);
@@ -40,9 +40,9 @@ public class TenantTimeService {
         return ZoneId.of(tenant.getTimezone());
     }
 
-    private LocalTime cutoffTime(Map<String, String> config) {
-        String cutoffHour = config.get(TenantConfigKeys.CUTOFF_HOUR);
-        String cutoffMinute = config.get(TenantConfigKeys.CUTOFF_MINUTE);
+    private LocalTime cutoffTime(TenantSettings settings) {
+        String cutoffHour = settings.cutoffHour();
+        String cutoffMinute = settings.cutoffMinute();
 
         if (!StringUtils.hasText(cutoffHour) && !StringUtils.hasText(cutoffMinute)) {
             return null;

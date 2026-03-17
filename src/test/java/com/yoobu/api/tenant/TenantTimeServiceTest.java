@@ -32,7 +32,7 @@ class TenantTimeServiceTest {
 
         LocalDate earliestDeliveryDate = service.earliestDeliveryDate(
                 tenant,
-                Map.of("cutoff_hour", "18", "cutoff_minute", "0")
+                TenantSettings.fromMap(Map.of("cutoff_hour", "18", "cutoff_minute", "0"))
         );
 
         assertEquals(LocalDate.of(2026, 3, 15), earliestDeliveryDate);
@@ -49,11 +49,11 @@ class TenantTimeServiceTest {
 
         LocalDate utcEarliestDeliveryDate = service.earliestDeliveryDate(
                 utcTenant,
-                Map.of("cutoff_hour", "18", "cutoff_minute", "0")
+                TenantSettings.fromMap(Map.of("cutoff_hour", "18", "cutoff_minute", "0"))
         );
         LocalDate hoChiMinhEarliestDeliveryDate = service.earliestDeliveryDate(
                 hoChiMinhTenant,
-                Map.of("cutoff_hour", "18", "cutoff_minute", "0")
+                TenantSettings.fromMap(Map.of("cutoff_hour", "18", "cutoff_minute", "0"))
         );
 
         assertEquals(LocalDate.of(2026, 3, 14), utcEarliestDeliveryDate);
@@ -70,7 +70,7 @@ class TenantTimeServiceTest {
 
         LocalDate earliestDeliveryDate = service.earliestDeliveryDate(
                 tenant,
-                Map.of("cutoff_hour", "18", "cutoff_minute", "0")
+                TenantSettings.fromMap(Map.of("cutoff_hour", "18", "cutoff_minute", "0"))
         );
 
         assertEquals(LocalDate.of(2026, 3, 15), earliestDeliveryDate);
@@ -84,7 +84,7 @@ class TenantTimeServiceTest {
                 ZoneOffset.UTC
         ));
 
-        assertEquals(LocalDate.of(2026, 3, 14), service.earliestDeliveryDate(tenant, Map.of()));
+        assertEquals(LocalDate.of(2026, 3, 14), service.earliestDeliveryDate(tenant, TenantSettings.fromMap(Map.of())));
     }
 
     private static Tenant tenant(String timezone) {

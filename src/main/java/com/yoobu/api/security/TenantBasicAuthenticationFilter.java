@@ -2,11 +2,9 @@ package com.yoobu.api.security;
 
 import com.yoobu.api.config.SecurityProperties;
 import com.yoobu.api.tenant.Tenant;
-import com.yoobu.api.tenant.TenantConfig;
-import com.yoobu.api.tenant.TenantConfigKeys;
 import com.yoobu.api.tenant.TenantConfigRepository;
-import com.yoobu.api.tenant.TenantConfigs;
 import com.yoobu.api.tenant.TenantContext;
+import com.yoobu.api.tenant.TenantSettings;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -14,8 +12,6 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
-import java.util.List;
-import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -47,9 +43,9 @@ public class TenantBasicAuthenticationFilter extends OncePerRequestFilter {
             return;
         }
 
-        Map<String, String> config = loadTenantConfig(tenant.getId());
-        String expectedUsername = config.get(TenantConfigKeys.ADMIN_USERNAME);
-        String expectedPasswordHash = config.get(TenantConfigKeys.ADMIN_PASSWORD);
+        TenantSettings settings = loadTenantSettings(tenant.getId());
+        String expectedUsername = settings.adminUsername();
+        String expectedPasswordHash = settings.adminPasswordHash();
         if (expectedUsername == null || expectedPasswordHash == null) {
             BasicAuthChallenge.send(response, realm(tenant.getSlug()), "Admin credentials are not configured");
             return;
@@ -101,9 +97,8 @@ public class TenantBasicAuthenticationFilter extends OncePerRequestFilter {
         return new Credentials(decoded.substring(0, separatorIndex), decoded.substring(separatorIndex + 1));
     }
 
-    private Map<String, String> loadTenantConfig(Long tenantId) {
-        List<TenantConfig> configEntries = tenantConfigRepository.findByTenantId(tenantId);
-        return TenantConfigs.toMap(configEntries);
+    private TenantSettings loadTenantSettings(Long tenantId) {
+        return TenantSettings.fromEntries(tenantConfigRepository.findByTenantId(tenantId));
     }
 
     private UsernamePasswordAuthenticationToken authenticate(

@@ -2,7 +2,6 @@ package com.yoobu.api.tenant;
 
 import com.yoobu.api.tenant.dto.TenantConfigResponse;
 import java.util.List;
-import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -16,8 +15,8 @@ public class TenantConfigService {
     public TenantConfigResponse getCurrentTenantConfig() {
         Tenant tenant = TenantContext.requireCurrentTenant();
         List<TenantConfig> configEntries = tenantConfigRepository.findByTenantId(tenant.getId());
-        Map<String, String> config = TenantConfigs.toMap(configEntries);
+        TenantSettings settings = TenantSettings.fromEntries(configEntries);
 
-        return tenantMapper.toConfigResponse(tenant, config);
+        return tenantMapper.toConfigResponse(tenant, settings);
     }
 }

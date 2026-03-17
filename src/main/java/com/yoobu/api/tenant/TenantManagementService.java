@@ -45,9 +45,9 @@ public class TenantManagementService {
         Tenant tenant = tenantRepository.findById(tenantId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Tenant not found"));
 
-        Map<String, String> config = TenantConfigs.toMap(tenantConfigRepository.findByTenantId(tenantId));
+        TenantSettings settings = TenantSettings.fromEntries(tenantConfigRepository.findByTenantId(tenantId));
 
-        return tenantMapper.toDetailResponse(tenant, config);
+        return tenantMapper.toDetailResponse(tenant, settings.asMap());
     }
 
     @Transactional(readOnly = true)
@@ -84,7 +84,7 @@ public class TenantManagementService {
                 ENTITY_NAME,
                 savedTenant.getId(),
                 auditLogService.currentActorId(),
-                toAuditSnapshotFromValues(savedTenant, configMap(configs))
+                toAuditSnapshot(savedTenant, TenantSettings.fromEntries(configs))
         );
 
         return tenantMapper.toSummaryResponse(savedTenant);
@@ -128,7 +128,7 @@ public class TenantManagementService {
                 savedTenant.getId(),
                 auditLogService.currentActorId(),
                 oldSnapshot,
-                toAuditSnapshot(savedTenant, existingConfigs)
+                toAuditSnapshot(savedTenant, TenantSettings.fromEntries(new ArrayList<>(existingConfigs.values())))
         );
 
         return tenantMapper.toSummaryResponse(savedTenant);
@@ -216,19 +216,11 @@ public class TenantManagementService {
         return StringUtils.hasText(timezone) ? timezone.trim() : DEFAULT_TIMEZONE;
     }
 
-    private Map<String, String> configMap(List<TenantConfig> configs) {
-        Map<String, String> values = new HashMap<>();
-        configs.forEach(config -> values.put(config.getKey(), config.getValue()));
-        return values;
-    }
-
     private Map<String, Object> toAuditSnapshot(Tenant tenant, Map<String, TenantConfig> configs) {
-        Map<String, String> values = new HashMap<>();
-        configs.forEach((key, config) -> values.put(key, config.getValue()));
-        return toAuditSnapshotFromValues(tenant, values);
+        return toAuditSnapshot(tenant, TenantSettings.fromEntries(new ArrayList<>(configs.values())));
     }
 
-    private Map<String, Object> toAuditSnapshotFromValues(Tenant tenant, Map<String, String> configValues) {
+    private Map<String, Object> toAuditSnapshot(Tenant tenant, TenantSettings settings) {
         Map<String, Object> snapshot = new LinkedHashMap<>();
         snapshot.put("id", tenant.getId());
         snapshot.put("slug", tenant.getSlug());
@@ -238,11 +230,11 @@ public class TenantManagementService {
         snapshot.put("timezone", tenant.getTimezone());
         snapshot.put("ownerTelegramId", tenant.getOwnerTelegramId());
         snapshot.put("botTokenConfigured", StringUtils.hasText(tenant.getBotToken()));
-        snapshot.put("adminUsername", configValues.get(TenantConfigKeys.ADMIN_USERNAME));
-        snapshot.put("adminPasswordConfigured", configValues.containsKey(TenantConfigKeys.ADMIN_PASSWORD));
-        snapshot.put("primaryColor", configValues.get(TenantConfigKeys.PRIMARY_COLOR));
-        snapshot.put("logoUrl", configValues.get(TenantConfigKeys.LOGO_URL));
-        snapshot.put("welcomeMessage", configValues.get(TenantConfigKeys.WELCOME_MESSAGE));
+        snapshot.put("adminUsername", settings.adminUsername());
+        snapshot.put("adminPasswordConfigured", settings.hasAdminPassword());
+        snapshot.put("primaryColor", settings.primaryColor());
+        snapshot.put("logoUrl", settings.logoUrl());
+        snapshot.put("welcomeMessage", settings.welcomeMessage());
         return snapshot;
     }
 }
