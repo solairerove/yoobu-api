@@ -9,13 +9,11 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.filter.OncePerRequestFilter;
 import org.springframework.web.server.ResponseStatusException;
 
 @RequiredArgsConstructor
-@Slf4j
 public class TenantContextFilter extends OncePerRequestFilter {
 
     private final TenantRepository tenantRepository;
@@ -28,14 +26,10 @@ public class TenantContextFilter extends OncePerRequestFilter {
     ) throws ServletException, IOException {
         try {
             String slug = extractSlug(request.getRequestURI());
-            log.debug("Resolving tenant for slug={} path={}", slug, request.getRequestURI());
             Tenant tenant = tenantRepository.findBySlugAndActiveTrue(slug)
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Tenant not found"));
             TenantContext.setCurrentTenant(tenant);
             filterChain.doFilter(request, response);
-        } catch (ResponseStatusException ex) {
-            log.warn("Tenant resolution failed for path={} reason={}", request.getRequestURI(), ex.getReason());
-            throw ex;
         } finally {
             TenantContext.clear();
         }
