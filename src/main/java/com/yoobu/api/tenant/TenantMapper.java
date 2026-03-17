@@ -18,5 +18,7 @@ public interface TenantMapper {
     @Mapping(target = "primaryColor", expression = "java(settings.branding().primaryColor())")
     @Mapping(target = "logoUrl", expression = "java(settings.branding().logoUrl())")
     @Mapping(target = "welcomeMessage", expression = "java(settings.branding().welcomeMessage())")
+    @Mapping(target = "checkoutPhoneHint", expression = "java(settings.branding().checkoutPhoneHint())")
+    @Mapping(target = "checkoutNoteHint", expression = "java(settings.branding().checkoutNoteHint())")
     TenantConfigResponse toConfigResponse(Tenant tenant, TenantSettings settings);
 }

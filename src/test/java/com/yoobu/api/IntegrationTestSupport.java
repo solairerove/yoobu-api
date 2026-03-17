@@ -118,6 +118,8 @@ public abstract class IntegrationTestSupport {
                 "#112233",
                 "https://cdn.example.com/logo.png",
                 "Hello from test",
+                "+84...",
+                "No onion, gate code, delivery code",
                 adminUsername,
                 adminPassword
         );

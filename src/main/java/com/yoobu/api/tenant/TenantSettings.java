@@ -39,7 +39,9 @@ public final class TenantSettings {
         return new BrandingSettings(
                 values.get(TenantConfigKeys.PRIMARY_COLOR),
                 values.get(TenantConfigKeys.LOGO_URL),
-                values.get(TenantConfigKeys.WELCOME_MESSAGE)
+                values.get(TenantConfigKeys.WELCOME_MESSAGE),
+                values.get(TenantConfigKeys.CHECKOUT_PHONE_HINT),
+                values.get(TenantConfigKeys.CHECKOUT_NOTE_HINT)
         );
     }
 
@@ -60,7 +62,9 @@ public final class TenantSettings {
     public record BrandingSettings(
             String primaryColor,
             String logoUrl,
-            String welcomeMessage
+            String welcomeMessage,
+            String checkoutPhoneHint,
+            String checkoutNoteHint
     ) {
     }
 

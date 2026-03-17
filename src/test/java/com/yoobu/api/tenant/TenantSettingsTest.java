@@ -44,6 +44,8 @@ class TenantSettingsTest {
                 TenantConfigKeys.PRIMARY_COLOR, "#101010",
                 TenantConfigKeys.LOGO_URL, "https://cdn.example.com/logo.png",
                 TenantConfigKeys.WELCOME_MESSAGE, "hello",
+                TenantConfigKeys.CHECKOUT_PHONE_HINT, "+84...",
+                TenantConfigKeys.CHECKOUT_NOTE_HINT, "No onion, gate code",
                 TenantConfigKeys.CUTOFF_HOUR, "18",
                 TenantConfigKeys.CUTOFF_MINUTE, "30"
         ));
@@ -53,6 +55,8 @@ class TenantSettingsTest {
         assertEquals("#101010", settings.branding().primaryColor());
         assertEquals("https://cdn.example.com/logo.png", settings.branding().logoUrl());
         assertEquals("hello", settings.branding().welcomeMessage());
+        assertEquals("+84...", settings.branding().checkoutPhoneHint());
+        assertEquals("No onion, gate code", settings.branding().checkoutNoteHint());
         assertEquals("18", settings.delivery().cutoffHour());
         assertEquals("30", settings.delivery().cutoffMinute());
     }

@@ -8,6 +8,8 @@ public record TenantConfigResponse(
         TenantType type,
         String primaryColor,
         String logoUrl,
-        String welcomeMessage
+        String welcomeMessage,
+        String checkoutPhoneHint,
+        String checkoutNoteHint
 ) {
 }

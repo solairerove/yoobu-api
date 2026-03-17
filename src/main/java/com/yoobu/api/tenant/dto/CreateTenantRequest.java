@@ -14,6 +14,8 @@ public record CreateTenantRequest(
         String primaryColor,
         String logoUrl,
         String welcomeMessage,
+        String checkoutPhoneHint,
+        String checkoutNoteHint,
         @NotBlank String adminUsername,
         @NotBlank String adminPassword
 ) {

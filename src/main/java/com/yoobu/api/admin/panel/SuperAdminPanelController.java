@@ -117,6 +117,8 @@ public class SuperAdminPanelController {
                 form.getPrimaryColor(),
                 form.getLogoUrl(),
                 form.getWelcomeMessage(),
+                null,
+                null,
                 form.getAdminUsername(),
                 form.getAdminPassword()
         );
@@ -132,6 +134,8 @@ public class SuperAdminPanelController {
                 form.getPrimaryColor(),
                 form.getLogoUrl(),
                 form.getWelcomeMessage(),
+                null,
+                null,
                 form.getAdminUsername(),
                 form.getAdminPassword(),
                 form.isActive()

@@ -13,6 +13,8 @@ public record UpdateTenantRequest(
         String primaryColor,
         String logoUrl,
         String welcomeMessage,
+        String checkoutPhoneHint,
+        String checkoutNoteHint,
         @NotBlank String adminUsername,
         String adminPassword,
         @NotNull Boolean active
