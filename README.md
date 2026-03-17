@@ -34,6 +34,18 @@ Example:
 CORS_ALLOWED_ORIGIN_PATTERNS=https://yoobu-web-production.up.railway.app,https://your-custom-domain.com
 ```
 
+`railway.toml` configures Railway to build from the repository `Dockerfile`, wait for `GET /health`, and restart on failures.
+
+You still need to set runtime variables manually in Railway, at minimum:
+
+```shell
+DB_URL=...
+DB_USER=...
+DB_PASS=...
+SUPERADMIN_USER=...
+SUPERADMIN_PASS=...
+```
+
 ### Super Admin panel
 
 http://localhost:8080/superadmin/panel
