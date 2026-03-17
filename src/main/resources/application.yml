@@ -17,11 +17,14 @@ spring:
     locations: classpath:db/migration
 
 app:
+  cors:
+    allowed-origin-patterns: ${CORS_ALLOWED_ORIGIN_PATTERNS:http://localhost:*,http://127.0.0.1:*,https://localhost:*,https://127.0.0.1:*,https://*.up.railway.app}
   superadmin:
     username: ${SUPERADMIN_USER:superadmin}
     password: ${SUPERADMIN_PASS:superadmin}
 
 server:
+  port: ${PORT:8080}
   error:
     include-message: always
 

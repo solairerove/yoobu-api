@@ -24,6 +24,16 @@ mvn clean install && java -jar target/yoobu-api-0.0.1-SNAPSHOT.jar --spring.prof
 mvn spring-boot:run
 ```
 
+### Railway
+
+Set `CORS_ALLOWED_ORIGIN_PATTERNS` to your frontend origins if you want to lock CORS down more tightly than the default Railway wildcard.
+
+Example:
+
+```shell
+CORS_ALLOWED_ORIGIN_PATTERNS=https://yoobu-web-production.up.railway.app,https://your-custom-domain.com
+```
+
 ### Super Admin panel
 
 http://localhost:8080/superadmin/panel

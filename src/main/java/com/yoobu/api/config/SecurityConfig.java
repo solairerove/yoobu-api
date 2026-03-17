@@ -81,6 +81,7 @@ public class SecurityConfig {
     ) throws Exception {
         http
                 .securityMatcher("/superadmin/**")
+                .cors(Customizer.withDefaults())
                 .csrf(AbstractHttpConfigurer::disable)
                 .formLogin(AbstractHttpConfigurer::disable)
                 .logout(AbstractHttpConfigurer::disable)
@@ -100,6 +101,7 @@ public class SecurityConfig {
     ) throws Exception {
         http
                 .securityMatcher("/admin/*/**")
+                .cors(Customizer.withDefaults())
                 .csrf(AbstractHttpConfigurer::disable)
                 .formLogin(AbstractHttpConfigurer::disable)
                 .logout(AbstractHttpConfigurer::disable)
@@ -119,6 +121,7 @@ public class SecurityConfig {
     ) throws Exception {
         http
                 .securityMatcher("/t/*/**")
+                .cors(Customizer.withDefaults())
                 .csrf(AbstractHttpConfigurer::disable)
                 .formLogin(AbstractHttpConfigurer::disable)
                 .logout(AbstractHttpConfigurer::disable)
@@ -132,6 +135,7 @@ public class SecurityConfig {
     @Order(4)
     SecurityFilterChain defaultSecurityFilterChain(HttpSecurity http) throws Exception {
         http
+                .cors(Customizer.withDefaults())
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(authorize -> authorize.anyRequest().permitAll())
                 .httpBasic(AbstractHttpConfigurer::disable)
