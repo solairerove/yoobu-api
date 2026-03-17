@@ -27,6 +27,10 @@ public class SuperAdminTenantForm {
 
     private String welcomeMessage;
 
+    private String checkoutPhoneHint;
+
+    private String checkoutNoteHint;
+
     @NotBlank
     private String adminUsername;
 
@@ -104,6 +108,22 @@ public class SuperAdminTenantForm {
 
     public void setWelcomeMessage(String welcomeMessage) {
         this.welcomeMessage = welcomeMessage;
+    }
+
+    public String getCheckoutPhoneHint() {
+        return checkoutPhoneHint;
+    }
+
+    public void setCheckoutPhoneHint(String checkoutPhoneHint) {
+        this.checkoutPhoneHint = checkoutPhoneHint;
+    }
+
+    public String getCheckoutNoteHint() {
+        return checkoutNoteHint;
+    }
+
+    public void setCheckoutNoteHint(String checkoutNoteHint) {
+        this.checkoutNoteHint = checkoutNoteHint;
     }
 
     public String getAdminUsername() {

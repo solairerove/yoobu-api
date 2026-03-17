@@ -46,6 +46,8 @@
                 <div><dt>Primary color</dt><dd th:text="${tenant.config['primary_color'] ?: 'N/A'}">#112233</dd></div>
                 <div><dt>Logo URL</dt><dd th:text="${tenant.config['logo_url'] ?: 'N/A'}">N/A</dd></div>
                 <div><dt>Welcome message</dt><dd th:text="${tenant.config['welcome_message'] ?: 'N/A'}">N/A</dd></div>
+                <div><dt>Checkout phone hint</dt><dd th:text="${tenant.config['checkout_phone_hint'] ?: 'N/A'}">+84...</dd></div>
+                <div><dt>Checkout note hint</dt><dd th:text="${tenant.config['checkout_note_hint'] ?: 'N/A'}">No onion, gate code, delivery code</dd></div>
                 <div><dt>Admin username</dt><dd th:text="${tenant.config['admin_username'] ?: 'N/A'}">admin</dd></div>
             </dl>
         </article>
