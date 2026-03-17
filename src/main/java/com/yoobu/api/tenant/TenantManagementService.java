@@ -221,6 +221,8 @@ public class TenantManagementService {
     }
 
     private Map<String, Object> toAuditSnapshot(Tenant tenant, TenantSettings settings) {
+        TenantSettings.AdminSettings admin = settings.admin();
+        TenantSettings.BrandingSettings branding = settings.branding();
         Map<String, Object> snapshot = new LinkedHashMap<>();
         snapshot.put("id", tenant.getId());
         snapshot.put("slug", tenant.getSlug());
@@ -230,11 +232,11 @@ public class TenantManagementService {
         snapshot.put("timezone", tenant.getTimezone());
         snapshot.put("ownerTelegramId", tenant.getOwnerTelegramId());
         snapshot.put("botTokenConfigured", StringUtils.hasText(tenant.getBotToken()));
-        snapshot.put("adminUsername", settings.adminUsername());
-        snapshot.put("adminPasswordConfigured", settings.hasAdminPassword());
-        snapshot.put("primaryColor", settings.primaryColor());
-        snapshot.put("logoUrl", settings.logoUrl());
-        snapshot.put("welcomeMessage", settings.welcomeMessage());
+        snapshot.put("adminUsername", admin.username());
+        snapshot.put("adminPasswordConfigured", admin.passwordConfigured());
+        snapshot.put("primaryColor", branding.primaryColor());
+        snapshot.put("logoUrl", branding.logoUrl());
+        snapshot.put("welcomeMessage", branding.welcomeMessage());
         return snapshot;
     }
 }

@@ -43,9 +43,9 @@ public class TenantBasicAuthenticationFilter extends OncePerRequestFilter {
             return;
         }
 
-        TenantSettings settings = loadTenantSettings(tenant.getId());
-        String expectedUsername = settings.adminUsername();
-        String expectedPasswordHash = settings.adminPasswordHash();
+        TenantSettings.AdminSettings admin = loadTenantSettings(tenant.getId()).admin();
+        String expectedUsername = admin.username();
+        String expectedPasswordHash = admin.passwordHash();
         if (expectedUsername == null || expectedPasswordHash == null) {
             BasicAuthChallenge.send(response, realm(tenant.getSlug()), "Admin credentials are not configured");
             return;

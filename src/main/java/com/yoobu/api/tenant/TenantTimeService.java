@@ -41,8 +41,9 @@ public class TenantTimeService {
     }
 
     private LocalTime cutoffTime(TenantSettings settings) {
-        String cutoffHour = settings.cutoffHour();
-        String cutoffMinute = settings.cutoffMinute();
+        TenantSettings.DeliverySettings delivery = settings.delivery();
+        String cutoffHour = delivery.cutoffHour();
+        String cutoffMinute = delivery.cutoffMinute();
 
         if (!StringUtils.hasText(cutoffHour) && !StringUtils.hasText(cutoffMinute)) {
             return null;

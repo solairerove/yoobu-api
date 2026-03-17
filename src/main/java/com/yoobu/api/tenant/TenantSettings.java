@@ -27,35 +27,46 @@ public final class TenantSettings {
         return values;
     }
 
-    public String adminUsername() {
-        return values.get(TenantConfigKeys.ADMIN_USERNAME);
+    public AdminSettings admin() {
+        return new AdminSettings(
+                values.get(TenantConfigKeys.ADMIN_USERNAME),
+                values.get(TenantConfigKeys.ADMIN_PASSWORD),
+                values.containsKey(TenantConfigKeys.ADMIN_PASSWORD)
+        );
     }
 
-    public String adminPasswordHash() {
-        return values.get(TenantConfigKeys.ADMIN_PASSWORD);
+    public BrandingSettings branding() {
+        return new BrandingSettings(
+                values.get(TenantConfigKeys.PRIMARY_COLOR),
+                values.get(TenantConfigKeys.LOGO_URL),
+                values.get(TenantConfigKeys.WELCOME_MESSAGE)
+        );
     }
 
-    public boolean hasAdminPassword() {
-        return values.containsKey(TenantConfigKeys.ADMIN_PASSWORD);
+    public DeliverySettings delivery() {
+        return new DeliverySettings(
+                values.get(TenantConfigKeys.CUTOFF_HOUR),
+                values.get(TenantConfigKeys.CUTOFF_MINUTE)
+        );
     }
 
-    public String primaryColor() {
-        return values.get(TenantConfigKeys.PRIMARY_COLOR);
+    public record AdminSettings(
+            String username,
+            String passwordHash,
+            boolean passwordConfigured
+    ) {
     }
 
-    public String logoUrl() {
-        return values.get(TenantConfigKeys.LOGO_URL);
+    public record BrandingSettings(
+            String primaryColor,
+            String logoUrl,
+            String welcomeMessage
+    ) {
     }
 
-    public String welcomeMessage() {
-        return values.get(TenantConfigKeys.WELCOME_MESSAGE);
-    }
-
-    public String cutoffHour() {
-        return values.get(TenantConfigKeys.CUTOFF_HOUR);
-    }
-
-    public String cutoffMinute() {
-        return values.get(TenantConfigKeys.CUTOFF_MINUTE);
+    public record DeliverySettings(
+            String cutoffHour,
+            String cutoffMinute
+    ) {
     }
 }
