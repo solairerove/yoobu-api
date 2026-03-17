@@ -41,8 +41,8 @@ public class TenantTimeService {
     }
 
     private LocalTime cutoffTime(Map<String, String> config) {
-        String cutoffHour = config.get("cutoff_hour");
-        String cutoffMinute = config.get("cutoff_minute");
+        String cutoffHour = config.get(TenantConfigKeys.CUTOFF_HOUR);
+        String cutoffMinute = config.get(TenantConfigKeys.CUTOFF_MINUTE);
 
         if (!StringUtils.hasText(cutoffHour) && !StringUtils.hasText(cutoffMinute)) {
             return null;

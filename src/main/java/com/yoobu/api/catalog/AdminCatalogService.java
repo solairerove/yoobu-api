@@ -140,10 +140,7 @@ public class AdminCatalogService {
     }
 
     private Tenant requireFoodOrderTenant() {
-        Tenant tenant = TenantContext.getCurrentTenant();
-        if (tenant == null) {
-            throw new IllegalStateException("Tenant context is not available");
-        }
+        Tenant tenant = TenantContext.requireCurrentTenant();
         if (tenant.getType() != TenantType.FOOD_ORDER) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Tenant does not support food ordering");
         }

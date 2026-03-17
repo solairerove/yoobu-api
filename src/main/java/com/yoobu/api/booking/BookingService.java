@@ -7,8 +7,8 @@ import com.yoobu.api.booking.dto.CreateBookingRequest;
 import com.yoobu.api.catalog.CatalogService;
 import com.yoobu.api.catalog.CatalogServiceRepository;
 import com.yoobu.api.tenant.Tenant;
-import com.yoobu.api.tenant.TenantConfig;
 import com.yoobu.api.tenant.TenantConfigRepository;
+import com.yoobu.api.tenant.TenantConfigs;
 import com.yoobu.api.tenant.TenantContext;
 import com.yoobu.api.tenant.TenantTimeService;
 import com.yoobu.api.tenant.TenantType;
@@ -180,10 +180,7 @@ public class BookingService {
     }
 
     private Tenant requireFoodOrderTenant() {
-        Tenant tenant = TenantContext.getCurrentTenant();
-        if (tenant == null) {
-            throw new IllegalStateException("Tenant context is not available");
-        }
+        Tenant tenant = TenantContext.requireCurrentTenant();
         if (tenant.getType() != TenantType.FOOD_ORDER) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Tenant does not support food ordering");
         }
@@ -201,12 +198,7 @@ public class BookingService {
     }
 
     private Map<String, String> loadTenantConfig(Long tenantId) {
-        return tenantConfigRepository.findByTenantId(tenantId).stream()
-                .collect(java.util.stream.Collectors.toMap(
-                        TenantConfig::getKey,
-                        TenantConfig::getValue,
-                        (left, right) -> right
-                ));
+        return TenantConfigs.toMap(tenantConfigRepository.findByTenantId(tenantId));
     }
 
     private Booking findCustomerBooking(Long bookingId, Long telegramUserId) {

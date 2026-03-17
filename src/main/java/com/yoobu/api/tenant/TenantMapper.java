@@ -8,7 +8,7 @@ import java.util.Map;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 
-@Mapper(config = MapStructConfig.class)
+@Mapper(config = MapStructConfig.class, imports = TenantConfigKeys.class)
 public interface TenantMapper {
 
     TenantSummaryResponse toSummaryResponse(Tenant tenant);
@@ -16,8 +16,8 @@ public interface TenantMapper {
     @Mapping(target = "config", source = "config")
     TenantDetailResponse toDetailResponse(Tenant tenant, Map<String, String> config);
 
-    @Mapping(target = "primaryColor", expression = "java(config.get(\"primary_color\"))")
-    @Mapping(target = "logoUrl", expression = "java(config.get(\"logo_url\"))")
-    @Mapping(target = "welcomeMessage", expression = "java(config.get(\"welcome_message\"))")
+    @Mapping(target = "primaryColor", expression = "java(config.get(TenantConfigKeys.PRIMARY_COLOR))")
+    @Mapping(target = "logoUrl", expression = "java(config.get(TenantConfigKeys.LOGO_URL))")
+    @Mapping(target = "welcomeMessage", expression = "java(config.get(TenantConfigKeys.WELCOME_MESSAGE))")
     TenantConfigResponse toConfigResponse(Tenant tenant, Map<String, String> config);
 }

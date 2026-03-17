@@ -15,9 +15,17 @@ public final class TenantContext {
         return CURRENT_TENANT.get();
     }
 
-    public static Long getRequiredTenantId() {
+    public static Tenant requireCurrentTenant() {
         Tenant tenant = CURRENT_TENANT.get();
-        if (tenant == null || tenant.getId() == null) {
+        if (tenant == null) {
+            throw new IllegalStateException("Tenant context is not available");
+        }
+        return tenant;
+    }
+
+    public static Long getRequiredTenantId() {
+        Tenant tenant = requireCurrentTenant();
+        if (tenant.getId() == null) {
             throw new IllegalStateException("Tenant context is not available");
         }
         return tenant.getId();

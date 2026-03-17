@@ -1,6 +1,7 @@
 package com.yoobu.api.admin.panel;
 
 import com.yoobu.api.tenant.TenantManagementService;
+import com.yoobu.api.tenant.TenantConfigKeys;
 import com.yoobu.api.tenant.TenantType;
 import com.yoobu.api.tenant.dto.CreateTenantRequest;
 import com.yoobu.api.tenant.dto.TenantDetailResponse;
@@ -30,11 +31,6 @@ public class SuperAdminPanelController {
     private static final String TENANT_FORM_VIEW = "superadmin/panel/tenant-form";
     private static final String CREATE_MODE = "create";
     private static final String EDIT_MODE = "edit";
-    private static final String PRIMARY_COLOR_KEY = "primary_color";
-    private static final String LOGO_URL_KEY = "logo_url";
-    private static final String WELCOME_MESSAGE_KEY = "welcome_message";
-    private static final String ADMIN_USERNAME_KEY = "admin_username";
-
     private final TenantManagementService tenantManagementService;
 
     @GetMapping({"", "/"})
@@ -151,10 +147,10 @@ public class SuperAdminPanelController {
         form.setBotToken(tenant.botToken());
         form.setOwnerTelegramId(tenant.ownerTelegramId());
         form.setTimezone(tenant.timezone());
-        form.setPrimaryColor(config.get(PRIMARY_COLOR_KEY));
-        form.setLogoUrl(config.get(LOGO_URL_KEY));
-        form.setWelcomeMessage(config.get(WELCOME_MESSAGE_KEY));
-        form.setAdminUsername(config.get(ADMIN_USERNAME_KEY));
+        form.setPrimaryColor(config.get(TenantConfigKeys.PRIMARY_COLOR));
+        form.setLogoUrl(config.get(TenantConfigKeys.LOGO_URL));
+        form.setWelcomeMessage(config.get(TenantConfigKeys.WELCOME_MESSAGE));
+        form.setAdminUsername(config.get(TenantConfigKeys.ADMIN_USERNAME));
         form.setActive(tenant.active());
         return form;
     }

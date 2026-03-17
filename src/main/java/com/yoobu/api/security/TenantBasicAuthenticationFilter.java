@@ -3,7 +3,9 @@ package com.yoobu.api.security;
 import com.yoobu.api.config.SecurityProperties;
 import com.yoobu.api.tenant.Tenant;
 import com.yoobu.api.tenant.TenantConfig;
+import com.yoobu.api.tenant.TenantConfigKeys;
 import com.yoobu.api.tenant.TenantConfigRepository;
+import com.yoobu.api.tenant.TenantConfigs;
 import com.yoobu.api.tenant.TenantContext;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -14,7 +16,6 @@ import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -39,10 +40,7 @@ public class TenantBasicAuthenticationFilter extends OncePerRequestFilter {
             HttpServletResponse response,
             FilterChain filterChain
     ) throws ServletException, IOException {
-        Tenant tenant = TenantContext.getCurrentTenant();
-        if (tenant == null) {
-            throw new IllegalStateException("Tenant context is not available");
-        }
+        Tenant tenant = TenantContext.requireCurrentTenant();
 
         Credentials credentials = extractCredentials(request, response, tenant.getSlug());
         if (credentials == null) {
@@ -50,8 +48,8 @@ public class TenantBasicAuthenticationFilter extends OncePerRequestFilter {
         }
 
         Map<String, String> config = loadTenantConfig(tenant.getId());
-        String expectedUsername = config.get("admin_username");
-        String expectedPasswordHash = config.get("admin_password");
+        String expectedUsername = config.get(TenantConfigKeys.ADMIN_USERNAME);
+        String expectedPasswordHash = config.get(TenantConfigKeys.ADMIN_PASSWORD);
         if (expectedUsername == null || expectedPasswordHash == null) {
             BasicAuthChallenge.send(response, realm(tenant.getSlug()), "Admin credentials are not configured");
             return;
@@ -105,8 +103,7 @@ public class TenantBasicAuthenticationFilter extends OncePerRequestFilter {
 
     private Map<String, String> loadTenantConfig(Long tenantId) {
         List<TenantConfig> configEntries = tenantConfigRepository.findByTenantId(tenantId);
-        return configEntries.stream()
-                .collect(Collectors.toMap(TenantConfig::getKey, TenantConfig::getValue, (left, right) -> right));
+        return TenantConfigs.toMap(configEntries);
     }
 
     private UsernamePasswordAuthenticationToken authenticate(

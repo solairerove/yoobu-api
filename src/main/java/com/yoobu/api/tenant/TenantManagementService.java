@@ -14,7 +14,6 @@ import java.util.List;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,12 +25,13 @@ import org.springframework.web.server.ResponseStatusException;
 public class TenantManagementService {
 
     private static final String ENTITY_NAME = "tenant";
+    private static final String DEFAULT_TIMEZONE = "Asia/Ho_Chi_Minh";
 
     private final AuditLogService auditLogService;
     private final TenantRepository tenantRepository;
     private final TenantConfigRepository tenantConfigRepository;
     private final TenantMapper tenantMapper;
-    private final PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
+    private final PasswordEncoder passwordEncoder;
 
     @Transactional(readOnly = true)
     public List<TenantSummaryResponse> getAllTenants() {
@@ -45,9 +45,7 @@ public class TenantManagementService {
         Tenant tenant = tenantRepository.findById(tenantId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Tenant not found"));
 
-        Map<String, String> config = new LinkedHashMap<>();
-        tenantConfigRepository.findByTenantId(tenantId)
-                .forEach(entry -> config.put(entry.getKey(), entry.getValue()));
+        Map<String, String> config = TenantConfigs.toMap(tenantConfigRepository.findByTenantId(tenantId));
 
         return tenantMapper.toDetailResponse(tenant, config);
     }
@@ -65,25 +63,21 @@ public class TenantManagementService {
         }
 
         OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
-
         Tenant tenant = new Tenant();
         tenant.setSlug(request.slug());
-        tenant.setName(request.name());
-        tenant.setType(request.type());
-        tenant.setBotToken(normalizeOptional(request.botToken()));
-        tenant.setOwnerTelegramId(request.ownerTelegramId());
-        tenant.setTimezone(normalizeTimezone(request.timezone()));
-        tenant.setActive(true);
+        applyTenantDetails(
+                tenant,
+                request.name(),
+                request.type(),
+                request.botToken(),
+                request.ownerTelegramId(),
+                request.timezone(),
+                true
+        );
         tenant.setCreatedAt(now);
 
         Tenant savedTenant = tenantRepository.save(tenant);
-
-        List<TenantConfig> configs = new ArrayList<>();
-        addConfig(configs, savedTenant, "admin_username", request.adminUsername());
-        addConfig(configs, savedTenant, "admin_password", passwordEncoder.encode(request.adminPassword()));
-        addConfig(configs, savedTenant, "primary_color", request.primaryColor());
-        addConfig(configs, savedTenant, "logo_url", request.logoUrl());
-        addConfig(configs, savedTenant, "welcome_message", request.welcomeMessage());
+        List<TenantConfig> configs = buildInitialConfigs(savedTenant, request);
         tenantConfigRepository.saveAll(configs);
         auditLogService.logCreate(
                 savedTenant.getId(),
@@ -101,27 +95,33 @@ public class TenantManagementService {
         Tenant tenant = tenantRepository.findById(tenantId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Tenant not found"));
 
-        Map<String, TenantConfig> existingConfigs = new HashMap<>();
-        tenantConfigRepository.findByTenantId(tenantId)
-                .forEach(entry -> existingConfigs.put(entry.getKey(), entry));
+        Map<String, TenantConfig> existingConfigs = loadConfigsByKey(tenantId);
         Map<String, Object> oldSnapshot = toAuditSnapshot(tenant, existingConfigs);
 
-        tenant.setName(request.name());
-        tenant.setType(request.type());
-        tenant.setBotToken(normalizeOptional(request.botToken()));
-        tenant.setOwnerTelegramId(request.ownerTelegramId());
-        tenant.setTimezone(normalizeTimezone(request.timezone()));
-        tenant.setActive(request.active());
+        applyTenantDetails(
+                tenant,
+                request.name(),
+                request.type(),
+                request.botToken(),
+                request.ownerTelegramId(),
+                request.timezone(),
+                request.active()
+        );
 
         Tenant savedTenant = tenantRepository.save(tenant);
-
-        upsertConfig(existingConfigs, savedTenant, "admin_username", request.adminUsername(), false);
+        upsertConfig(existingConfigs, savedTenant, TenantConfigKeys.ADMIN_USERNAME, request.adminUsername(), false);
         if (StringUtils.hasText(request.adminPassword())) {
-            upsertConfig(existingConfigs, savedTenant, "admin_password", passwordEncoder.encode(request.adminPassword()), false);
+            upsertConfig(
+                    existingConfigs,
+                    savedTenant,
+                    TenantConfigKeys.ADMIN_PASSWORD,
+                    passwordEncoder.encode(request.adminPassword()),
+                    false
+            );
         }
-        upsertConfig(existingConfigs, savedTenant, "primary_color", request.primaryColor(), true);
-        upsertConfig(existingConfigs, savedTenant, "logo_url", request.logoUrl(), true);
-        upsertConfig(existingConfigs, savedTenant, "welcome_message", request.welcomeMessage(), true);
+        upsertConfig(existingConfigs, savedTenant, TenantConfigKeys.PRIMARY_COLOR, request.primaryColor(), true);
+        upsertConfig(existingConfigs, savedTenant, TenantConfigKeys.LOGO_URL, request.logoUrl(), true);
+        upsertConfig(existingConfigs, savedTenant, TenantConfigKeys.WELCOME_MESSAGE, request.welcomeMessage(), true);
         auditLogService.logUpdate(
                 savedTenant.getId(),
                 ENTITY_NAME,
@@ -134,14 +134,49 @@ public class TenantManagementService {
         return tenantMapper.toSummaryResponse(savedTenant);
     }
 
+    private void applyTenantDetails(
+            Tenant tenant,
+            String name,
+            TenantType type,
+            String botToken,
+            Long ownerTelegramId,
+            String timezone,
+            boolean active
+    ) {
+        tenant.setName(name);
+        tenant.setType(type);
+        tenant.setBotToken(normalizeOptional(botToken));
+        tenant.setOwnerTelegramId(ownerTelegramId);
+        tenant.setTimezone(normalizeTimezone(timezone));
+        tenant.setActive(active);
+    }
+
+    private List<TenantConfig> buildInitialConfigs(Tenant tenant, CreateTenantRequest request) {
+        List<TenantConfig> configs = new ArrayList<>();
+        addConfig(configs, tenant, TenantConfigKeys.ADMIN_USERNAME, request.adminUsername());
+        addConfig(configs, tenant, TenantConfigKeys.ADMIN_PASSWORD, passwordEncoder.encode(request.adminPassword()));
+        addConfig(configs, tenant, TenantConfigKeys.PRIMARY_COLOR, request.primaryColor());
+        addConfig(configs, tenant, TenantConfigKeys.LOGO_URL, request.logoUrl());
+        addConfig(configs, tenant, TenantConfigKeys.WELCOME_MESSAGE, request.welcomeMessage());
+        return configs;
+    }
+
+    private Map<String, TenantConfig> loadConfigsByKey(Long tenantId) {
+        Map<String, TenantConfig> configsByKey = new HashMap<>();
+        tenantConfigRepository.findByTenantId(tenantId)
+                .forEach(entry -> configsByKey.put(entry.getKey(), entry));
+        return configsByKey;
+    }
+
     private void addConfig(List<TenantConfig> configs, Tenant tenant, String key, String value) {
-        if (!StringUtils.hasText(value)) {
+        String normalizedValue = normalizeOptional(value);
+        if (normalizedValue == null) {
             return;
         }
         TenantConfig config = new TenantConfig();
         config.setTenant(tenant);
         config.setKey(key);
-        config.setValue(value);
+        config.setValue(normalizedValue);
         configs.add(config);
     }
 
@@ -178,7 +213,7 @@ public class TenantManagementService {
     }
 
     private String normalizeTimezone(String timezone) {
-        return StringUtils.hasText(timezone) ? timezone.trim() : "Asia/Ho_Chi_Minh";
+        return StringUtils.hasText(timezone) ? timezone.trim() : DEFAULT_TIMEZONE;
     }
 
     private Map<String, String> configMap(List<TenantConfig> configs) {
@@ -203,11 +238,11 @@ public class TenantManagementService {
         snapshot.put("timezone", tenant.getTimezone());
         snapshot.put("ownerTelegramId", tenant.getOwnerTelegramId());
         snapshot.put("botTokenConfigured", StringUtils.hasText(tenant.getBotToken()));
-        snapshot.put("adminUsername", configValues.get("admin_username"));
-        snapshot.put("adminPasswordConfigured", configValues.containsKey("admin_password"));
-        snapshot.put("primaryColor", configValues.get("primary_color"));
-        snapshot.put("logoUrl", configValues.get("logo_url"));
-        snapshot.put("welcomeMessage", configValues.get("welcome_message"));
+        snapshot.put("adminUsername", configValues.get(TenantConfigKeys.ADMIN_USERNAME));
+        snapshot.put("adminPasswordConfigured", configValues.containsKey(TenantConfigKeys.ADMIN_PASSWORD));
+        snapshot.put("primaryColor", configValues.get(TenantConfigKeys.PRIMARY_COLOR));
+        snapshot.put("logoUrl", configValues.get(TenantConfigKeys.LOGO_URL));
+        snapshot.put("welcomeMessage", configValues.get(TenantConfigKeys.WELCOME_MESSAGE));
         return snapshot;
     }
 }
