@@ -12,6 +12,7 @@ public record BookingResponse(
         BookingType type,
         BookingStatus status,
         String customerName,
+        String customerPhone,
         BigDecimal totalPrice,
         LocalDate deliveryDate,
         String note,

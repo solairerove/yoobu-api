@@ -34,12 +34,14 @@ class BookingLifecycleIT extends IntegrationTestSupport {
                 .andExpect(jsonPath("$.length()").value(1))
                 .andExpect(jsonPath("$[0].id").value(bookingId))
                 .andExpect(jsonPath("$[0].status").value("NEW"))
+                .andExpect(jsonPath("$[0].customerPhone").value("+48123456789"))
                 .andExpect(jsonPath("$[0].items[0].serviceName").value("Pizza"));
 
         tenantPublicGetAsUser(TENANT_SLUG, "/bookings/" + bookingId, 101L)
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(bookingId))
                 .andExpect(jsonPath("$.customerName").value("Alice"))
+                .andExpect(jsonPath("$.customerPhone").value("+48123456789"))
                 .andExpect(jsonPath("$.status").value("NEW"))
                 .andExpect(jsonPath("$.totalPrice").value(25.0));
 
