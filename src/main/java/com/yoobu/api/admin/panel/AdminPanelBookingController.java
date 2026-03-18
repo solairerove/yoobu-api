@@ -5,6 +5,7 @@ import com.yoobu.api.booking.BookingStatus;
 import com.yoobu.api.booking.dto.BookingResponse;
 import jakarta.validation.Valid;
 import java.time.LocalDate;
+import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.stereotype.Controller;
@@ -40,11 +41,7 @@ public class AdminPanelBookingController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate deliveryDate,
             Model model
     ) {
-        model.addAttribute("slug", slug);
-        model.addAttribute("bookings", bookingService.getAdminBookings(status, deliveryDate));
-        model.addAttribute("selectedStatus", status);
-        model.addAttribute("deliveryDate", deliveryDate);
-        model.addAttribute("statuses", BookingStatus.values());
+        populateBookingsModel(slug, status, deliveryDate, model);
         return BOOKINGS_VIEW;
     }
 
@@ -67,11 +64,7 @@ public class AdminPanelBookingController {
             Model model
     ) {
         if (bindingResult.hasErrors()) {
-            model.addAttribute("slug", slug);
-            model.addAttribute("bookings", bookingService.getAdminBookings(null, null));
-            model.addAttribute("selectedStatus", null);
-            model.addAttribute("deliveryDate", null);
-            model.addAttribute("statuses", BookingStatus.values());
+            populateBookingsModel(slug, null, null, model);
             return BOOKINGS_VIEW;
         }
 
@@ -82,9 +75,27 @@ public class AdminPanelBookingController {
     private String bookingDetailView(String slug, BookingResponse booking, BookingStatusForm form, Model model) {
         model.addAttribute("slug", slug);
         model.addAttribute("booking", booking);
-        model.addAttribute("statuses", BookingStatus.values());
+        model.addAttribute("statusOptions", bookingService.getAllowedAdminStatuses(booking.status()));
         model.addAttribute(STATUS_FORM_ATTRIBUTE, form);
         return BOOKING_DETAIL_VIEW;
+    }
+
+    private void populateBookingsModel(String slug, BookingStatus selectedStatus, LocalDate deliveryDate, Model model) {
+        var bookings = bookingService.getAdminBookings(selectedStatus, deliveryDate);
+        Map<Long, java.util.List<BookingStatus>> statusOptionsByBookingId = bookings.stream()
+                .collect(java.util.stream.Collectors.toMap(
+                        BookingResponse::id,
+                        booking -> bookingService.getAllowedAdminStatuses(booking.status()),
+                        (left, right) -> left,
+                        java.util.LinkedHashMap::new
+                ));
+
+        model.addAttribute("slug", slug);
+        model.addAttribute("bookings", bookings);
+        model.addAttribute("selectedStatus", selectedStatus);
+        model.addAttribute("deliveryDate", deliveryDate);
+        model.addAttribute("statuses", BookingStatus.values());
+        model.addAttribute("statusOptionsByBookingId", statusOptionsByBookingId);
     }
 
     private String bookingsRedirect(String slug) {

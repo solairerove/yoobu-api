@@ -119,10 +119,32 @@ class BookingLifecycleIT extends IntegrationTestSupport {
                 .get("id").asLong();
         long bookingId = createBooking(TENANT_SLUG, 101L, serviceId, 1).get("id").asLong();
 
+        updateBookingStatus(TENANT_SLUG, ADMIN_USERNAME, ADMIN_PASSWORD, bookingId, BookingStatus.CONFIRMED);
         updateBookingStatus(TENANT_SLUG, ADMIN_USERNAME, ADMIN_PASSWORD, bookingId, BookingStatus.DONE);
 
         tenantPublicPostJson(TENANT_SLUG, "/bookings/" + bookingId + "/cancel", 101L, "")
                 .andExpect(status().isConflict())
                 .andExpect(status().reason("Completed booking cannot be cancelled"));
+    }
+
+    @Test
+    void adminCannotMoveCompletedBookingBackToNew() throws Exception {
+        createFoodOrderTenant(TENANT_SLUG, "Food Tenant", "food-bot", ADMIN_USERNAME, ADMIN_PASSWORD);
+        long serviceId = createService(TENANT_SLUG, ADMIN_USERNAME, ADMIN_PASSWORD, "Pizza", "12.50")
+                .get("id").asLong();
+        long bookingId = createBooking(TENANT_SLUG, 101L, serviceId, 1).get("id").asLong();
+
+        updateBookingStatus(TENANT_SLUG, ADMIN_USERNAME, ADMIN_PASSWORD, bookingId, BookingStatus.CONFIRMED);
+        updateBookingStatus(TENANT_SLUG, ADMIN_USERNAME, ADMIN_PASSWORD, bookingId, BookingStatus.DONE);
+
+        tenantAdminPutJson(
+                TENANT_SLUG,
+                "/bookings/" + bookingId + "/status",
+                ADMIN_USERNAME,
+                ADMIN_PASSWORD,
+                java.util.Map.of("status", "NEW")
+        )
+                .andExpect(status().isConflict())
+                .andExpect(status().reason("Invalid booking status transition from DONE to NEW"));
     }
 }

@@ -40,7 +40,7 @@
                 <label>
                     <span>Status</span>
                     <select th:field="*{status}">
-                        <option th:each="statusOption : ${statuses}"
+                        <option th:each="statusOption : ${statusOptions}"
                                 th:value="${statusOption}"
                                 th:text="${statusOption}"></option>
                     </select>

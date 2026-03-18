@@ -66,7 +66,7 @@
                             <span th:text="${'Status for booking ' + booking.id}">Status for booking</span>
                         </label>
                         <select name="status" th:id="${'booking-status-' + booking.id}">
-                            <option th:each="statusOption : ${statuses}"
+                            <option th:each="statusOption : ${statusOptionsByBookingId[booking.id]}"
                                     th:value="${statusOption}"
                                     th:text="${statusOption}"
                                     th:selected="${statusOption == booking.status}"></option>

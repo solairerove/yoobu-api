@@ -16,6 +16,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.util.EnumSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -160,6 +161,7 @@ public class BookingService {
     public BookingResponse updateBookingStatus(Long bookingId, BookingStatus status) {
         requireFoodOrderTenant();
         Booking booking = findAdminBooking(bookingId);
+        validateStatusTransition(booking.getStatus(), status);
         Map<String, Object> oldSnapshot = toAuditSnapshot(booking);
 
         booking.setStatus(status);
@@ -177,6 +179,16 @@ public class BookingService {
         );
 
         return toResponse(savedBooking);
+    }
+
+    public List<BookingStatus> getAllowedAdminStatuses(BookingStatus currentStatus) {
+        EnumSet<BookingStatus> allowedStatuses = switch (currentStatus) {
+            case NEW -> EnumSet.of(BookingStatus.NEW, BookingStatus.CONFIRMED, BookingStatus.CANCELLED);
+            case CONFIRMED -> EnumSet.of(BookingStatus.CONFIRMED, BookingStatus.DONE, BookingStatus.CANCELLED);
+            case DONE -> EnumSet.of(BookingStatus.DONE);
+            case CANCELLED -> EnumSet.of(BookingStatus.CANCELLED);
+        };
+        return List.copyOf(allowedStatuses);
     }
 
     private Tenant requireFoodOrderTenant() {
@@ -300,6 +312,17 @@ public class BookingService {
 
     private ResponseStatusException bookingNotFound() {
         return new ResponseStatusException(HttpStatus.NOT_FOUND, "Booking not found");
+    }
+
+    private void validateStatusTransition(BookingStatus currentStatus, BookingStatus nextStatus) {
+        if (getAllowedAdminStatuses(currentStatus).contains(nextStatus)) {
+            return;
+        }
+
+        throw new ResponseStatusException(
+                HttpStatus.CONFLICT,
+                "Invalid booking status transition from %s to %s".formatted(currentStatus, nextStatus)
+        );
     }
 
     private OffsetDateTime nowUtc() {
