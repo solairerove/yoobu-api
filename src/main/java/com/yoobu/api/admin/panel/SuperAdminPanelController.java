@@ -10,11 +10,15 @@ import com.yoobu.api.tenant.dto.TenantDetailResponse;
 import com.yoobu.api.tenant.dto.TenantSummaryResponse;
 import com.yoobu.api.tenant.dto.UpdateTenantRequest;
 import jakarta.validation.Valid;
+import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
-import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
@@ -41,6 +45,9 @@ public class SuperAdminPanelController {
     private static final String CREATE_MODE = "create";
     private static final String EDIT_MODE = "edit";
     private static final String FLASH_TYPE_SUCCESS = "success";
+    private static final DateTimeFormatter DATETIME_LOCAL_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm");
+    private static final Map<String, String> ENTITY_LABELS = buildEntityLabels();
+    private static final Map<String, String> ACTION_LABELS = buildActionLabels();
     private final TenantManagementService tenantManagementService;
     private final AuditLogService auditLogService;
 
@@ -66,23 +73,28 @@ public class SuperAdminPanelController {
             @RequestParam(required = false) String entity,
             @RequestParam(required = false) String action,
             @RequestParam(required = false) String actorId,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) OffsetDateTime createdFrom,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) OffsetDateTime createdTo,
+            @RequestParam(required = false) String createdFrom,
+            @RequestParam(required = false) String createdTo,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
             Model model
     ) {
+        OffsetDateTime createdFromValue = parseDateTime(createdFrom);
+        OffsetDateTime createdToValue = parseDateTime(createdTo);
+
         Page<AuditLogItemResponse> auditPage =
-                auditLogService.search(tenantId, entity, action, actorId, createdFrom, createdTo, page, size);
+                auditLogService.search(tenantId, entity, action, actorId, createdFromValue, createdToValue, page, size);
         model.addAttribute("auditEntries", auditPage.getContent());
         model.addAttribute("auditPage", auditPage);
         model.addAttribute("tenantId", tenantId);
         model.addAttribute("entity", entity);
         model.addAttribute("action", action);
         model.addAttribute("actorId", actorId);
-        model.addAttribute("createdFrom", createdFrom);
-        model.addAttribute("createdTo", createdTo);
+        model.addAttribute("createdFrom", toDateTimeLocalValue(createdFromValue));
+        model.addAttribute("createdTo", toDateTimeLocalValue(createdToValue));
         model.addAttribute("size", auditPage.getSize());
+        model.addAttribute("entityLabels", ENTITY_LABELS);
+        model.addAttribute("actionLabels", ACTION_LABELS);
         return AUDIT_VIEW;
     }
 
@@ -248,5 +260,47 @@ public class SuperAdminPanelController {
 
     private String tenantDetailRedirect(Long tenantId) {
         return TENANTS_REDIRECT + "/" + tenantId;
+    }
+
+    private OffsetDateTime parseDateTime(String value) {
+        if (!StringUtils.hasText(value)) {
+            return null;
+        }
+
+        String normalized = value.trim();
+        try {
+            return OffsetDateTime.parse(normalized);
+        } catch (DateTimeParseException ignored) {
+            try {
+                return LocalDateTime.parse(normalized).atOffset(ZoneOffset.UTC);
+            } catch (DateTimeParseException fallbackError) {
+                return null;
+            }
+        }
+    }
+
+    private String toDateTimeLocalValue(OffsetDateTime value) {
+        if (value == null) {
+            return null;
+        }
+        return value.withOffsetSameInstant(ZoneOffset.UTC).format(DATETIME_LOCAL_FORMATTER);
+    }
+
+    private static Map<String, String> buildEntityLabels() {
+        Map<String, String> labels = new LinkedHashMap<>();
+        labels.put("tenant", "Tenant");
+        labels.put("service", "Service");
+        labels.put("booking", "Booking");
+        return labels;
+    }
+
+    private static Map<String, String> buildActionLabels() {
+        Map<String, String> labels = new LinkedHashMap<>();
+        labels.put("CREATE", "Created");
+        labels.put("UPDATE", "Updated");
+        labels.put("DELETE", "Deleted");
+        labels.put("UPDATE_STATUS", "Status updated");
+        labels.put("CANCEL", "Cancelled");
+        return labels;
     }
 }

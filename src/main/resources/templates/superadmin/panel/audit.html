@@ -28,23 +28,35 @@
             </label>
             <label>
                 <span>Entity</span>
-                <input type="text" name="entity" th:value="${entity}" placeholder="tenant, service, booking">
+                <select name="entity">
+                    <option value="">All</option>
+                    <option th:each="entry : ${entityLabels.entrySet()}"
+                            th:value="${entry.key}"
+                            th:text="${entry.value}"
+                            th:selected="${entry.key == entity}">Tenant</option>
+                </select>
             </label>
             <label>
                 <span>Action</span>
-                <input type="text" name="action" th:value="${action}" placeholder="CREATE, UPDATE, DELETE">
+                <select name="action">
+                    <option value="">All</option>
+                    <option th:each="entry : ${actionLabels.entrySet()}"
+                            th:value="${entry.key}"
+                            th:text="${entry.value}"
+                            th:selected="${entry.key == action}">Created</option>
+                </select>
             </label>
             <label>
                 <span>Actor ID</span>
                 <input type="text" name="actorId" th:value="${actorId}">
             </label>
             <label>
-                <span>From (ISO datetime)</span>
-                <input type="text" name="createdFrom" th:value="${createdFrom}" placeholder="2026-03-18T00:00:00Z">
+                <span>From</span>
+                <input type="datetime-local" name="createdFrom" th:value="${createdFrom}">
             </label>
             <label>
-                <span>To (ISO datetime)</span>
-                <input type="text" name="createdTo" th:value="${createdTo}" placeholder="2026-03-18T23:59:59Z">
+                <span>To</span>
+                <input type="datetime-local" name="createdTo" th:value="${createdTo}">
             </label>
             <input type="hidden" name="size" th:value="${size}">
             <input type="hidden" name="page" value="0">
@@ -72,8 +84,8 @@
             <tr th:each="entry : ${auditEntries}">
                 <td th:text="${entry.createdAt != null ? #temporals.format(entry.createdAt, 'yyyy-MM-dd HH:mm') : 'N/A'}">2026-03-18 10:10</td>
                 <td th:text="${entry.tenantId}">1</td>
-                <td th:text="${entry.entity + ' #' + entry.entityId}">tenant #1</td>
-                <td th:text="${entry.action}">UPDATE</td>
+                <td th:text="${(entityLabels[entry.entity] ?: entry.entity) + ' #' + entry.entityId}">Booking #1</td>
+                <td th:text="${actionLabels[entry.action] ?: entry.action}">Status updated</td>
                 <td th:text="${entry.actorId ?: 'N/A'}">superadmin</td>
                 <td th:text="${entry.oldValue != null ? #strings.abbreviate(entry.oldValue.toString(), 120) : '-'}">{"name":"Before"}</td>
                 <td th:text="${entry.newValue != null ? #strings.abbreviate(entry.newValue.toString(), 120) : '-'}">{"name":"After"}</td>
