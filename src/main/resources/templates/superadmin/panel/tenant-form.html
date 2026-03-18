@@ -18,6 +18,7 @@
             <a class="nav-link"
                th:classappend="${formMode == 'create'} ? ' active'"
                th:href="@{/superadmin/panel/tenants/new}">Create tenant</a>
+            <a class="nav-link" th:href="@{/superadmin/panel/audit}">Audit log</a>
             <a class="nav-link"
                th:if="${formMode == 'edit'}"
                th:classappend="${formMode == 'edit'} ? ' active'"

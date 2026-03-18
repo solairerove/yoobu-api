@@ -8,6 +8,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.yoobu.api.IntegrationTestSupport;
+import com.yoobu.api.booking.BookingStatus;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.context.TestPropertySource;
@@ -20,6 +21,7 @@ class SuperAdminPanelIT extends IntegrationTestSupport {
 
     private static final String PANEL_ROOT = "/superadmin/panel";
     private static final String PANEL_TENANTS_PATH = PANEL_ROOT + "/tenants";
+    private static final String PANEL_AUDIT_PATH = PANEL_ROOT + "/audit";
 
     @Test
     void superAdminPanelListsAndCreatesTenants() throws Exception {
@@ -133,5 +135,32 @@ class SuperAdminPanelIT extends IntegrationTestSupport {
         ))
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("Tenant slug already exists")));
+    }
+
+    @Test
+    void superAdminPanelAuditPageRendersAndSupportsTenantFilter() throws Exception {
+        long tenantId = createFoodOrderTenant("panel-audit", "Panel Audit", "bot-audit", "audit-admin", "audit-secret")
+                .get("id").asLong();
+        long serviceId = createService("panel-audit", "audit-admin", "audit-secret", "Pizza", "12.50")
+                .get("id").asLong();
+        long bookingId = createBooking("panel-audit", 707L, serviceId, 1)
+                .get("id").asLong();
+        updateBookingStatus("panel-audit", "audit-admin", "audit-secret", bookingId, BookingStatus.CONFIRMED);
+
+        superAdminGet(PANEL_AUDIT_PATH)
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("Audit log")))
+                .andExpect(content().string(containsString("UPDATE_STATUS")))
+                .andExpect(content().string(containsString("audit-admin")));
+
+        superAdminGet(PANEL_AUDIT_PATH + "?tenantId=" + tenantId + "&entity=booking&action=UPDATE_STATUS")
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("booking #" + bookingId)))
+                .andExpect(content().string(containsString("UPDATE_STATUS")));
+
+        superAdminGet(PANEL_TENANTS_PATH + "/" + tenantId)
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("/superadmin/panel/audit?tenantId=" + tenantId)))
+                .andExpect(content().string(containsString("Audit log")));
     }
 }

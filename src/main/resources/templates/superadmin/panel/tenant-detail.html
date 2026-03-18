@@ -16,6 +16,7 @@
         <nav class="nav">
             <a class="nav-link" th:href="@{/superadmin/panel/tenants}">Tenants</a>
             <a class="nav-link" th:href="@{/superadmin/panel/tenants/new}">Create tenant</a>
+            <a class="nav-link" th:href="@{/superadmin/panel/audit}">Audit log</a>
             <a class="nav-link active" th:href="@{/superadmin/panel/tenants/{tenantId}(tenantId=${tenant.id})}">Detail</a>
         </nav>
     </header>
@@ -31,6 +32,7 @@
     <section class="toolbar">
         <a class="button-link" th:href="@{/admin/{slug}/panel(slug=${tenant.slug})}">Open admin panel</a>
         <a class="button-link" th:href="@{/superadmin/panel/tenants/{tenantId}/edit(tenantId=${tenant.id})}">Edit tenant</a>
+        <a class="button-link" th:href="@{/superadmin/panel/audit(tenantId=${tenant.id})}">View tenant audit</a>
     </section>
 
     <section class="detail-grid">

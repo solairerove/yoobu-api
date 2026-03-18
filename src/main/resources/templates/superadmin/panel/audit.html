@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Audit Log | Superadmin</title>
+    <link rel="stylesheet" th:href="@{/css/admin-panel.css}">
+</head>
+<body>
+<div class="shell">
+    <header class="page-header">
+        <div>
+            <p class="eyebrow">Superadmin panel</p>
+            <h1>Audit log</h1>
+        </div>
+        <nav class="nav">
+            <a class="nav-link" th:href="@{/superadmin/panel/tenants}">Tenants</a>
+            <a class="nav-link" th:href="@{/superadmin/panel/tenants/new}">Create tenant</a>
+            <a class="nav-link active" th:href="@{/superadmin/panel/audit}">Audit log</a>
+        </nav>
+    </header>
+
+    <section class="card">
+        <form class="filters" method="get" th:action="@{/superadmin/panel/audit}">
+            <label>
+                <span>Tenant ID</span>
+                <input type="number" name="tenantId" th:value="${tenantId}">
+            </label>
+            <label>
+                <span>Entity</span>
+                <input type="text" name="entity" th:value="${entity}" placeholder="tenant, service, booking">
+            </label>
+            <label>
+                <span>Action</span>
+                <input type="text" name="action" th:value="${action}" placeholder="CREATE, UPDATE, DELETE">
+            </label>
+            <label>
+                <span>Actor ID</span>
+                <input type="text" name="actorId" th:value="${actorId}">
+            </label>
+            <label>
+                <span>From (ISO datetime)</span>
+                <input type="text" name="createdFrom" th:value="${createdFrom}" placeholder="2026-03-18T00:00:00Z">
+            </label>
+            <label>
+                <span>To (ISO datetime)</span>
+                <input type="text" name="createdTo" th:value="${createdTo}" placeholder="2026-03-18T23:59:59Z">
+            </label>
+            <input type="hidden" name="size" th:value="${size}">
+            <input type="hidden" name="page" value="0">
+            <button type="submit">Filter</button>
+        </form>
+    </section>
+
+    <section class="card">
+        <table>
+            <thead>
+            <tr>
+                <th>At</th>
+                <th>Tenant</th>
+                <th>Entity</th>
+                <th>Action</th>
+                <th>Actor</th>
+                <th>Old value</th>
+                <th>New value</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:if="${#lists.isEmpty(auditEntries)}">
+                <td colspan="7" class="empty">No audit entries found.</td>
+            </tr>
+            <tr th:each="entry : ${auditEntries}">
+                <td th:text="${entry.createdAt != null ? #temporals.format(entry.createdAt, 'yyyy-MM-dd HH:mm') : 'N/A'}">2026-03-18 10:10</td>
+                <td th:text="${entry.tenantId}">1</td>
+                <td th:text="${entry.entity + ' #' + entry.entityId}">tenant #1</td>
+                <td th:text="${entry.action}">UPDATE</td>
+                <td th:text="${entry.actorId ?: 'N/A'}">superadmin</td>
+                <td th:text="${entry.oldValue != null ? #strings.abbreviate(entry.oldValue.toString(), 120) : '-'}">{"name":"Before"}</td>
+                <td th:text="${entry.newValue != null ? #strings.abbreviate(entry.newValue.toString(), 120) : '-'}">{"name":"After"}</td>
+            </tr>
+            </tbody>
+        </table>
+        <div class="pager" th:if="${auditPage.totalPages > 1}">
+            <a class="nav-link"
+               th:if="${auditPage.hasPrevious()}"
+               th:href="@{/superadmin/panel/audit(tenantId=${tenantId}, entity=${entity}, action=${action}, actorId=${actorId}, createdFrom=${createdFrom}, createdTo=${createdTo}, page=${auditPage.number - 1}, size=${size})}">
+                Previous
+            </a>
+            <span class="pager-info"
+                  th:text="${'Page ' + (auditPage.number + 1) + ' of ' + auditPage.totalPages}">Page 1 of 1</span>
+            <a class="nav-link"
+               th:if="${auditPage.hasNext()}"
+               th:href="@{/superadmin/panel/audit(tenantId=${tenantId}, entity=${entity}, action=${action}, actorId=${actorId}, createdFrom=${createdFrom}, createdTo=${createdTo}, page=${auditPage.number + 1}, size=${size})}">
+                Next
+            </a>
+        </div>
+    </section>
+</div>
+</body>
+</html>

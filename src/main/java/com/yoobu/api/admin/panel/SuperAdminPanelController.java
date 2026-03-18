@@ -1,5 +1,7 @@
 package com.yoobu.api.admin.panel;
 
+import com.yoobu.api.audit.AuditLogService;
+import com.yoobu.api.audit.dto.AuditLogItemResponse;
 import com.yoobu.api.tenant.TenantManagementService;
 import com.yoobu.api.tenant.TenantConfigKeys;
 import com.yoobu.api.tenant.TenantType;
@@ -8,9 +10,11 @@ import com.yoobu.api.tenant.dto.TenantDetailResponse;
 import com.yoobu.api.tenant.dto.TenantSummaryResponse;
 import com.yoobu.api.tenant.dto.UpdateTenantRequest;
 import jakarta.validation.Valid;
+import java.time.OffsetDateTime;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
@@ -33,10 +37,12 @@ public class SuperAdminPanelController {
     private static final String TENANTS_VIEW = "superadmin/panel/tenants";
     private static final String TENANT_DETAIL_VIEW = "superadmin/panel/tenant-detail";
     private static final String TENANT_FORM_VIEW = "superadmin/panel/tenant-form";
+    private static final String AUDIT_VIEW = "superadmin/panel/audit";
     private static final String CREATE_MODE = "create";
     private static final String EDIT_MODE = "edit";
     private static final String FLASH_TYPE_SUCCESS = "success";
     private final TenantManagementService tenantManagementService;
+    private final AuditLogService auditLogService;
 
     @GetMapping({"", "/"})
     public String panelHome() {
@@ -52,6 +58,32 @@ public class SuperAdminPanelController {
     ) {
         populateTenantsModel(query, page, size, model);
         return TENANTS_VIEW;
+    }
+
+    @GetMapping("/audit")
+    public String audit(
+            @RequestParam(required = false) Long tenantId,
+            @RequestParam(required = false) String entity,
+            @RequestParam(required = false) String action,
+            @RequestParam(required = false) String actorId,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) OffsetDateTime createdFrom,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) OffsetDateTime createdTo,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
+            Model model
+    ) {
+        Page<AuditLogItemResponse> auditPage =
+                auditLogService.search(tenantId, entity, action, actorId, createdFrom, createdTo, page, size);
+        model.addAttribute("auditEntries", auditPage.getContent());
+        model.addAttribute("auditPage", auditPage);
+        model.addAttribute("tenantId", tenantId);
+        model.addAttribute("entity", entity);
+        model.addAttribute("action", action);
+        model.addAttribute("actorId", actorId);
+        model.addAttribute("createdFrom", createdFrom);
+        model.addAttribute("createdTo", createdTo);
+        model.addAttribute("size", auditPage.getSize());
+        return AUDIT_VIEW;
     }
 
     @GetMapping("/tenants/{tenantId}")
