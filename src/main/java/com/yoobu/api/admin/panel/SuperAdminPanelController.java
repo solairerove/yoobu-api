@@ -15,8 +15,12 @@ import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Controller;
@@ -85,6 +89,7 @@ public class SuperAdminPanelController {
         Page<AuditLogItemResponse> auditPage =
                 auditLogService.search(tenantId, entity, action, actorId, createdFromValue, createdToValue, page, size);
         model.addAttribute("auditEntries", auditPage.getContent());
+        model.addAttribute("auditDiffById", buildAuditDiffById(auditPage.getContent()));
         model.addAttribute("auditPage", auditPage);
         model.addAttribute("tenantId", tenantId);
         model.addAttribute("entity", entity);
@@ -302,5 +307,40 @@ public class SuperAdminPanelController {
         labels.put("UPDATE_STATUS", "Status updated");
         labels.put("CANCEL", "Cancelled");
         return labels;
+    }
+
+    private Map<Long, List<String>> buildAuditDiffById(List<AuditLogItemResponse> entries) {
+        Map<Long, List<String>> diffById = new LinkedHashMap<>();
+        for (AuditLogItemResponse entry : entries) {
+            diffById.put(entry.id(), buildDiffLines(entry.oldValue(), entry.newValue()));
+        }
+        return diffById;
+    }
+
+    private List<String> buildDiffLines(Object oldValue, Object newValue) {
+        if (oldValue instanceof Map<?, ?> oldMap && newValue instanceof Map<?, ?> newMap) {
+            LinkedHashSet<String> keys = new LinkedHashSet<>();
+            oldMap.keySet().forEach(key -> keys.add(String.valueOf(key)));
+            newMap.keySet().forEach(key -> keys.add(String.valueOf(key)));
+
+            List<String> lines = new ArrayList<>();
+            for (String key : keys) {
+                Object left = oldMap.get(key);
+                Object right = newMap.get(key);
+                if (!Objects.equals(left, right)) {
+                    lines.add(key + ": " + renderValue(left) + " -> " + renderValue(right));
+                }
+            }
+            return lines.isEmpty() ? List.of("No top-level changes") : lines;
+        }
+
+        if (!Objects.equals(oldValue, newValue)) {
+            return List.of("value: " + renderValue(oldValue) + " -> " + renderValue(newValue));
+        }
+        return List.of("No changes");
+    }
+
+    private String renderValue(Object value) {
+        return value == null ? "null" : String.valueOf(value);
     }
 }

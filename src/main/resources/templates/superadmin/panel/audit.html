@@ -73,13 +73,12 @@
                 <th>Entity</th>
                 <th>Action</th>
                 <th>Actor</th>
-                <th>Old value</th>
-                <th>New value</th>
+                <th>Changes</th>
             </tr>
             </thead>
             <tbody>
             <tr th:if="${#lists.isEmpty(auditEntries)}">
-                <td colspan="7" class="empty">No audit entries found.</td>
+                <td colspan="6" class="empty">No audit entries found.</td>
             </tr>
             <tr th:each="entry : ${auditEntries}">
                 <td th:text="${entry.createdAt != null ? #temporals.format(entry.createdAt, 'yyyy-MM-dd HH:mm') : 'N/A'}">2026-03-18 10:10</td>
@@ -87,8 +86,9 @@
                 <td th:text="${(entityLabels[entry.entity] ?: entry.entity) + ' #' + entry.entityId}">Booking #1</td>
                 <td th:text="${actionLabels[entry.action] ?: entry.action}">Status updated</td>
                 <td th:text="${entry.actorId ?: 'N/A'}">superadmin</td>
-                <td th:text="${entry.oldValue != null ? #strings.abbreviate(entry.oldValue.toString(), 120) : '-'}">{"name":"Before"}</td>
-                <td th:text="${entry.newValue != null ? #strings.abbreviate(entry.newValue.toString(), 120) : '-'}">{"name":"After"}</td>
+                <td>
+                    <div th:each="line : ${auditDiffById[entry.id]}" th:text="${line}">status: NEW -> CONFIRMED</div>
+                </td>
             </tr>
             </tbody>
         </table>

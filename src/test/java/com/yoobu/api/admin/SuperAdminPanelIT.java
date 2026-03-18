@@ -151,7 +151,8 @@ class SuperAdminPanelIT extends IntegrationTestSupport {
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("Audit log")))
                 .andExpect(content().string(containsString("Status updated")))
-                .andExpect(content().string(containsString("audit-admin")));
+                .andExpect(content().string(containsString("audit-admin")))
+                .andExpect(content().string(containsString("status: NEW -&gt; CONFIRMED")));
 
         superAdminGet(PANEL_AUDIT_PATH + "?tenantId=" + tenantId + "&entity=booking&action=UPDATE_STATUS")
                 .andExpect(status().isOk())
