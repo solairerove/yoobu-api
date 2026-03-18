@@ -3,6 +3,8 @@ package com.yoobu.api.booking;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface BookingRepository extends JpaRepository<Booking, Long> {
@@ -23,5 +25,18 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
             Long tenantId,
             BookingStatus status,
             LocalDate deliveryDate
+    );
+
+    Page<Booking> findByTenantIdAndDeletedAtIsNull(Long tenantId, Pageable pageable);
+
+    Page<Booking> findByTenantIdAndDeletedAtIsNullAndStatus(Long tenantId, BookingStatus status, Pageable pageable);
+
+    Page<Booking> findByTenantIdAndDeletedAtIsNullAndDeliveryDate(Long tenantId, LocalDate deliveryDate, Pageable pageable);
+
+    Page<Booking> findByTenantIdAndDeletedAtIsNullAndStatusAndDeliveryDate(
+            Long tenantId,
+            BookingStatus status,
+            LocalDate deliveryDate,
+            Pageable pageable
     );
 }

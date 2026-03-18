@@ -24,6 +24,18 @@
     </section>
 
     <section class="card">
+        <form class="filters" method="get" th:action="@{/admin/{slug}/panel/services(slug=${slug})}">
+            <label>
+                <span>Search by name</span>
+                <input type="text" name="query" th:value="${query}" placeholder="Pizza, Pasta...">
+            </label>
+            <input type="hidden" name="size" th:value="${size}">
+            <input type="hidden" name="page" value="0">
+            <button type="submit">Search</button>
+        </form>
+    </section>
+
+    <section class="card">
         <table>
             <thead>
             <tr>
@@ -74,6 +86,20 @@
             </tr>
             </tbody>
         </table>
+        <div class="pager" th:if="${servicePage.totalPages > 1}">
+            <a class="nav-link"
+               th:if="${servicePage.hasPrevious()}"
+               th:href="@{/admin/{slug}/panel/services(slug=${slug}, query=${query}, page=${servicePage.number - 1}, size=${size})}">
+                Previous
+            </a>
+            <span class="pager-info"
+                  th:text="${'Page ' + (servicePage.number + 1) + ' of ' + servicePage.totalPages}">Page 1 of 1</span>
+            <a class="nav-link"
+               th:if="${servicePage.hasNext()}"
+               th:href="@{/admin/{slug}/panel/services(slug=${slug}, query=${query}, page=${servicePage.number + 1}, size=${size})}">
+                Next
+            </a>
+        </div>
     </section>
 </div>
 </body>

@@ -7,6 +7,7 @@ import jakarta.validation.Valid;
 import java.time.LocalDate;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -43,9 +44,11 @@ public class AdminPanelBookingController {
             @PathVariable String slug,
             @RequestParam(required = false) BookingStatus status,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate deliveryDate,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
             Model model
     ) {
-        populateBookingsModel(slug, status, deliveryDate, model);
+        populateBookingsModel(slug, status, deliveryDate, page, size, model);
         return BOOKINGS_VIEW;
     }
 
@@ -96,8 +99,16 @@ public class AdminPanelBookingController {
         return BOOKING_DETAIL_VIEW;
     }
 
-    private void populateBookingsModel(String slug, BookingStatus selectedStatus, LocalDate deliveryDate, Model model) {
-        var bookings = bookingService.getAdminBookings(selectedStatus, deliveryDate);
+    private void populateBookingsModel(
+            String slug,
+            BookingStatus selectedStatus,
+            LocalDate deliveryDate,
+            int page,
+            int size,
+            Model model
+    ) {
+        Page<BookingResponse> bookingPage = bookingService.getAdminBookingsPage(selectedStatus, deliveryDate, page, size);
+        var bookings = bookingPage.getContent();
         Map<Long, java.util.List<BookingStatus>> statusOptionsByBookingId = bookings.stream()
                 .collect(java.util.stream.Collectors.toMap(
                         BookingResponse::id,
@@ -112,6 +123,8 @@ public class AdminPanelBookingController {
         model.addAttribute("deliveryDate", deliveryDate);
         model.addAttribute("statuses", BookingStatus.values());
         model.addAttribute("statusOptionsByBookingId", statusOptionsByBookingId);
+        model.addAttribute("bookingPage", bookingPage);
+        model.addAttribute("size", bookingPage.getSize());
     }
 
     private String bookingsRedirect(String slug) {

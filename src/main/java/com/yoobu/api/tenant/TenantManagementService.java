@@ -13,6 +13,9 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -39,6 +42,26 @@ public class TenantManagementService {
         return tenantRepository.findAllByOrderByCreatedAtDesc().stream()
                 .map(tenantMapper::toSummaryResponse)
                 .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public Page<TenantSummaryResponse> getAllTenantsPage(String query, int page, int size) {
+        String normalizedQuery = normalizeOptional(query);
+        var pageable = PageRequest.of(
+                Math.max(page, 0),
+                normalizePageSize(size),
+                Sort.by(Sort.Direction.DESC, "createdAt")
+        );
+
+        Page<Tenant> tenantPage = StringUtils.hasText(normalizedQuery)
+                ? tenantRepository.findByNameContainingIgnoreCaseOrSlugContainingIgnoreCase(
+                        normalizedQuery,
+                        normalizedQuery,
+                        pageable
+                )
+                : tenantRepository.findAll(pageable);
+
+        return tenantPage.map(tenantMapper::toSummaryResponse);
     }
 
     @Transactional(readOnly = true)
@@ -246,5 +269,12 @@ public class TenantManagementService {
         snapshot.put("checkoutPhoneHint", checkout.phoneHint());
         snapshot.put("checkoutNoteHint", checkout.noteHint());
         return snapshot;
+    }
+
+    private int normalizePageSize(int requestedSize) {
+        if (requestedSize < 1) {
+            return 20;
+        }
+        return Math.min(requestedSize, 100);
     }
 }

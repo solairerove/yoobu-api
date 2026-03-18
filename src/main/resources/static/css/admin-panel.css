@@ -240,6 +240,18 @@ thead th {
     color: #9b3d23;
 }
 
+.pager {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 16px;
+}
+
+.pager-info {
+    color: #6a5747;
+    font-size: 14px;
+}
+
 .slug-status {
     display: flex;
     align-items: center;

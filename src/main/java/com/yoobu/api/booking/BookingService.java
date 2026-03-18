@@ -21,6 +21,11 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -149,6 +154,33 @@ public class BookingService {
         }
 
         return toResponses(bookings);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<BookingResponse> getAdminBookingsPage(BookingStatus status, LocalDate deliveryDate, int page, int size) {
+        requireFoodOrderTenant();
+
+        Long tenantId = TenantContext.getRequiredTenantId();
+        Pageable pageable = PageRequest.of(
+                Math.max(page, 0),
+                normalizePageSize(size),
+                Sort.by(Sort.Direction.DESC, "createdAt")
+        );
+        Page<Booking> bookingPage;
+
+        if (status != null && deliveryDate != null) {
+            bookingPage = bookingRepository.findByTenantIdAndDeletedAtIsNullAndStatusAndDeliveryDate(
+                    tenantId, status, deliveryDate, pageable);
+        } else if (status != null) {
+            bookingPage = bookingRepository.findByTenantIdAndDeletedAtIsNullAndStatus(tenantId, status, pageable);
+        } else if (deliveryDate != null) {
+            bookingPage = bookingRepository.findByTenantIdAndDeletedAtIsNullAndDeliveryDate(tenantId, deliveryDate, pageable);
+        } else {
+            bookingPage = bookingRepository.findByTenantIdAndDeletedAtIsNull(tenantId, pageable);
+        }
+
+        List<BookingResponse> responses = toResponses(bookingPage.getContent());
+        return new PageImpl<>(responses, pageable, bookingPage.getTotalElements());
     }
 
     @Transactional(readOnly = true)
@@ -327,5 +359,12 @@ public class BookingService {
 
     private OffsetDateTime nowUtc() {
         return OffsetDateTime.now(ZoneOffset.UTC);
+    }
+
+    private int normalizePageSize(int requestedSize) {
+        if (requestedSize < 1) {
+            return 10;
+        }
+        return Math.min(requestedSize, 100);
     }
 }

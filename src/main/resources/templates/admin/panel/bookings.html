@@ -43,6 +43,8 @@
                 <span>Delivery date</span>
                 <input type="date" name="deliveryDate" th:value="${deliveryDate}">
             </label>
+            <input type="hidden" name="size" th:value="${size}">
+            <input type="hidden" name="page" value="0">
             <button type="submit">Filter</button>
         </form>
     </section>
@@ -93,6 +95,20 @@
             </tr>
             </tbody>
         </table>
+        <div class="pager" th:if="${bookingPage.totalPages > 1}">
+            <a class="nav-link"
+               th:if="${bookingPage.hasPrevious()}"
+               th:href="@{/admin/{slug}/panel/bookings(slug=${slug}, status=${selectedStatus}, deliveryDate=${deliveryDate}, page=${bookingPage.number - 1}, size=${size})}">
+                Previous
+            </a>
+            <span class="pager-info"
+                  th:text="${'Page ' + (bookingPage.number + 1) + ' of ' + bookingPage.totalPages}">Page 1 of 1</span>
+            <a class="nav-link"
+               th:if="${bookingPage.hasNext()}"
+               th:href="@{/admin/{slug}/panel/bookings(slug=${slug}, status=${selectedStatus}, deliveryDate=${deliveryDate}, page=${bookingPage.number + 1}, size=${size})}">
+                Next
+            </a>
+        </div>
     </section>
 </div>
 </body>

@@ -7,6 +7,7 @@ import com.yoobu.api.catalog.dto.ServiceResponse;
 import jakarta.validation.Valid;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
@@ -15,6 +16,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 
 @Controller
 @RequiredArgsConstructor
@@ -33,10 +35,14 @@ public class AdminPanelServiceController {
     private final AdminCatalogService adminCatalogService;
 
     @GetMapping
-    public String services(@PathVariable String slug, Model model) {
-        model.addAttribute("slug", slug);
-        model.addAttribute("services", adminCatalogService.getAdminServices());
-        model.addAttribute("serviceStatuses", SERVICE_STATUSES);
+    public String services(
+            @PathVariable String slug,
+            @RequestParam(required = false) String query,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
+            Model model
+    ) {
+        populateServicesModel(slug, query, page, size, model);
         return SERVICES_VIEW;
     }
 
@@ -104,9 +110,7 @@ public class AdminPanelServiceController {
             Model model
     ) {
         if (bindingResult.hasErrors()) {
-            model.addAttribute("slug", slug);
-            model.addAttribute("services", adminCatalogService.getAdminServices());
-            model.addAttribute("serviceStatuses", SERVICE_STATUSES);
+            populateServicesModel(slug, null, 0, 20, model);
             return SERVICES_VIEW;
         }
 
@@ -121,6 +125,16 @@ public class AdminPanelServiceController {
                 form.getStatus()
         ));
         return servicesRedirect(slug);
+    }
+
+    private void populateServicesModel(String slug, String query, int page, int size, Model model) {
+        Page<ServiceResponse> servicePage = adminCatalogService.getAdminServicesPage(query, page, size);
+        model.addAttribute("slug", slug);
+        model.addAttribute("services", servicePage.getContent());
+        model.addAttribute("serviceStatuses", SERVICE_STATUSES);
+        model.addAttribute("servicePage", servicePage);
+        model.addAttribute("query", query);
+        model.addAttribute("size", servicePage.getSize());
     }
 
     private String serviceFormView(

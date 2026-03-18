@@ -5,10 +5,12 @@ import com.yoobu.api.tenant.TenantConfigKeys;
 import com.yoobu.api.tenant.TenantType;
 import com.yoobu.api.tenant.dto.CreateTenantRequest;
 import com.yoobu.api.tenant.dto.TenantDetailResponse;
+import com.yoobu.api.tenant.dto.TenantSummaryResponse;
 import com.yoobu.api.tenant.dto.UpdateTenantRequest;
 import jakarta.validation.Valid;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
@@ -18,6 +20,7 @@ import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.server.ResponseStatusException;
 
 @Controller
@@ -39,8 +42,13 @@ public class SuperAdminPanelController {
     }
 
     @GetMapping("/tenants")
-    public String tenants(Model model) {
-        model.addAttribute("tenants", tenantManagementService.getAllTenants());
+    public String tenants(
+            @RequestParam(required = false) String query,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
+            Model model
+    ) {
+        populateTenantsModel(query, page, size, model);
         return TENANTS_VIEW;
     }
 
@@ -165,6 +173,14 @@ public class SuperAdminPanelController {
         model.addAttribute("tenantTypes", TenantType.values());
         model.addAttribute("formMode", formMode);
         return TENANT_FORM_VIEW;
+    }
+
+    private void populateTenantsModel(String query, int page, int size, Model model) {
+        Page<TenantSummaryResponse> tenantPage = tenantManagementService.getAllTenantsPage(query, page, size);
+        model.addAttribute("tenants", tenantPage.getContent());
+        model.addAttribute("tenantPage", tenantPage);
+        model.addAttribute("query", query);
+        model.addAttribute("size", tenantPage.getSize());
     }
 
     private void validateCreateForm(SuperAdminTenantForm form, BindingResult bindingResult) {
