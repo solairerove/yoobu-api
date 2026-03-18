@@ -11,12 +11,14 @@ import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+import org.springframework.web.server.ResponseStatusException;
 
 @Controller
 @RequiredArgsConstructor
@@ -26,6 +28,8 @@ public class AdminPanelBookingController {
     private static final String BOOKINGS_VIEW = "admin/panel/bookings";
     private static final String BOOKING_DETAIL_VIEW = "admin/panel/booking-detail";
     private static final String STATUS_FORM_ATTRIBUTE = "statusForm";
+    private static final String FLASH_TYPE_SUCCESS = "success";
+    private static final String FLASH_TYPE_ERROR = "error";
 
     private final BookingService bookingService;
 
@@ -61,15 +65,27 @@ public class AdminPanelBookingController {
             @PathVariable Long bookingId,
             @Valid @ModelAttribute(STATUS_FORM_ATTRIBUTE) BookingStatusForm form,
             BindingResult bindingResult,
-            Model model
+            @RequestParam(defaultValue = "list") String returnTo,
+            RedirectAttributes redirectAttributes
     ) {
         if (bindingResult.hasErrors()) {
-            populateBookingsModel(slug, null, null, model);
-            return BOOKINGS_VIEW;
+            setFlashError(redirectAttributes, "Please choose a valid booking status.");
+            return redirectTo(slug, bookingId, returnTo);
         }
 
-        bookingService.updateBookingStatus(bookingId, form.getStatus());
-        return bookingsRedirect(slug);
+        try {
+            bookingService.updateBookingStatus(bookingId, form.getStatus());
+        } catch (ResponseStatusException ex) {
+            setFlashError(redirectAttributes, ex.getReason());
+            return redirectTo(slug, bookingId, returnTo);
+        }
+
+        redirectAttributes.addFlashAttribute(
+                "flashMessage",
+                "Booking #%d status updated to %s.".formatted(bookingId, form.getStatus())
+        );
+        redirectAttributes.addFlashAttribute("flashType", FLASH_TYPE_SUCCESS);
+        return redirectTo(slug, bookingId, returnTo);
     }
 
     private String bookingDetailView(String slug, BookingResponse booking, BookingStatusForm form, Model model) {
@@ -104,5 +120,17 @@ public class AdminPanelBookingController {
 
     private String bookingDetailRedirect(String slug, Long bookingId) {
         return bookingsRedirect(slug) + "/" + bookingId;
+    }
+
+    private String redirectTo(String slug, Long bookingId, String returnTo) {
+        if ("detail".equalsIgnoreCase(returnTo)) {
+            return bookingDetailRedirect(slug, bookingId);
+        }
+        return bookingsRedirect(slug);
+    }
+
+    private void setFlashError(RedirectAttributes redirectAttributes, String message) {
+        redirectAttributes.addFlashAttribute("flashMessage", message != null ? message : "Unable to update booking status.");
+        redirectAttributes.addFlashAttribute("flashType", FLASH_TYPE_ERROR);
     }
 }

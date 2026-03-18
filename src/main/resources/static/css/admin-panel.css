@@ -227,6 +227,19 @@ thead th {
     color: #9b3d23;
 }
 
+.flash {
+    margin: 0;
+    font-weight: 600;
+}
+
+.flash-success {
+    color: #1f6a38;
+}
+
+.flash-error {
+    color: #9b3d23;
+}
+
 .slug-status {
     display: flex;
     align-items: center;

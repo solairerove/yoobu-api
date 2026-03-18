@@ -2,11 +2,13 @@ package com.yoobu.api.admin;
 
 import static org.hamcrest.Matchers.containsString;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.flash;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.yoobu.api.IntegrationTestSupport;
+import com.yoobu.api.booking.BookingStatus;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.context.TestPropertySource;
@@ -206,5 +208,50 @@ class AdminPanelIT extends IntegrationTestSupport {
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("onsubmit=\"return confirm('Delete this service?');\"")))
                 .andExpect(content().string(containsString("Delete service")));
+    }
+
+    @Test
+    void bookingStatusUpdateFromDetailRedirectsBackWithFlashMessage() throws Exception {
+        createFoodOrderTenant(TENANT_SLUG, "Food Tenant", "food-bot-token", ADMIN_USERNAME, ADMIN_PASSWORD);
+        JsonNode service = createService(TENANT_SLUG, ADMIN_USERNAME, ADMIN_PASSWORD, "Pizza", "12.50");
+        long serviceId = service.get("id").asLong();
+        JsonNode booking = createBooking(TENANT_SLUG, 777L, serviceId, 2);
+        long bookingId = booking.get("id").asLong();
+
+        tenantAdminPostForm(
+                TENANT_SLUG,
+                "/panel/bookings/" + bookingId + "/status",
+                ADMIN_USERNAME,
+                ADMIN_PASSWORD,
+                Map.of("status", "CONFIRMED", "returnTo", "detail")
+        )
+                .andExpect(status().is3xxRedirection())
+                .andExpect(header().string("Location", PANEL_ROOT + "/bookings/" + bookingId))
+                .andExpect(flash().attribute("flashType", "success"))
+                .andExpect(flash().attribute("flashMessage", containsString("updated to CONFIRMED")));
+    }
+
+    @Test
+    void bookingStatusUpdateFromDetailShowsErrorFlashForInvalidTransition() throws Exception {
+        createFoodOrderTenant(TENANT_SLUG, "Food Tenant", "food-bot-token", ADMIN_USERNAME, ADMIN_PASSWORD);
+        JsonNode service = createService(TENANT_SLUG, ADMIN_USERNAME, ADMIN_PASSWORD, "Pizza", "12.50");
+        long serviceId = service.get("id").asLong();
+        JsonNode booking = createBooking(TENANT_SLUG, 777L, serviceId, 2);
+        long bookingId = booking.get("id").asLong();
+
+        updateBookingStatus(TENANT_SLUG, ADMIN_USERNAME, ADMIN_PASSWORD, bookingId, BookingStatus.CONFIRMED);
+        updateBookingStatus(TENANT_SLUG, ADMIN_USERNAME, ADMIN_PASSWORD, bookingId, BookingStatus.DONE);
+
+        tenantAdminPostForm(
+                TENANT_SLUG,
+                "/panel/bookings/" + bookingId + "/status",
+                ADMIN_USERNAME,
+                ADMIN_PASSWORD,
+                Map.of("status", "NEW", "returnTo", "detail")
+        )
+                .andExpect(status().is3xxRedirection())
+                .andExpect(header().string("Location", PANEL_ROOT + "/bookings/" + bookingId))
+                .andExpect(flash().attribute("flashType", "error"))
+                .andExpect(flash().attribute("flashMessage", "Invalid booking status transition from DONE to NEW"));
     }
 }
