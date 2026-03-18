@@ -54,7 +54,7 @@
             </tr>
             <tr th:each="service : ${services}">
                 <td th:text="${service.name}">Pizza</td>
-                <td th:text="${service.price}">12.50</td>
+                <td th:text="${service.price != null ? #numbers.formatDecimal(service.price, 1, 2) : '0.00'}">12.50</td>
                 <td th:text="${service.unit}">pcs</td>
                 <td th:text="${service.durationMinutes ?: 'N/A'}">N/A</td>
                 <td th:text="${service.sortOrder}">0</td>

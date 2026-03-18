@@ -65,7 +65,7 @@
                           th:text="${tenant.active} ? 'Active' : 'Inactive'">Active</span>
                 </td>
                 <td th:text="${tenant.timezone}">Asia/Ho_Chi_Minh</td>
-                <td th:text="${tenant.createdAt}">2026-03-14T00:00Z</td>
+                <td th:text="${tenant.createdAt != null ? #temporals.format(tenant.createdAt, 'yyyy-MM-dd HH:mm') : 'N/A'}">2026-03-14 00:00</td>
                 <td>
                     <a th:href="@{/admin/{slug}/panel(slug=${tenant.slug})}">Open admin panel</a>
                 </td>

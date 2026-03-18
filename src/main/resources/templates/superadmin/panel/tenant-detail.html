@@ -34,7 +34,7 @@
                 <div><dt>Type</dt><dd th:text="${tenant.type}">FOOD_ORDER</dd></div>
                 <div><dt>Timezone</dt><dd th:text="${tenant.timezone}">Asia/Ho_Chi_Minh</dd></div>
                 <div><dt>Owner Telegram ID</dt><dd th:text="${tenant.ownerTelegramId ?: 'N/A'}">N/A</dd></div>
-                <div><dt>Created</dt><dd th:text="${tenant.createdAt}">2026-03-14T00:00Z</dd></div>
+                <div><dt>Created</dt><dd th:text="${tenant.createdAt != null ? #temporals.format(tenant.createdAt, 'yyyy-MM-dd HH:mm') : 'N/A'}">2026-03-14 00:00</dd></div>
                 <div><dt>Active</dt><dd th:text="${tenant.active ? 'Yes' : 'No'}">Yes</dd></div>
             </dl>
         </article>
