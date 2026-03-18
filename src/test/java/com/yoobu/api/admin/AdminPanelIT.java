@@ -198,7 +198,7 @@ class AdminPanelIT extends IntegrationTestSupport {
     }
 
     @Test
-    void editServiceFormRequiresDeleteConfirmation() throws Exception {
+    void editServiceFormRequiresTypedDeleteConfirmation() throws Exception {
         createFoodOrderTenant(TENANT_SLUG, "Food Tenant", "food-bot-token", ADMIN_USERNAME, ADMIN_PASSWORD);
 
         JsonNode service = createService(TENANT_SLUG, ADMIN_USERNAME, ADMIN_PASSWORD, "Pizza", "12.50");
@@ -206,8 +206,28 @@ class AdminPanelIT extends IntegrationTestSupport {
 
         tenantAdminGet(TENANT_SLUG, "/panel/services/" + serviceId + "/edit", ADMIN_USERNAME, ADMIN_PASSWORD)
                 .andExpect(status().isOk())
-                .andExpect(content().string(containsString("onsubmit=\"return confirm('Delete this service?');\"")))
+                .andExpect(content().string(containsString("name=\"confirmName\"")))
+                .andExpect(content().string(containsString("Type")))
                 .andExpect(content().string(containsString("Delete service")));
+    }
+
+    @Test
+    void serviceDeleteRejectsWrongTypedConfirmation() throws Exception {
+        createFoodOrderTenant(TENANT_SLUG, "Food Tenant", "food-bot-token", ADMIN_USERNAME, ADMIN_PASSWORD);
+        JsonNode service = createService(TENANT_SLUG, ADMIN_USERNAME, ADMIN_PASSWORD, "Pizza", "12.50");
+        long serviceId = service.get("id").asLong();
+
+        tenantAdminPostForm(
+                TENANT_SLUG,
+                "/panel/services/" + serviceId + "/delete",
+                ADMIN_USERNAME,
+                ADMIN_PASSWORD,
+                Map.of("confirmName", "Wrong Name")
+        )
+                .andExpect(status().is3xxRedirection())
+                .andExpect(header().string("Location", PANEL_ROOT + "/services/" + serviceId + "/edit"))
+                .andExpect(flash().attribute("flashType", "error"))
+                .andExpect(flash().attribute("flashMessage", "Delete confirmation failed. Type the exact service name."));
     }
 
     @Test

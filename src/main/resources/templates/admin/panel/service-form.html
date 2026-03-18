@@ -20,6 +20,13 @@
     </header>
 
     <section class="card">
+        <p class="flash"
+           th:if="${flashMessage}"
+           th:classappend="${flashType == 'success'} ? ' flash-success' : ' flash-error'"
+           th:text="${flashMessage}">
+            Status updated.
+        </p>
+
         <form method="post" th:action="${formAction}" th:object="${serviceForm}">
             <label>
                 <span>Name</span>
@@ -73,8 +80,14 @@
         </form>
         <form method="post"
               th:if="${editServiceId != null}"
-              onsubmit="return confirm('Delete this service?');"
               th:action="@{/admin/{slug}/panel/services/{serviceId}/delete(slug=${slug}, serviceId=${editServiceId})}">
+            <p class="field-hint">
+                Type <strong th:text="${serviceForm.name}">Service Name</strong> to confirm deletion.
+            </p>
+            <label>
+                <span>Confirm service name</span>
+                <input type="text" name="confirmName" autocomplete="off" required>
+            </label>
             <div class="actions actions-danger">
                 <button type="submit" class="button-danger">Delete service</button>
             </div>

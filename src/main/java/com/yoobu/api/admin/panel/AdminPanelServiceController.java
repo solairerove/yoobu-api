@@ -11,6 +11,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
+import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -119,8 +120,16 @@ public class AdminPanelServiceController {
     public String deleteService(
             @PathVariable String slug,
             @PathVariable Long serviceId,
+            @RequestParam(required = false) String confirmName,
             RedirectAttributes redirectAttributes
     ) {
+        ServiceResponse service = adminCatalogService.getAdminService(serviceId);
+        String normalizedConfirmName = normalize(confirmName);
+        if (!StringUtils.hasText(normalizedConfirmName) || !service.name().equals(normalizedConfirmName)) {
+            setFlashError(redirectAttributes, "Delete confirmation failed. Type the exact service name.");
+            return editServiceRedirect(slug, serviceId);
+        }
+
         try {
             adminCatalogService.deleteService(serviceId);
         } catch (ResponseStatusException ex) {
@@ -234,6 +243,14 @@ public class AdminPanelServiceController {
 
     private String servicesPath(String slug) {
         return "/admin/" + slug + "/panel/services";
+    }
+
+    private String editServiceRedirect(String slug, Long serviceId) {
+        return "redirect:" + servicesPath(slug) + "/" + serviceId + "/edit";
+    }
+
+    private String normalize(String value) {
+        return value == null ? null : value.trim();
     }
 
     private void setFlashError(RedirectAttributes redirectAttributes, String message) {
