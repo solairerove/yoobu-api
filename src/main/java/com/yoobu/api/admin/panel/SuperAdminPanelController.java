@@ -22,6 +22,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 @Controller
 @RequiredArgsConstructor
@@ -34,6 +35,7 @@ public class SuperAdminPanelController {
     private static final String TENANT_FORM_VIEW = "superadmin/panel/tenant-form";
     private static final String CREATE_MODE = "create";
     private static final String EDIT_MODE = "edit";
+    private static final String FLASH_TYPE_SUCCESS = "success";
     private final TenantManagementService tenantManagementService;
 
     @GetMapping({"", "/"})
@@ -70,7 +72,8 @@ public class SuperAdminPanelController {
     public String createTenant(
             @Valid @ModelAttribute("tenantForm") SuperAdminTenantForm form,
             BindingResult bindingResult,
-            Model model
+            Model model,
+            RedirectAttributes redirectAttributes
     ) {
         validateCreateForm(form, bindingResult);
 
@@ -84,6 +87,8 @@ public class SuperAdminPanelController {
             return formError(model, CREATE_MODE, ex);
         }
 
+        redirectAttributes.addFlashAttribute("flashMessage", "Tenant created.");
+        redirectAttributes.addFlashAttribute("flashType", FLASH_TYPE_SUCCESS);
         return TENANTS_REDIRECT;
     }
 
@@ -99,7 +104,8 @@ public class SuperAdminPanelController {
             @PathVariable Long tenantId,
             @Valid @ModelAttribute("tenantForm") SuperAdminTenantForm form,
             BindingResult bindingResult,
-            Model model
+            Model model,
+            RedirectAttributes redirectAttributes
     ) {
         if (bindingResult.hasErrors()) {
             return populateEditFormModel(model, tenantId);
@@ -111,6 +117,8 @@ public class SuperAdminPanelController {
             return formError(populateTenantId(model, tenantId), EDIT_MODE, ex);
         }
 
+        redirectAttributes.addFlashAttribute("flashMessage", "Tenant updated.");
+        redirectAttributes.addFlashAttribute("flashType", FLASH_TYPE_SUCCESS);
         return tenantDetailRedirect(tenantId);
     }
 

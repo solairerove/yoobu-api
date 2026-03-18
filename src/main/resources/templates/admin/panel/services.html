@@ -19,6 +19,14 @@
         </nav>
     </header>
 
+    <section class="card" th:if="${flashMessage}">
+        <p class="flash"
+           th:classappend="${flashType == 'success'} ? ' flash-success' : ' flash-error'"
+           th:text="${flashMessage}">
+            Service updated.
+        </p>
+    </section>
+
     <section class="toolbar">
         <a class="button-link" th:href="@{/admin/{slug}/panel/services/new(slug=${slug})}">New service</a>
     </section>

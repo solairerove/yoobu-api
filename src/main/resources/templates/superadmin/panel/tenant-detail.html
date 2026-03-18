@@ -20,6 +20,14 @@
         </nav>
     </header>
 
+    <section class="card" th:if="${flashMessage}">
+        <p class="flash"
+           th:classappend="${flashType == 'success'} ? ' flash-success' : ' flash-error'"
+           th:text="${flashMessage}">
+            Tenant updated.
+        </p>
+    </section>
+
     <section class="toolbar">
         <a class="button-link" th:href="@{/admin/{slug}/panel(slug=${tenant.slug})}">Open admin panel</a>
         <a class="button-link" th:href="@{/superadmin/panel/tenants/{tenantId}/edit(tenantId=${tenant.id})}">Edit tenant</a>
