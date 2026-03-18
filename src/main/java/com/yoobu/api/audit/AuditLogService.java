@@ -214,7 +214,7 @@ public class AuditLogService {
         if (requestedSize < 1) {
             return 20;
         }
-        return Math.min(requestedSize, 100);
+        return Math.min(requestedSize, 50);
     }
 
     private Specification<AuditLog> buildSearchSpec(

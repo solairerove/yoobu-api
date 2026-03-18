@@ -62,6 +62,15 @@ class SuperAdminAuditControllerIT extends IntegrationTestSupport {
                 .andExpect(header().string("WWW-Authenticate", "Basic realm=\"Yoobu Super Admin\""));
     }
 
+    @Test
+    void superAdminAuditEndpointCapsPageSizeToFifty() throws Exception {
+        createFoodOrderTenant("audit-cap", "Audit Cap", "bot-cap", "cap-admin", "cap-secret");
+
+        superAdminGet(AUDIT_PATH + "?page=0&size=500")
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.size").value(50));
+    }
+
     private void assertAuditStatus(JsonNode payload, String expectedStatus) throws Exception {
         if (payload == null || payload.isNull()) {
             throw new AssertionError("Audit payload is null");
