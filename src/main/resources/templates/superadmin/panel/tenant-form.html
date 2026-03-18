@@ -74,7 +74,7 @@
                 </label>
                 <label>
                     <span th:text="${formMode == 'edit' ? 'Admin password (leave blank to keep)' : 'Admin password'}">Admin password</span>
-                    <input type="text" th:field="*{adminPassword}">
+                    <input type="password" th:field="*{adminPassword}" autocomplete="new-password">
                 </label>
             </div>
             <p class="error" th:if="${#fields.hasErrors('adminUsername')}" th:errors="*{adminUsername}">Admin user error</p>
@@ -82,8 +82,8 @@
 
             <div class="field-row">
                 <label>
-                    <span>Bot token</span>
-                    <input type="text" th:field="*{botToken}">
+                    <span th:text="${formMode == 'edit' ? 'Bot token (edit with care)' : 'Bot token'}">Bot token</span>
+                    <input type="password" th:field="*{botToken}" autocomplete="off">
                 </label>
                 <label>
                     <span>Owner Telegram ID</span>

@@ -42,7 +42,7 @@
         <article class="card">
             <h2>Integrations</h2>
             <dl class="summary">
-                <div><dt>Bot token</dt><dd th:text="${tenant.botToken ?: 'N/A'}">N/A</dd></div>
+                <div><dt>Bot token</dt><dd th:text="${tenant.botToken != null ? 'Configured' : 'N/A'}">Configured</dd></div>
                 <div><dt>Primary color</dt><dd th:text="${tenant.config['primary_color'] ?: 'N/A'}">#112233</dd></div>
                 <div><dt>Logo URL</dt><dd th:text="${tenant.config['logo_url'] ?: 'N/A'}">N/A</dd></div>
                 <div><dt>Welcome message</dt><dd th:text="${tenant.config['welcome_message'] ?: 'N/A'}">N/A</dd></div>
