@@ -30,6 +30,7 @@ class ServiceManagementAndValidationIT extends IntegrationTestSupport {
                 .andExpect(jsonPath("$.slug").value(TENANT_SLUG))
                 .andExpect(jsonPath("$.name").value("Food Tenant"))
                 .andExpect(jsonPath("$.type").value("FOOD_ORDER"))
+                .andExpect(jsonPath("$.currency").value("USD"))
                 .andExpect(jsonPath("$.primaryColor").value("#112233"))
                 .andExpect(jsonPath("$.logoUrl").value("https://cdn.example.com/logo.png"))
                 .andExpect(jsonPath("$.welcomeMessage").value("Hello from test"))

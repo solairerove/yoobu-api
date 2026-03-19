@@ -62,7 +62,7 @@
             </tr>
             <tr th:each="service : ${services}">
                 <td th:text="${service.name}">Pizza</td>
-                <td th:text="${@adminPanelViewFormats.money(service.price)}">USD 12.50</td>
+                <td th:text="${@adminPanelViewFormats.money(service.price, currency)}">USD 12.50</td>
                 <td th:text="${service.unit}">pcs</td>
                 <td th:text="${service.durationMinutes ?: 'N/A'}">N/A</td>
                 <td th:text="${service.sortOrder}">0</td>

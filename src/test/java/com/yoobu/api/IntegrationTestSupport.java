@@ -115,6 +115,7 @@ public abstract class IntegrationTestSupport {
                 botToken,
                 123456789L,
                 DEFAULT_TENANT_TIMEZONE,
+                null,
                 "#112233",
                 "https://cdn.example.com/logo.png",
                 "Hello from test",

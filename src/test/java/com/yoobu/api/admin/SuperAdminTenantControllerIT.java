@@ -71,6 +71,10 @@ class SuperAdminTenantControllerIT extends IntegrationTestSupport {
                 .andExpect(jsonPath("$[0].timezone").value("Europe/Warsaw"))
                 .andExpect(jsonPath("$[0].createdAt").isString());
 
+        superAdminGet(SUPERADMIN_TENANTS_PATH + "/1")
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.config.currency").value("USD"));
+
         var auditLog = latestAuditLog("tenant", "CREATE");
         assertEquals(1, auditLogCount());
         assertEquals("tenant", auditLog.get("entity").asText());
@@ -126,6 +130,7 @@ class SuperAdminTenantControllerIT extends IntegrationTestSupport {
                 "bot-after",
                 999999L,
                 "Asia/Ho_Chi_Minh",
+                "THB",
                 "#445566",
                 "https://cdn.example.com/updated-logo.png",
                 "Updated welcome",
@@ -154,6 +159,7 @@ class SuperAdminTenantControllerIT extends IntegrationTestSupport {
                 .andExpect(jsonPath("$.botToken").value("bot-after"))
                 .andExpect(jsonPath("$.ownerTelegramId").value(999999L))
                 .andExpect(jsonPath("$.config.admin_username").value("admin-after"))
+                .andExpect(jsonPath("$.config.currency").value("THB"))
                 .andExpect(jsonPath("$.config.primary_color").value("#445566"))
                 .andExpect(jsonPath("$.config.logo_url").value("https://cdn.example.com/updated-logo.png"))
                 .andExpect(jsonPath("$.config.welcome_message").value("Updated welcome"))
@@ -187,6 +193,7 @@ class SuperAdminTenantControllerIT extends IntegrationTestSupport {
                 "bot-token-updated",
                 444444L,
                 "Asia/Ho_Chi_Minh",
+                "USD",
                 "#778899",
                 "https://cdn.example.com/keep-pass.png",
                 "Password unchanged",
@@ -206,6 +213,7 @@ class SuperAdminTenantControllerIT extends IntegrationTestSupport {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.slug").value("tenant-keep-pass"))
                 .andExpect(jsonPath("$.config.admin_username").value("admin-after"))
+                .andExpect(jsonPath("$.config.currency").value("USD"))
                 .andExpect(jsonPath("$.botToken").value("bot-token-updated"))
                 .andExpect(jsonPath("$.config.primary_color").value("#778899"))
                 .andExpect(jsonPath("$.config.checkout_phone_hint").value("+66..."))
@@ -234,6 +242,7 @@ class SuperAdminTenantControllerIT extends IntegrationTestSupport {
                 "",
                 "",
                 "",
+                "",
                 "admin-clear",
                 "",
                 false
@@ -253,6 +262,7 @@ class SuperAdminTenantControllerIT extends IntegrationTestSupport {
                 .andExpect(jsonPath("$.ownerTelegramId").doesNotExist())
                 .andExpect(jsonPath("$.timezone").value("Asia/Ho_Chi_Minh"))
                 .andExpect(jsonPath("$.config.admin_username").value("admin-clear"))
+                .andExpect(jsonPath("$.config.currency").value("USD"))
                 .andExpect(jsonPath("$.config.primary_color").doesNotExist())
                 .andExpect(jsonPath("$.config.logo_url").doesNotExist())
                 .andExpect(jsonPath("$.config.welcome_message").doesNotExist())

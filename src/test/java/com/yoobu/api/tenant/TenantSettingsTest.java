@@ -46,6 +46,7 @@ class TenantSettingsTest {
                 TenantConfigKeys.WELCOME_MESSAGE, "hello",
                 TenantConfigKeys.CHECKOUT_PHONE_HINT, "+84...",
                 TenantConfigKeys.CHECKOUT_NOTE_HINT, "No onion, gate code",
+                TenantConfigKeys.CURRENCY, "THB",
                 TenantConfigKeys.CUTOFF_HOUR, "18",
                 TenantConfigKeys.CUTOFF_MINUTE, "30"
         ));
@@ -57,8 +58,16 @@ class TenantSettingsTest {
         assertEquals("hello", settings.branding().welcomeMessage());
         assertEquals("+84...", settings.checkout().phoneHint());
         assertEquals("No onion, gate code", settings.checkout().noteHint());
+        assertEquals("THB", settings.pricing().currency());
         assertEquals("18", settings.delivery().cutoffHour());
         assertEquals("30", settings.delivery().cutoffMinute());
+    }
+
+    @Test
+    void pricingFallsBackToDefaultCurrencyWhenUnset() {
+        TenantSettings settings = TenantSettings.fromMap(Map.of(TenantConfigKeys.ADMIN_USERNAME, "root"));
+
+        assertEquals("USD", settings.pricing().currency());
     }
 
     private static TenantConfig config(Tenant tenant, String key, String value) {

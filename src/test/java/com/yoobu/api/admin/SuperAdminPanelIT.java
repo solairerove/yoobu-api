@@ -36,6 +36,7 @@ class SuperAdminPanelIT extends IntegrationTestSupport {
                 Map.entry("botToken", "panel-bot"),
                 Map.entry("ownerTelegramId", "123456"),
                 Map.entry("timezone", "Asia/Ho_Chi_Minh"),
+                Map.entry("currency", "USD"),
                 Map.entry("primaryColor", "#112233"),
                 Map.entry("logoUrl", "https://cdn.example.com/logo.png"),
                 Map.entry("welcomeMessage", "Hello from panel"),
@@ -65,6 +66,7 @@ class SuperAdminPanelIT extends IntegrationTestSupport {
                 .andExpect(content().string(containsString("panel-admin")))
                 .andExpect(content().string(containsString("+84...")))
                 .andExpect(content().string(containsString("No onion, gate code, delivery code")))
+                .andExpect(content().string(containsString("USD")))
                 .andExpect(content().string(containsString("Edit tenant")))
                 .andExpect(content().string(containsString("/t/panel-tenant/services")));
     }
@@ -86,6 +88,7 @@ class SuperAdminPanelIT extends IntegrationTestSupport {
                 Map.entry("botToken", ""),
                 Map.entry("ownerTelegramId", ""),
                 Map.entry("timezone", "Asia/Ho_Chi_Minh"),
+                Map.entry("currency", "THB"),
                 Map.entry("primaryColor", ""),
                 Map.entry("logoUrl", "https://cdn.example.com/panel-updated.png"),
                 Map.entry("welcomeMessage", "Updated from panel"),
@@ -105,7 +108,8 @@ class SuperAdminPanelIT extends IntegrationTestSupport {
                 .andExpect(content().string(containsString("Yes")))
                 .andExpect(content().string(containsString("https://cdn.example.com/panel-updated.png")))
                 .andExpect(content().string(containsString("+1 555...")))
-                .andExpect(content().string(containsString("Ring bell twice")));
+                .andExpect(content().string(containsString("Ring bell twice")))
+                .andExpect(content().string(containsString("THB")));
 
         tenantAdminGet("panel-edit", "/services", "panel-admin", "panel-secret")
                 .andExpect(status().isUnauthorized());
@@ -125,6 +129,7 @@ class SuperAdminPanelIT extends IntegrationTestSupport {
                 Map.entry("botToken", "panel-bot"),
                 Map.entry("ownerTelegramId", "123456"),
                 Map.entry("timezone", "Asia/Ho_Chi_Minh"),
+                Map.entry("currency", "USD"),
                 Map.entry("primaryColor", "#112233"),
                 Map.entry("logoUrl", "https://cdn.example.com/logo.png"),
                 Map.entry("welcomeMessage", "Hello from panel"),

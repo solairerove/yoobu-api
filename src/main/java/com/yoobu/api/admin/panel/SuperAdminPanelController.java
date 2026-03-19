@@ -6,6 +6,7 @@ import com.yoobu.api.audit.AuditLogService;
 import com.yoobu.api.audit.dto.AuditLogItemResponse;
 import com.yoobu.api.tenant.TenantManagementService;
 import com.yoobu.api.tenant.TenantConfigKeys;
+import com.yoobu.api.tenant.TenantSettings;
 import com.yoobu.api.tenant.TenantType;
 import com.yoobu.api.tenant.dto.CreateTenantRequest;
 import com.yoobu.api.tenant.dto.TenantDetailResponse;
@@ -208,6 +209,7 @@ public class SuperAdminPanelController {
                 form.getBotToken(),
                 form.getOwnerTelegramId(),
                 form.getTimezone(),
+                form.getCurrency(),
                 form.getPrimaryColor(),
                 form.getLogoUrl(),
                 form.getWelcomeMessage(),
@@ -225,6 +227,7 @@ public class SuperAdminPanelController {
                 form.getBotToken(),
                 form.getOwnerTelegramId(),
                 form.getTimezone(),
+                form.getCurrency(),
                 form.getPrimaryColor(),
                 form.getLogoUrl(),
                 form.getWelcomeMessage(),
@@ -245,6 +248,7 @@ public class SuperAdminPanelController {
         form.setBotToken(tenant.botToken());
         form.setOwnerTelegramId(tenant.ownerTelegramId());
         form.setTimezone(tenant.timezone());
+        form.setCurrency(config.getOrDefault(TenantConfigKeys.CURRENCY, TenantSettings.DEFAULT_CURRENCY));
         form.setPrimaryColor(config.get(TenantConfigKeys.PRIMARY_COLOR));
         form.setLogoUrl(config.get(TenantConfigKeys.LOGO_URL));
         form.setWelcomeMessage(config.get(TenantConfigKeys.WELCOME_MESSAGE));

@@ -134,6 +134,7 @@ public class TenantManagementService {
 
         Tenant savedTenant = tenantRepository.save(tenant);
         upsertConfig(existingConfigs, savedTenant, TenantConfigKeys.ADMIN_USERNAME, request.adminUsername(), false);
+        upsertCurrency(existingConfigs, savedTenant, request.currency());
         if (StringUtils.hasText(request.adminPassword())) {
             upsertConfig(
                     existingConfigs,
@@ -181,6 +182,7 @@ public class TenantManagementService {
         List<TenantConfig> configs = new ArrayList<>();
         addConfig(configs, tenant, TenantConfigKeys.ADMIN_USERNAME, request.adminUsername());
         addConfig(configs, tenant, TenantConfigKeys.ADMIN_PASSWORD, passwordEncoder.encode(request.adminPassword()));
+        addConfig(configs, tenant, TenantConfigKeys.CURRENCY, resolveCurrency(request.currency()));
         addConfig(configs, tenant, TenantConfigKeys.PRIMARY_COLOR, request.primaryColor());
         addConfig(configs, tenant, TenantConfigKeys.LOGO_URL, request.logoUrl());
         addConfig(configs, tenant, TenantConfigKeys.WELCOME_MESSAGE, request.welcomeMessage());
@@ -236,12 +238,36 @@ public class TenantManagementService {
         existingConfigs.put(key, savedConfig);
     }
 
+    private void upsertCurrency(
+            Map<String, TenantConfig> existingConfigs,
+            Tenant tenant,
+            String requestedCurrency
+    ) {
+        String normalizedCurrency = normalizeOptional(requestedCurrency);
+        if (StringUtils.hasText(normalizedCurrency)) {
+            upsertConfig(existingConfigs, tenant, TenantConfigKeys.CURRENCY, normalizedCurrency, false);
+            return;
+        }
+
+        if (!existingConfigs.containsKey(TenantConfigKeys.CURRENCY)) {
+            upsertConfig(existingConfigs, tenant, TenantConfigKeys.CURRENCY, TenantSettings.DEFAULT_CURRENCY, false);
+        }
+    }
+
     private String normalizeOptional(String value) {
         return StringUtils.hasText(value) ? value.trim() : null;
     }
 
     private String normalizeTimezone(String timezone) {
         return StringUtils.hasText(timezone) ? timezone.trim() : DEFAULT_TIMEZONE;
+    }
+
+    private String resolveCurrency(String currency) {
+        String normalizedCurrency = normalizeOptional(currency);
+        if (StringUtils.hasText(normalizedCurrency)) {
+            return normalizedCurrency;
+        }
+        return TenantSettings.DEFAULT_CURRENCY;
     }
 
     private Map<String, Object> toAuditSnapshot(Tenant tenant, Map<String, TenantConfig> configs) {
@@ -252,6 +278,7 @@ public class TenantManagementService {
         TenantSettings.AdminSettings admin = settings.admin();
         TenantSettings.BrandingSettings branding = settings.branding();
         TenantSettings.CheckoutSettings checkout = settings.checkout();
+        TenantSettings.PricingSettings pricing = settings.pricing();
         Map<String, Object> snapshot = new LinkedHashMap<>();
         snapshot.put("id", tenant.getId());
         snapshot.put("slug", tenant.getSlug());
@@ -268,6 +295,7 @@ public class TenantManagementService {
         snapshot.put("welcomeMessage", branding.welcomeMessage());
         snapshot.put("checkoutPhoneHint", checkout.phoneHint());
         snapshot.put("checkoutNoteHint", checkout.noteHint());
+        snapshot.put("currency", pricing.currency());
         return snapshot;
     }
 

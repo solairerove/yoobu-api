@@ -7,6 +7,8 @@ import java.util.Map;
 
 public final class TenantSettings {
 
+    public static final String DEFAULT_CURRENCY = "USD";
+
     private final Map<String, String> values;
 
     private TenantSettings(Map<String, String> values) {
@@ -57,6 +59,14 @@ public final class TenantSettings {
         );
     }
 
+    public PricingSettings pricing() {
+        String configuredCurrency = values.get(TenantConfigKeys.CURRENCY);
+        if (configuredCurrency == null || configuredCurrency.isBlank()) {
+            return new PricingSettings(DEFAULT_CURRENCY);
+        }
+        return new PricingSettings(configuredCurrency);
+    }
+
     public record AdminSettings(
             String username,
             String passwordHash,
@@ -80,6 +90,11 @@ public final class TenantSettings {
     public record DeliverySettings(
             String cutoffHour,
             String cutoffMinute
+    ) {
+    }
+
+    public record PricingSettings(
+            String currency
     ) {
     }
 }

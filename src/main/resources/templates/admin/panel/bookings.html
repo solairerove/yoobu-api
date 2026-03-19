@@ -86,7 +86,7 @@
                     </form>
                 </td>
                 <td th:text="${booking.deliveryDate}">2026-03-14</td>
-                <td th:text="${@adminPanelViewFormats.money(booking.totalPrice)}">USD 12.50</td>
+                <td th:text="${@adminPanelViewFormats.money(booking.totalPrice, currency)}">USD 12.50</td>
                 <td>
                     <a th:href="@{/admin/{slug}/panel/bookings/{bookingId}(slug=${slug}, bookingId=${booking.id})}">
                         View

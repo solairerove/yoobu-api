@@ -21,6 +21,8 @@ public class SuperAdminTenantForm {
 
     private String timezone = "Asia/Ho_Chi_Minh";
 
+    private String currency = "USD";
+
     private String primaryColor;
 
     private String logoUrl;
@@ -84,6 +86,14 @@ public class SuperAdminTenantForm {
 
     public void setTimezone(String timezone) {
         this.timezone = timezone;
+    }
+
+    public String getCurrency() {
+        return currency;
+    }
+
+    public void setCurrency(String currency) {
+        this.currency = currency;
     }
 
     public String getPrimaryColor() {

@@ -4,6 +4,7 @@ import com.yoobu.api.catalog.AdminCatalogService;
 import com.yoobu.api.catalog.ServiceStatus;
 import com.yoobu.api.catalog.dto.AdminUpsertServiceRequest;
 import com.yoobu.api.catalog.dto.ServiceResponse;
+import com.yoobu.api.tenant.TenantSettingsService;
 import jakarta.validation.Valid;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -38,6 +39,7 @@ public class AdminPanelServiceController {
     private static final String FLASH_TYPE_ERROR = "error";
 
     private final AdminCatalogService adminCatalogService;
+    private final TenantSettingsService tenantSettingsService;
 
     @GetMapping
     public String services(
@@ -182,6 +184,7 @@ public class AdminPanelServiceController {
         model.addAttribute("servicePage", servicePage);
         model.addAttribute("query", query);
         model.addAttribute("size", servicePage.getSize());
+        model.addAttribute("currency", tenantSettingsService.getCurrentTenantSettings().pricing().currency());
     }
 
     private String serviceFormView(

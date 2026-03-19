@@ -10,6 +10,7 @@ public record UpdateTenantRequest(
         String botToken,
         Long ownerTelegramId,
         String timezone,
+        String currency,
         String primaryColor,
         String logoUrl,
         String welcomeMessage,
