@@ -213,6 +213,7 @@ public class SuperAdminPanelController {
                 form.getPrimaryColor(),
                 form.getLogoUrl(),
                 form.getWelcomeMessage(),
+                form.getCheckoutNameHint(),
                 form.getCheckoutPhoneHint(),
                 form.getCheckoutNoteHint(),
                 form.getAdminUsername(),
@@ -231,6 +232,7 @@ public class SuperAdminPanelController {
                 form.getPrimaryColor(),
                 form.getLogoUrl(),
                 form.getWelcomeMessage(),
+                form.getCheckoutNameHint(),
                 form.getCheckoutPhoneHint(),
                 form.getCheckoutNoteHint(),
                 form.getAdminUsername(),
@@ -252,6 +254,7 @@ public class SuperAdminPanelController {
         form.setPrimaryColor(config.get(TenantConfigKeys.PRIMARY_COLOR));
         form.setLogoUrl(config.get(TenantConfigKeys.LOGO_URL));
         form.setWelcomeMessage(config.get(TenantConfigKeys.WELCOME_MESSAGE));
+        form.setCheckoutNameHint(config.get(TenantConfigKeys.CHECKOUT_NAME_HINT));
         form.setCheckoutPhoneHint(config.get(TenantConfigKeys.CHECKOUT_PHONE_HINT));
         form.setCheckoutNoteHint(config.get(TenantConfigKeys.CHECKOUT_NOTE_HINT));
         form.setAdminUsername(config.get(TenantConfigKeys.ADMIN_USERNAME));

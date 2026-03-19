@@ -34,6 +34,7 @@ class ServiceManagementAndValidationIT extends IntegrationTestSupport {
                 .andExpect(jsonPath("$.primaryColor").value("#112233"))
                 .andExpect(jsonPath("$.logoUrl").value("https://cdn.example.com/logo.png"))
                 .andExpect(jsonPath("$.welcomeMessage").value("Hello from test"))
+                .andExpect(jsonPath("$.checkoutNameHint").value("Your full name"))
                 .andExpect(jsonPath("$.checkoutPhoneHint").value("+84..."))
                 .andExpect(jsonPath("$.checkoutNoteHint").value("No onion, gate code, delivery code"));
     }

@@ -10,6 +10,7 @@ public record TenantConfigResponse(
         String primaryColor,
         String logoUrl,
         String welcomeMessage,
+        String checkoutNameHint,
         String checkoutPhoneHint,
         String checkoutNoteHint
 ) {

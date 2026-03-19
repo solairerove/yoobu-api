@@ -147,6 +147,7 @@ public class TenantManagementService {
         upsertConfig(existingConfigs, savedTenant, TenantConfigKeys.PRIMARY_COLOR, request.primaryColor(), true);
         upsertConfig(existingConfigs, savedTenant, TenantConfigKeys.LOGO_URL, request.logoUrl(), true);
         upsertConfig(existingConfigs, savedTenant, TenantConfigKeys.WELCOME_MESSAGE, request.welcomeMessage(), true);
+        upsertConfig(existingConfigs, savedTenant, TenantConfigKeys.CHECKOUT_NAME_HINT, request.checkoutNameHint(), true);
         upsertConfig(existingConfigs, savedTenant, TenantConfigKeys.CHECKOUT_PHONE_HINT, request.checkoutPhoneHint(), true);
         upsertConfig(existingConfigs, savedTenant, TenantConfigKeys.CHECKOUT_NOTE_HINT, request.checkoutNoteHint(), true);
         auditLogService.logUpdate(
@@ -186,6 +187,7 @@ public class TenantManagementService {
         addConfig(configs, tenant, TenantConfigKeys.PRIMARY_COLOR, request.primaryColor());
         addConfig(configs, tenant, TenantConfigKeys.LOGO_URL, request.logoUrl());
         addConfig(configs, tenant, TenantConfigKeys.WELCOME_MESSAGE, request.welcomeMessage());
+        addConfig(configs, tenant, TenantConfigKeys.CHECKOUT_NAME_HINT, request.checkoutNameHint());
         addConfig(configs, tenant, TenantConfigKeys.CHECKOUT_PHONE_HINT, request.checkoutPhoneHint());
         addConfig(configs, tenant, TenantConfigKeys.CHECKOUT_NOTE_HINT, request.checkoutNoteHint());
         return configs;
@@ -293,6 +295,7 @@ public class TenantManagementService {
         snapshot.put("primaryColor", branding.primaryColor());
         snapshot.put("logoUrl", branding.logoUrl());
         snapshot.put("welcomeMessage", branding.welcomeMessage());
+        snapshot.put("checkoutNameHint", checkout.nameHint());
         snapshot.put("checkoutPhoneHint", checkout.phoneHint());
         snapshot.put("checkoutNoteHint", checkout.noteHint());
         snapshot.put("currency", pricing.currency());

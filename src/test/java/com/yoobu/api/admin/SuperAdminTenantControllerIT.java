@@ -73,7 +73,8 @@ class SuperAdminTenantControllerIT extends IntegrationTestSupport {
 
         superAdminGet(SUPERADMIN_TENANTS_PATH + "/1")
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.config.currency").value("USD"));
+                .andExpect(jsonPath("$.config.currency").value("USD"))
+                .andExpect(jsonPath("$.config.checkout_name_hint").value("Your full name"));
 
         var auditLog = latestAuditLog("tenant", "CREATE");
         assertEquals(1, auditLogCount());
@@ -134,6 +135,7 @@ class SuperAdminTenantControllerIT extends IntegrationTestSupport {
                 "#445566",
                 "https://cdn.example.com/updated-logo.png",
                 "Updated welcome",
+                "Contact person",
                 "+1 555...",
                 "Ring bell twice",
                 "admin-after",
@@ -163,6 +165,7 @@ class SuperAdminTenantControllerIT extends IntegrationTestSupport {
                 .andExpect(jsonPath("$.config.primary_color").value("#445566"))
                 .andExpect(jsonPath("$.config.logo_url").value("https://cdn.example.com/updated-logo.png"))
                 .andExpect(jsonPath("$.config.welcome_message").value("Updated welcome"))
+                .andExpect(jsonPath("$.config.checkout_name_hint").value("Contact person"))
                 .andExpect(jsonPath("$.config.checkout_phone_hint").value("+1 555..."))
                 .andExpect(jsonPath("$.config.checkout_note_hint").value("Ring bell twice"));
 
@@ -197,6 +200,7 @@ class SuperAdminTenantControllerIT extends IntegrationTestSupport {
                 "#778899",
                 "https://cdn.example.com/keep-pass.png",
                 "Password unchanged",
+                "Receiver name",
                 "+66...",
                 "Leave at lobby",
                 "admin-after",
@@ -216,6 +220,7 @@ class SuperAdminTenantControllerIT extends IntegrationTestSupport {
                 .andExpect(jsonPath("$.config.currency").value("USD"))
                 .andExpect(jsonPath("$.botToken").value("bot-token-updated"))
                 .andExpect(jsonPath("$.config.primary_color").value("#778899"))
+                .andExpect(jsonPath("$.config.checkout_name_hint").value("Receiver name"))
                 .andExpect(jsonPath("$.config.checkout_phone_hint").value("+66..."))
                 .andExpect(jsonPath("$.config.checkout_note_hint").value("Leave at lobby"));
 
@@ -236,6 +241,7 @@ class SuperAdminTenantControllerIT extends IntegrationTestSupport {
                 TenantType.FOOD_ORDER,
                 "",
                 null,
+                "",
                 "",
                 "",
                 "",
@@ -266,6 +272,7 @@ class SuperAdminTenantControllerIT extends IntegrationTestSupport {
                 .andExpect(jsonPath("$.config.primary_color").doesNotExist())
                 .andExpect(jsonPath("$.config.logo_url").doesNotExist())
                 .andExpect(jsonPath("$.config.welcome_message").doesNotExist())
+                .andExpect(jsonPath("$.config.checkout_name_hint").doesNotExist())
                 .andExpect(jsonPath("$.config.checkout_phone_hint").doesNotExist())
                 .andExpect(jsonPath("$.config.checkout_note_hint").doesNotExist());
 

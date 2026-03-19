@@ -14,6 +14,7 @@ public record UpdateTenantRequest(
         String primaryColor,
         String logoUrl,
         String welcomeMessage,
+        String checkoutNameHint,
         String checkoutPhoneHint,
         String checkoutNoteHint,
         @NotBlank String adminUsername,

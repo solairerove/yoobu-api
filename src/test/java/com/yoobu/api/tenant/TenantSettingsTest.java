@@ -38,17 +38,18 @@ class TenantSettingsTest {
 
     @Test
     void exposesDomainSlicesForAdminBrandingCheckoutAndDelivery() {
-        TenantSettings settings = TenantSettings.fromMap(Map.of(
-                TenantConfigKeys.ADMIN_USERNAME, "root",
-                TenantConfigKeys.ADMIN_PASSWORD, "hash",
-                TenantConfigKeys.PRIMARY_COLOR, "#101010",
-                TenantConfigKeys.LOGO_URL, "https://cdn.example.com/logo.png",
-                TenantConfigKeys.WELCOME_MESSAGE, "hello",
-                TenantConfigKeys.CHECKOUT_PHONE_HINT, "+84...",
-                TenantConfigKeys.CHECKOUT_NOTE_HINT, "No onion, gate code",
-                TenantConfigKeys.CURRENCY, "THB",
-                TenantConfigKeys.CUTOFF_HOUR, "18",
-                TenantConfigKeys.CUTOFF_MINUTE, "30"
+        TenantSettings settings = TenantSettings.fromMap(Map.ofEntries(
+                Map.entry(TenantConfigKeys.ADMIN_USERNAME, "root"),
+                Map.entry(TenantConfigKeys.ADMIN_PASSWORD, "hash"),
+                Map.entry(TenantConfigKeys.PRIMARY_COLOR, "#101010"),
+                Map.entry(TenantConfigKeys.LOGO_URL, "https://cdn.example.com/logo.png"),
+                Map.entry(TenantConfigKeys.WELCOME_MESSAGE, "hello"),
+                Map.entry(TenantConfigKeys.CHECKOUT_NAME_HINT, "Receiver name"),
+                Map.entry(TenantConfigKeys.CHECKOUT_PHONE_HINT, "+84..."),
+                Map.entry(TenantConfigKeys.CHECKOUT_NOTE_HINT, "No onion, gate code"),
+                Map.entry(TenantConfigKeys.CURRENCY, "THB"),
+                Map.entry(TenantConfigKeys.CUTOFF_HOUR, "18"),
+                Map.entry(TenantConfigKeys.CUTOFF_MINUTE, "30")
         ));
 
         assertEquals("root", settings.admin().username());
@@ -56,6 +57,7 @@ class TenantSettingsTest {
         assertEquals("#101010", settings.branding().primaryColor());
         assertEquals("https://cdn.example.com/logo.png", settings.branding().logoUrl());
         assertEquals("hello", settings.branding().welcomeMessage());
+        assertEquals("Receiver name", settings.checkout().nameHint());
         assertEquals("+84...", settings.checkout().phoneHint());
         assertEquals("No onion, gate code", settings.checkout().noteHint());
         assertEquals("THB", settings.pricing().currency());

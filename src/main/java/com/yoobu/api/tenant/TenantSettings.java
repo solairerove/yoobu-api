@@ -47,6 +47,7 @@ public final class TenantSettings {
 
     public CheckoutSettings checkout() {
         return new CheckoutSettings(
+                values.get(TenantConfigKeys.CHECKOUT_NAME_HINT),
                 values.get(TenantConfigKeys.CHECKOUT_PHONE_HINT),
                 values.get(TenantConfigKeys.CHECKOUT_NOTE_HINT)
         );
@@ -82,6 +83,7 @@ public final class TenantSettings {
     }
 
     public record CheckoutSettings(
+            String nameHint,
             String phoneHint,
             String noteHint
     ) {

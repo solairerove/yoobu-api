@@ -29,6 +29,8 @@ public class SuperAdminTenantForm {
 
     private String welcomeMessage;
 
+    private String checkoutNameHint;
+
     private String checkoutPhoneHint;
 
     private String checkoutNoteHint;
@@ -126,6 +128,14 @@ public class SuperAdminTenantForm {
 
     public void setCheckoutPhoneHint(String checkoutPhoneHint) {
         this.checkoutPhoneHint = checkoutPhoneHint;
+    }
+
+    public String getCheckoutNameHint() {
+        return checkoutNameHint;
+    }
+
+    public void setCheckoutNameHint(String checkoutNameHint) {
+        this.checkoutNameHint = checkoutNameHint;
     }
 
     public String getCheckoutNoteHint() {
