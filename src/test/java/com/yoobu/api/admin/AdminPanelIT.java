@@ -46,7 +46,10 @@ class AdminPanelIT extends IntegrationTestSupport {
         tenantAdminGet(TENANT_SLUG, "/panel/bookings/" + bookingId, ADMIN_USERNAME, ADMIN_PASSWORD)
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("Booking #" + bookingId)))
-                .andExpect(content().string(containsString("Pizza")));
+                .andExpect(content().string(containsString("Pizza")))
+                .andExpect(content().string(containsString("USD 25.00")))
+                .andExpect(content().string(containsString("USD 12.50")))
+                .andExpect(content().string(containsString(DEFAULT_TENANT_TIMEZONE)));
 
         tenantAdminPostForm(
                 TENANT_SLUG,
@@ -61,7 +64,8 @@ class AdminPanelIT extends IntegrationTestSupport {
         tenantAdminGet(TENANT_SLUG, "/panel/services", ADMIN_USERNAME, ADMIN_PASSWORD)
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("Services for " + TENANT_SLUG)))
-                .andExpect(content().string(containsString("Pizza")));
+                .andExpect(content().string(containsString("Pizza")))
+                .andExpect(content().string(containsString("USD 12.50")));
 
         tenantAdminPostForm(
                 TENANT_SLUG,

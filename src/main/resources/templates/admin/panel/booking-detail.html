@@ -34,8 +34,8 @@
                 <div><dt>Status</dt><dd th:text="${booking.status}">NEW</dd></div>
                 <div><dt>Customer</dt><dd th:text="${booking.customerName}">Alice</dd></div>
                 <div><dt>Delivery date</dt><dd th:text="${booking.deliveryDate}">2026-03-14</dd></div>
-                <div><dt>Total</dt><dd th:text="${booking.totalPrice != null ? #numbers.formatDecimal(booking.totalPrice, 1, 2) : '0.00'}">25.00</dd></div>
-                <div><dt>Created</dt><dd th:text="${booking.createdAt != null ? #temporals.format(booking.createdAt, 'yyyy-MM-dd HH:mm') : 'N/A'}">2026-03-14 00:00</dd></div>
+                <div><dt>Total</dt><dd th:text="${@adminPanelViewFormats.money(booking.totalPrice)}">USD 25.00</dd></div>
+                <div><dt>Created</dt><dd th:text="${@adminPanelViewFormats.timestamp(booking.createdAt)}">2026-03-14 00:00 Europe/Warsaw</dd></div>
                 <div><dt>Note</dt><dd th:text="${booking.note ?: 'N/A'}">Leave at the door</dd></div>
             </dl>
         </article>
@@ -74,7 +74,7 @@
             <tr th:each="item : ${booking.items}">
                 <td th:text="${item.serviceName}">Pizza</td>
                 <td th:text="${item.quantity}">2</td>
-                <td th:text="${item.unitPrice != null ? #numbers.formatDecimal(item.unitPrice, 1, 2) : '0.00'}">12.50</td>
+                <td th:text="${@adminPanelViewFormats.money(item.unitPrice)}">USD 12.50</td>
             </tr>
             </tbody>
         </table>
