@@ -21,6 +21,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
@@ -120,7 +121,7 @@ public class BookingService {
         booking.setStatus(BookingStatus.CANCELLED);
         booking.setUpdatedAt(nowUtc());
 
-        Booking savedBooking = bookingRepository.save(booking);
+        Booking savedBooking = persistBookingWithConflictGuard(booking);
         auditLogService.logAction(
                 savedBooking.getTenant().getId(),
                 ENTITY_NAME,
@@ -199,7 +200,7 @@ public class BookingService {
         booking.setStatus(status);
         booking.setUpdatedAt(nowUtc());
 
-        Booking savedBooking = bookingRepository.save(booking);
+        Booking savedBooking = persistBookingWithConflictGuard(booking);
         auditLogService.logAction(
                 savedBooking.getTenant().getId(),
                 ENTITY_NAME,
@@ -359,6 +360,18 @@ public class BookingService {
 
     private OffsetDateTime nowUtc() {
         return OffsetDateTime.now(ZoneOffset.UTC);
+    }
+
+    private Booking persistBookingWithConflictGuard(Booking booking) {
+        try {
+            return bookingRepository.saveAndFlush(booking);
+        } catch (OptimisticLockingFailureException ex) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "Booking was modified by another request. Refresh and retry.",
+                    ex
+            );
+        }
     }
 
     private int normalizePageSize(int requestedSize) {
