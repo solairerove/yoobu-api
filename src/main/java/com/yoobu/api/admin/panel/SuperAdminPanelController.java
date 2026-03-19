@@ -1,5 +1,7 @@
 package com.yoobu.api.admin.panel;
 
+import com.yoobu.api.audit.AuditLogChangeFormatter;
+import com.yoobu.api.audit.AuditLogCsvExporter;
 import com.yoobu.api.audit.AuditLogService;
 import com.yoobu.api.audit.dto.AuditLogItemResponse;
 import com.yoobu.api.tenant.TenantManagementService;
@@ -13,20 +15,21 @@ import jakarta.validation.Valid;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.nio.charset.StandardCharsets;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
-import java.util.ArrayList;
 import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
-import org.springframework.validation.BindingResult;
 import org.springframework.util.StringUtils;
+import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -50,10 +53,13 @@ public class SuperAdminPanelController {
     private static final String EDIT_MODE = "edit";
     private static final String FLASH_TYPE_SUCCESS = "success";
     private static final DateTimeFormatter DATETIME_LOCAL_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm");
+    private static final DateTimeFormatter EXPORT_TIMESTAMP_FORMATTER = DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss");
     private static final Map<String, String> ENTITY_LABELS = buildEntityLabels();
     private static final Map<String, String> ACTION_LABELS = buildActionLabels();
     private final TenantManagementService tenantManagementService;
     private final AuditLogService auditLogService;
+    private final AuditLogChangeFormatter auditLogChangeFormatter;
+    private final AuditLogCsvExporter auditLogCsvExporter;
 
     @GetMapping({"", "/"})
     public String panelHome() {
@@ -98,9 +104,32 @@ public class SuperAdminPanelController {
         model.addAttribute("createdFrom", toDateTimeLocalValue(createdFromValue));
         model.addAttribute("createdTo", toDateTimeLocalValue(createdToValue));
         model.addAttribute("size", auditPage.getSize());
+        model.addAttribute("exportLimit", auditLogService.exportLimit());
+        model.addAttribute("exportTruncated", auditPage.getTotalElements() > auditLogService.exportLimit());
         model.addAttribute("entityLabels", ENTITY_LABELS);
         model.addAttribute("actionLabels", ACTION_LABELS);
         return AUDIT_VIEW;
+    }
+
+    @GetMapping(value = "/audit/export", produces = "text/csv")
+    public ResponseEntity<byte[]> exportAudit(
+            @RequestParam(required = false) Long tenantId,
+            @RequestParam(required = false) String entity,
+            @RequestParam(required = false) String action,
+            @RequestParam(required = false) String actorId,
+            @RequestParam(required = false) String createdFrom,
+            @RequestParam(required = false) String createdTo,
+            @RequestParam(defaultValue = "5000") int size
+    ) {
+        OffsetDateTime createdFromValue = parseDateTime(createdFrom);
+        OffsetDateTime createdToValue = parseDateTime(createdTo);
+        var items = auditLogService.searchForExport(tenantId, entity, action, actorId, createdFromValue, createdToValue, size);
+        String csv = auditLogCsvExporter.toCsv(items);
+        String filename = "audit-log-" + OffsetDateTime.now(ZoneOffset.UTC).format(EXPORT_TIMESTAMP_FORMATTER) + ".csv";
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType("text/csv"))
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
+                .body(csv.getBytes(StandardCharsets.UTF_8));
     }
 
     @GetMapping("/tenants/{tenantId}")
@@ -312,35 +341,8 @@ public class SuperAdminPanelController {
     private Map<Long, List<String>> buildAuditDiffById(List<AuditLogItemResponse> entries) {
         Map<Long, List<String>> diffById = new LinkedHashMap<>();
         for (AuditLogItemResponse entry : entries) {
-            diffById.put(entry.id(), buildDiffLines(entry.oldValue(), entry.newValue()));
+            diffById.put(entry.id(), auditLogChangeFormatter.buildDiffLines(entry));
         }
         return diffById;
-    }
-
-    private List<String> buildDiffLines(Object oldValue, Object newValue) {
-        if (oldValue instanceof Map<?, ?> oldMap && newValue instanceof Map<?, ?> newMap) {
-            LinkedHashSet<String> keys = new LinkedHashSet<>();
-            oldMap.keySet().forEach(key -> keys.add(String.valueOf(key)));
-            newMap.keySet().forEach(key -> keys.add(String.valueOf(key)));
-
-            List<String> lines = new ArrayList<>();
-            for (String key : keys) {
-                Object left = oldMap.get(key);
-                Object right = newMap.get(key);
-                if (!Objects.equals(left, right)) {
-                    lines.add(key + ": " + renderValue(left) + " -> " + renderValue(right));
-                }
-            }
-            return lines.isEmpty() ? List.of("No top-level changes") : lines;
-        }
-
-        if (!Objects.equals(oldValue, newValue)) {
-            return List.of("value: " + renderValue(oldValue) + " -> " + renderValue(newValue));
-        }
-        return List.of("No changes");
-    }
-
-    private String renderValue(Object value) {
-        return value == null ? "null" : String.valueOf(value);
     }
 }

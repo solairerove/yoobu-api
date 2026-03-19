@@ -26,6 +26,10 @@ import org.springframework.util.StringUtils;
 @RequiredArgsConstructor
 public class AuditLogService {
 
+    private static final int DEFAULT_PAGE_SIZE = 20;
+    private static final int MAX_PAGE_SIZE = 50;
+    private static final int MAX_EXPORT_SIZE = 5_000;
+
     private final AuditLogRepository auditLogRepository;
     private final ObjectMapper objectMapper;
 
@@ -77,28 +81,29 @@ public class AuditLogService {
             int page,
             int size
     ) {
-        var pageable = PageRequest.of(
-                Math.max(page, 0),
-                normalizePageSize(size),
-                Sort.by(Sort.Direction.DESC, "createdAt").and(Sort.by(Sort.Direction.DESC, "id"))
-        );
-
-        Page<AuditLog> logs = auditLogRepository.findAll(
-                buildSearchSpec(
-                        tenantId,
-                        normalizeOptional(entity),
-                        normalizeOptional(action),
-                        normalizeOptional(actorId),
-                        createdFrom,
-                        createdTo
-                ),
-                pageable
-        );
+        Page<AuditLog> logs = searchLogs(tenantId, entity, action, actorId, createdFrom, createdTo, page, size, MAX_PAGE_SIZE);
 
         List<AuditLogItemResponse> items = logs.stream()
                 .map(this::toResponse)
                 .toList();
-        return new PageImpl<>(items, pageable, logs.getTotalElements());
+        return new PageImpl<>(items, logs.getPageable(), logs.getTotalElements());
+    }
+
+    public List<AuditLogItemResponse> searchForExport(
+            Long tenantId,
+            String entity,
+            String action,
+            String actorId,
+            OffsetDateTime createdFrom,
+            OffsetDateTime createdTo,
+            int size
+    ) {
+        Page<AuditLog> logs = searchLogs(tenantId, entity, action, actorId, createdFrom, createdTo, 0, size, MAX_EXPORT_SIZE);
+        return logs.stream().map(this::toResponse).toList();
+    }
+
+    public int exportLimit() {
+        return MAX_EXPORT_SIZE;
     }
 
     private void log(
@@ -210,11 +215,41 @@ public class AuditLogService {
         return StringUtils.hasText(value) ? value.trim() : null;
     }
 
-    private int normalizePageSize(int requestedSize) {
+    private int normalizePageSize(int requestedSize, int maxAllowedSize) {
         if (requestedSize < 1) {
-            return 20;
+            return DEFAULT_PAGE_SIZE;
         }
-        return Math.min(requestedSize, 50);
+        return Math.min(requestedSize, maxAllowedSize);
+    }
+
+    private Page<AuditLog> searchLogs(
+            Long tenantId,
+            String entity,
+            String action,
+            String actorId,
+            OffsetDateTime createdFrom,
+            OffsetDateTime createdTo,
+            int page,
+            int size,
+            int maxAllowedSize
+    ) {
+        var pageable = PageRequest.of(
+                Math.max(page, 0),
+                normalizePageSize(size, maxAllowedSize),
+                Sort.by(Sort.Direction.DESC, "createdAt").and(Sort.by(Sort.Direction.DESC, "id"))
+        );
+
+        return auditLogRepository.findAll(
+                buildSearchSpec(
+                        tenantId,
+                        normalizeOptional(entity),
+                        normalizeOptional(action),
+                        normalizeOptional(actorId),
+                        createdFrom,
+                        createdTo
+                ),
+                pageable
+        );
     }
 
     private Specification<AuditLog> buildSearchSpec(

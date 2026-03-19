@@ -240,6 +240,10 @@ thead th {
     color: #9b3d23;
 }
 
+.flash-warning {
+    color: #8a6f20;
+}
+
 .pager {
     display: flex;
     align-items: center;

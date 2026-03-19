@@ -61,7 +61,16 @@
             <input type="hidden" name="size" th:value="${size}">
             <input type="hidden" name="page" value="0">
             <button type="submit">Filter</button>
+            <a class="nav-link"
+               th:href="@{/superadmin/panel/audit/export(tenantId=${tenantId}, entity=${entity}, action=${action}, actorId=${actorId}, createdFrom=${createdFrom}, createdTo=${createdTo})}">
+                Export CSV
+            </a>
         </form>
+        <p class="flash flash-warning"
+           th:if="${exportTruncated}"
+           th:text="${'CSV export is limited to ' + exportLimit + ' rows. Narrow filters for a full extract.'}">
+            CSV export is limited to 5000 rows. Narrow filters for a full extract.
+        </p>
     </section>
 
     <section class="card">

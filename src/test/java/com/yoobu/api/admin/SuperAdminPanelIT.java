@@ -152,12 +152,22 @@ class SuperAdminPanelIT extends IntegrationTestSupport {
                 .andExpect(content().string(containsString("Audit log")))
                 .andExpect(content().string(containsString("Status updated")))
                 .andExpect(content().string(containsString("audit-admin")))
-                .andExpect(content().string(containsString("status: NEW -&gt; CONFIRMED")));
+                .andExpect(content().string(containsString("status: NEW -&gt; CONFIRMED")))
+                .andExpect(content().string(containsString("/superadmin/panel/audit/export")));
 
         superAdminGet(PANEL_AUDIT_PATH + "?tenantId=" + tenantId + "&entity=booking&action=UPDATE_STATUS")
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("Booking #" + bookingId)))
-                .andExpect(content().string(containsString("Status updated")));
+                .andExpect(content().string(containsString("Status updated")))
+                .andExpect(content().string(containsString(
+                        "/superadmin/panel/audit/export?tenantId=" + tenantId + "&amp;entity=booking&amp;action=UPDATE_STATUS"
+                )));
+
+        superAdminGet(PANEL_AUDIT_PATH + "/export?tenantId=" + tenantId + "&entity=booking&action=UPDATE_STATUS")
+                .andExpect(status().isOk())
+                .andExpect(content().contentType("text/csv"))
+                .andExpect(header().string("Content-Disposition", containsString("attachment; filename=\"audit-log-")))
+                .andExpect(content().string(containsString("status: NEW -> CONFIRMED")));
 
         superAdminGet(PANEL_TENANTS_PATH + "/" + tenantId)
                 .andExpect(status().isOk())

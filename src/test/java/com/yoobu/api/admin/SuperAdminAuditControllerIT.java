@@ -1,6 +1,7 @@
 package com.yoobu.api.admin;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -69,6 +70,23 @@ class SuperAdminAuditControllerIT extends IntegrationTestSupport {
         superAdminGet(AUDIT_PATH + "?page=0&size=500")
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.size").value(50));
+    }
+
+    @Test
+    void superAdminCanExportAuditLogAsCsv() throws Exception {
+        long tenantId = createFoodOrderTenant("audit-export", "Audit Export", "bot-export", "export-admin", "secret-1")
+                .get("id").asLong();
+        long serviceId = createService("audit-export", "export-admin", "secret-1", "Pizza", "12.50").get("id").asLong();
+        long bookingId = createBooking("audit-export", 1002L, serviceId, 1).get("id").asLong();
+        updateBookingStatus("audit-export", "export-admin", "secret-1", bookingId, BookingStatus.CONFIRMED);
+
+        superAdminGet(AUDIT_PATH + "/export?tenantId=" + tenantId + "&entity=booking&action=UPDATE_STATUS")
+                .andExpect(status().isOk())
+                .andExpect(content().contentType("text/csv"))
+                .andExpect(header().string("Content-Disposition", org.hamcrest.Matchers.containsString("attachment; filename=\"audit-log-")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("createdAt,tenantId,entity,entityId,action,actorId,changesSummary")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("\"UPDATE_STATUS\"")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("status: NEW -> CONFIRMED")));
     }
 
     private void assertAuditStatus(JsonNode payload, String expectedStatus) throws Exception {
