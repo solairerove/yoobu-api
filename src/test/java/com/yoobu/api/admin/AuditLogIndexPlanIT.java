@@ -3,6 +3,7 @@ package com.yoobu.api.admin;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.yoobu.api.IntegrationTestSupport;
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Locale;
 import java.util.stream.Collectors;
@@ -63,6 +64,24 @@ class AuditLogIndexPlanIT extends IntegrationTestSupport {
                 """, "CREATE");
 
         assertPlanContainsIndex(plan, "idx_audit_action_created_at_id");
+    }
+
+    @Test
+    void explainUsesCreatedAtIndexForDateRangeFilter() throws Exception {
+        seedAuditData();
+        OffsetDateTime from = OffsetDateTime.now().minusDays(30);
+        OffsetDateTime to = OffsetDateTime.now().plusDays(1);
+
+        String plan = explain("""
+                SELECT id
+                FROM audit_log
+                WHERE created_at >= ?
+                  AND created_at <= ?
+                ORDER BY created_at DESC, id DESC
+                LIMIT 20
+                """, from, to);
+
+        assertPlanContainsIndex(plan, "idx_audit_created_at_id");
     }
 
     private long seedAuditData() throws Exception {
