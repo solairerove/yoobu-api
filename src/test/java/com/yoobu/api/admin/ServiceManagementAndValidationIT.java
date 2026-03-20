@@ -7,6 +7,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.yoobu.api.IntegrationTestSupport;
+import com.yoobu.api.tenant.TenantType;
+import com.yoobu.api.tenant.dto.UpdateTenantRequest;
 import java.time.LocalDate;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.context.TestPropertySource;
@@ -38,6 +40,38 @@ class ServiceManagementAndValidationIT extends IntegrationTestSupport {
                 .andExpect(jsonPath("$.checkoutPhoneHint").value("+84..."))
                 .andExpect(jsonPath("$.checkoutNoteHint").value("No onion, gate code, delivery code"))
                 .andExpect(jsonPath("$.paymentQrUrl").value("https://cdn.example.com/payment-qr.png"));
+    }
+
+    @Test
+    void tenantPublicConfigReflectsUpdatedPaymentQrUrl() throws Exception {
+        long tenantId = createFoodOrderTenant(TENANT_SLUG, "Food Tenant", "food-bot", ADMIN_USERNAME, ADMIN_PASSWORD)
+                .get("id").asLong();
+
+        UpdateTenantRequest updateRequest = new UpdateTenantRequest(
+                "Food Tenant",
+                TenantType.FOOD_ORDER,
+                "food-bot",
+                123456789L,
+                DEFAULT_TENANT_TIMEZONE,
+                "USD",
+                "#112233",
+                "https://cdn.example.com/logo.png",
+                "Hello from test",
+                "Your full name",
+                "+84...",
+                "No onion, gate code, delivery code",
+                "https://cdn.example.com/payment-qr-updated.png",
+                ADMIN_USERNAME,
+                "",
+                true
+        );
+
+        superAdminPutJson("/superadmin/tenants/" + tenantId, updateRequest)
+                .andExpect(status().isOk());
+
+        tenantPublicGet(TENANT_SLUG, "/config")
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.paymentQrUrl").value("https://cdn.example.com/payment-qr-updated.png"));
     }
 
     @Test
