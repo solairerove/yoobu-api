@@ -131,6 +131,15 @@ class BookingLifecycleIT extends IntegrationTestSupport {
     }
 
     @Test
+    void customerCannotConfirmPaymentForUnknownBooking() throws Exception {
+        createFoodOrderTenant(TENANT_SLUG, "Food Tenant", "food-bot", ADMIN_USERNAME, ADMIN_PASSWORD);
+
+        tenantPublicPostJson(TENANT_SLUG, "/bookings/999999/confirm-payment", 101L, "")
+                .andExpect(status().isNotFound())
+                .andExpect(status().reason("Booking not found"));
+    }
+
+    @Test
     void adminCanListReadAndUpdateBookingStatus() throws Exception {
         createFoodOrderTenant(TENANT_SLUG, "Food Tenant", "food-bot", ADMIN_USERNAME, ADMIN_PASSWORD);
         long serviceId = createService(TENANT_SLUG, ADMIN_USERNAME, ADMIN_PASSWORD, "Pizza", "12.50")
@@ -208,6 +217,16 @@ class BookingLifecycleIT extends IntegrationTestSupport {
         )
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("CANCELLED"));
+
+        tenantAdminPutJson(
+                TENANT_SLUG,
+                "/bookings/" + firstBookingId + "/status",
+                ADMIN_USERNAME,
+                ADMIN_PASSWORD,
+                java.util.Map.of("status", "CONFIRMED")
+        )
+                .andExpect(status().isConflict())
+                .andExpect(status().reason("Invalid booking status transition from CANCELLED to CONFIRMED"));
 
         long secondBookingId = createBooking(TENANT_SLUG, 202L, serviceId, 1).get("id").asLong();
         confirmBookingPayment(TENANT_SLUG, secondBookingId, 202L);

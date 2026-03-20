@@ -2,6 +2,7 @@ package com.yoobu.api.admin;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -72,6 +73,40 @@ class ServiceManagementAndValidationIT extends IntegrationTestSupport {
         tenantPublicGet(TENANT_SLUG, "/config")
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.paymentQrUrl").value("https://cdn.example.com/payment-qr-updated.png"));
+    }
+
+    @Test
+    void tenantPublicConfigAllowsClearingPaymentQrUrl() throws Exception {
+        long tenantId = createFoodOrderTenant(TENANT_SLUG, "Food Tenant", "food-bot", ADMIN_USERNAME, ADMIN_PASSWORD)
+                .get("id").asLong();
+
+        UpdateTenantRequest updateRequest = new UpdateTenantRequest(
+                "Food Tenant",
+                TenantType.FOOD_ORDER,
+                "food-bot",
+                123456789L,
+                DEFAULT_TENANT_TIMEZONE,
+                "USD",
+                "#112233",
+                "https://cdn.example.com/logo.png",
+                "Hello from test",
+                "Your full name",
+                "+84...",
+                "No onion, gate code, delivery code",
+                "",
+                ADMIN_USERNAME,
+                "",
+                true
+        );
+
+        superAdminPutJson("/superadmin/tenants/" + tenantId, updateRequest)
+                .andExpect(status().isOk());
+
+        JsonNode configResponse = readJson(tenantPublicGet(TENANT_SLUG, "/config")
+                .andExpect(status().isOk())
+                .andReturn());
+        JsonNode paymentQrUrl = configResponse.get("paymentQrUrl");
+        assertTrue(paymentQrUrl == null || paymentQrUrl.isNull());
     }
 
     @Test
