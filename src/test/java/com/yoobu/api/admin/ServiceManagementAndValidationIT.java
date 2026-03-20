@@ -169,6 +169,7 @@ class ServiceManagementAndValidationIT extends IntegrationTestSupport {
                         {
                           "customerName": "",
                           "customerPhone": "",
+                          "deliveryAddress": "",
                           "deliveryDate": null,
                           "items": []
                         }

@@ -13,6 +13,7 @@ public record BookingResponse(
         BookingStatus status,
         String customerName,
         String customerPhone,
+        String deliveryAddress,
         BigDecimal totalPrice,
         String currency,
         LocalDate deliveryDate,

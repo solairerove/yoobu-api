@@ -36,6 +36,7 @@ class TenantAdminCatalogAndBookingIT extends IntegrationTestSupport {
                 {
                   "customerName": "Alice",
                   "customerPhone": "+48123456789",
+                  "deliveryAddress": "123 Nguyen Van Linh, Hai Chau",
                   "deliveryDate": "%s",
                   "note": "Leave at the door",
                   "items": [
@@ -52,6 +53,7 @@ class TenantAdminCatalogAndBookingIT extends IntegrationTestSupport {
                 .andExpect(jsonPath("$.type").value("ORDER"))
                 .andExpect(jsonPath("$.status").value("NEW"))
                 .andExpect(jsonPath("$.customerName").value("Alice"))
+                .andExpect(jsonPath("$.deliveryAddress").value("123 Nguyen Van Linh, Hai Chau"))
                 .andExpect(jsonPath("$.totalPrice").value(25.0))
                 .andExpect(jsonPath("$.items.length()").value(1))
                 .andExpect(jsonPath("$.items[0].serviceName").value("Pizza"))

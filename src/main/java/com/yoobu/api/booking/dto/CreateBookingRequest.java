@@ -10,6 +10,7 @@ import java.util.List;
 public record CreateBookingRequest(
         @NotBlank String customerName,
         @NotBlank String customerPhone,
+        @NotBlank String deliveryAddress,
         @NotNull LocalDate deliveryDate,
         String note,
         @NotEmpty List<@Valid BookingItemRequest> items

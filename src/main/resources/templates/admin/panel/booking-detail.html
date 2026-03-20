@@ -33,6 +33,7 @@
             <dl class="summary">
                 <div><dt>Status</dt><dd th:text="${booking.status}">NEW</dd></div>
                 <div><dt>Customer</dt><dd th:text="${booking.customerName}">Alice</dd></div>
+                <div><dt>Delivery address</dt><dd th:text="${booking.deliveryAddress ?: 'N/A'}">123 Main St</dd></div>
                 <div><dt>Delivery date</dt><dd th:text="${booking.deliveryDate}">2026-03-14</dd></div>
                 <div><dt>Total</dt><dd th:text="${@adminPanelViewFormats.money(booking.totalPrice, booking.currency)}">USD 25.00</dd></div>
                 <div><dt>Created</dt><dd th:text="${@adminPanelViewFormats.timestamp(booking.createdAt)}">2026-03-14 00:00 Europe/Warsaw</dd></div>

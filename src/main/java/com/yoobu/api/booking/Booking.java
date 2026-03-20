@@ -50,6 +50,9 @@ public class Booking {
     @Column(name = "customer_phone", length = 50)
     private String customerPhone;
 
+    @Column(name = "delivery_address", columnDefinition = "TEXT")
+    private String deliveryAddress;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private BookingStatus status;

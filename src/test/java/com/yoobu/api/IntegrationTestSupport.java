@@ -252,6 +252,7 @@ public abstract class IntegrationTestSupport {
                 {
                   "customerName": "Alice",
                   "customerPhone": "+48123456789",
+                  "deliveryAddress": "123 Nguyen Van Linh, Hai Chau",
                   "deliveryDate": "%s",
                   "note": "Leave at the door",
                   "items": [

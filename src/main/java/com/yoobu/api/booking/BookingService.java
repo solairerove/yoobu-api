@@ -61,6 +61,7 @@ public class BookingService {
         booking.setTelegramUserId(telegramUserId);
         booking.setCustomerName(request.customerName());
         booking.setCustomerPhone(request.customerPhone());
+        booking.setDeliveryAddress(request.deliveryAddress());
         booking.setStatus(BookingStatus.NEW);
         booking.setNote(request.note());
         booking.setDeliveryDate(request.deliveryDate());
@@ -326,6 +327,7 @@ public class BookingService {
         snapshot.put("telegramUserId", booking.getTelegramUserId());
         snapshot.put("customerName", booking.getCustomerName());
         snapshot.put("customerPhone", booking.getCustomerPhone());
+        snapshot.put("deliveryAddress", booking.getDeliveryAddress());
         snapshot.put("status", booking.getStatus());
         snapshot.put("note", booking.getNote());
         snapshot.put("totalPrice", booking.getTotalPrice());
