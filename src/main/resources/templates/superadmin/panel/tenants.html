@@ -40,11 +40,12 @@
             </label>
             <input type="hidden" name="size" th:value="${size}">
             <input type="hidden" name="page" value="0">
-            <button type="submit">Search</button>
+            <button type="submit" class="button-secondary">Search</button>
         </form>
     </section>
 
     <section class="card">
+        <div class="table-wrap">
         <table>
             <thead>
             <tr>
@@ -81,6 +82,7 @@
             </tr>
             </tbody>
         </table>
+        </div>
         <div class="pager" th:if="${tenantPage.totalPages > 1}">
             <a class="nav-link"
                th:if="${tenantPage.hasPrevious()}"

@@ -45,11 +45,12 @@
             </label>
             <input type="hidden" name="size" th:value="${size}">
             <input type="hidden" name="page" value="0">
-            <button type="submit">Filter</button>
+            <button type="submit" class="button-secondary">Filter</button>
         </form>
     </section>
 
     <section class="card">
+        <div class="table-wrap">
         <table>
             <thead>
             <tr>
@@ -82,7 +83,7 @@
                                     th:selected="${statusOption == booking.status}"></option>
                         </select>
                         <input type="hidden" name="returnTo" value="list">
-                        <button type="submit">Update</button>
+                        <button type="submit" class="button-secondary button-compact">Update</button>
                     </form>
                 </td>
                 <td th:text="${booking.deliveryDate}">2026-03-14</td>
@@ -95,6 +96,7 @@
             </tr>
             </tbody>
         </table>
+        </div>
         <div class="pager" th:if="${bookingPage.totalPages > 1}">
             <a class="nav-link"
                th:if="${bookingPage.hasPrevious()}"

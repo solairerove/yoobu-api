@@ -60,8 +60,8 @@
             </label>
             <input type="hidden" name="size" th:value="${size}">
             <input type="hidden" name="page" value="0">
-            <button type="submit">Filter</button>
-            <a class="nav-link"
+            <button type="submit" class="button-secondary">Filter</button>
+            <a class="button-link button-secondary"
                th:href="@{/superadmin/panel/audit/export(tenantId=${tenantId}, entity=${entity}, action=${action}, actorId=${actorId}, createdFrom=${createdFrom}, createdTo=${createdTo})}">
                 Export CSV
             </a>
@@ -74,6 +74,7 @@
     </section>
 
     <section class="card">
+        <div class="table-wrap">
         <table>
             <thead>
             <tr>
@@ -101,6 +102,7 @@
             </tr>
             </tbody>
         </table>
+        </div>
         <div class="pager" th:if="${auditPage.totalPages > 1}">
             <a class="nav-link"
                th:if="${auditPage.hasPrevious()}"
