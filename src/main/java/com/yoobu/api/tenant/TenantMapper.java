@@ -22,5 +22,6 @@ public interface TenantMapper {
     @Mapping(target = "checkoutNameHint", expression = "java(settings.checkout().nameHint())")
     @Mapping(target = "checkoutPhoneHint", expression = "java(settings.checkout().phoneHint())")
     @Mapping(target = "checkoutNoteHint", expression = "java(settings.checkout().noteHint())")
+    @Mapping(target = "paymentQrUrl", expression = "java(settings.payment().qrUrl())")
     TenantConfigResponse toConfigResponse(Tenant tenant, TenantSettings settings);
 }

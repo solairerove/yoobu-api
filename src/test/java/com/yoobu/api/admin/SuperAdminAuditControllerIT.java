@@ -29,6 +29,7 @@ class SuperAdminAuditControllerIT extends IntegrationTestSupport {
 
         long serviceId = createService("audit-one", "admin-1", "secret-1", "Pizza", "12.50").get("id").asLong();
         long bookingId = createBooking("audit-one", 1001L, serviceId, 1).get("id").asLong();
+        confirmBookingPayment("audit-one", bookingId, 1001L);
         updateBookingStatus("audit-one", "admin-1", "secret-1", bookingId, BookingStatus.CONFIRMED);
 
         superAdminGet(AUDIT_PATH + "?tenantId=" + tenantOneId + "&entity=booking&action=UPDATE_STATUS&page=0&size=5")
@@ -45,7 +46,7 @@ class SuperAdminAuditControllerIT extends IntegrationTestSupport {
         JsonNode updateStatusAudit = readJson(superAdminGet(
                 AUDIT_PATH + "?tenantId=" + tenantOneId + "&entity=booking&action=UPDATE_STATUS&page=0&size=5"
         ).andExpect(status().isOk()).andReturn()).get("items").get(0);
-        assertAuditStatus(updateStatusAudit.get("oldValue"), "NEW");
+        assertAuditStatus(updateStatusAudit.get("oldValue"), "PAYMENT_PENDING");
         assertAuditStatus(updateStatusAudit.get("newValue"), "CONFIRMED");
 
         superAdminGet(AUDIT_PATH + "?tenantId=" + tenantTwoId + "&page=0&size=1")
@@ -78,6 +79,7 @@ class SuperAdminAuditControllerIT extends IntegrationTestSupport {
                 .get("id").asLong();
         long serviceId = createService("audit-export", "export-admin", "secret-1", "Pizza", "12.50").get("id").asLong();
         long bookingId = createBooking("audit-export", 1002L, serviceId, 1).get("id").asLong();
+        confirmBookingPayment("audit-export", bookingId, 1002L);
         updateBookingStatus("audit-export", "export-admin", "secret-1", bookingId, BookingStatus.CONFIRMED);
 
         superAdminGet(AUDIT_PATH + "/export?tenantId=" + tenantId + "&entity=booking&action=UPDATE_STATUS")
@@ -86,7 +88,7 @@ class SuperAdminAuditControllerIT extends IntegrationTestSupport {
                 .andExpect(header().string("Content-Disposition", org.hamcrest.Matchers.containsString("attachment; filename=\"audit-log-")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("createdAt,tenantId,entity,entityId,action,actorId,changesSummary")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("\"UPDATE_STATUS\"")))
-                .andExpect(content().string(org.hamcrest.Matchers.containsString("status: NEW -> CONFIRMED")));
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("status: PAYMENT_PENDING -> CONFIRMED")));
     }
 
     private void assertAuditStatus(JsonNode payload, String expectedStatus) throws Exception {

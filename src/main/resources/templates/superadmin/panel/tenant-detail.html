@@ -59,6 +59,7 @@
                 <div><dt>Checkout name hint</dt><dd th:text="${tenant.config['checkout_name_hint'] ?: 'N/A'}">Your full name</dd></div>
                 <div><dt>Checkout phone hint</dt><dd th:text="${tenant.config['checkout_phone_hint'] ?: 'N/A'}">+84...</dd></div>
                 <div><dt>Checkout note hint</dt><dd th:text="${tenant.config['checkout_note_hint'] ?: 'N/A'}">No onion, gate code, delivery code</dd></div>
+                <div><dt>Payment QR URL</dt><dd th:text="${tenant.config['payment_qr_url'] ?: 'N/A'}">https://cdn.example.com/payment-qr.png</dd></div>
                 <div><dt>Currency</dt><dd th:text="${tenant.config['currency'] ?: 'USD'}">USD</dd></div>
                 <div><dt>Admin username</dt><dd th:text="${tenant.config['admin_username'] ?: 'N/A'}">admin</dd></div>
             </dl>

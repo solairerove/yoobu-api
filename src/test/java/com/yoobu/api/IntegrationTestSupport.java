@@ -122,6 +122,7 @@ public abstract class IntegrationTestSupport {
                 "Your full name",
                 "+84...",
                 "No onion, gate code, delivery code",
+                "https://cdn.example.com/payment-qr.png",
                 adminUsername,
                 adminPassword
         );
@@ -240,6 +241,11 @@ public abstract class IntegrationTestSupport {
                         }
                         """.formatted(statusValue)
         )
+                .andExpect(status().isOk());
+    }
+
+    protected void confirmBookingPayment(String slug, long bookingId, long telegramUserId) throws Exception {
+        mockMvc.perform(withTelegramUser(post(publicPath(slug, "/bookings/" + bookingId + "/confirm-payment")), telegramUserId))
                 .andExpect(status().isOk());
     }
 

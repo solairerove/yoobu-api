@@ -150,6 +150,7 @@ public class TenantManagementService {
         upsertConfig(existingConfigs, savedTenant, TenantConfigKeys.CHECKOUT_NAME_HINT, request.checkoutNameHint(), true);
         upsertConfig(existingConfigs, savedTenant, TenantConfigKeys.CHECKOUT_PHONE_HINT, request.checkoutPhoneHint(), true);
         upsertConfig(existingConfigs, savedTenant, TenantConfigKeys.CHECKOUT_NOTE_HINT, request.checkoutNoteHint(), true);
+        upsertConfig(existingConfigs, savedTenant, TenantConfigKeys.PAYMENT_QR_URL, request.paymentQrUrl(), true);
         auditLogService.logUpdate(
                 savedTenant.getId(),
                 ENTITY_NAME,
@@ -190,6 +191,7 @@ public class TenantManagementService {
         addConfig(configs, tenant, TenantConfigKeys.CHECKOUT_NAME_HINT, request.checkoutNameHint());
         addConfig(configs, tenant, TenantConfigKeys.CHECKOUT_PHONE_HINT, request.checkoutPhoneHint());
         addConfig(configs, tenant, TenantConfigKeys.CHECKOUT_NOTE_HINT, request.checkoutNoteHint());
+        addConfig(configs, tenant, TenantConfigKeys.PAYMENT_QR_URL, request.paymentQrUrl());
         return configs;
     }
 
@@ -281,6 +283,7 @@ public class TenantManagementService {
         TenantSettings.BrandingSettings branding = settings.branding();
         TenantSettings.CheckoutSettings checkout = settings.checkout();
         TenantSettings.PricingSettings pricing = settings.pricing();
+        TenantSettings.PaymentSettings payment = settings.payment();
         Map<String, Object> snapshot = new LinkedHashMap<>();
         snapshot.put("id", tenant.getId());
         snapshot.put("slug", tenant.getSlug());
@@ -298,6 +301,7 @@ public class TenantManagementService {
         snapshot.put("checkoutNameHint", checkout.nameHint());
         snapshot.put("checkoutPhoneHint", checkout.phoneHint());
         snapshot.put("checkoutNoteHint", checkout.noteHint());
+        snapshot.put("paymentQrUrl", payment.qrUrl());
         snapshot.put("currency", pricing.currency());
         return snapshot;
     }

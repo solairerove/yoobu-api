@@ -12,6 +12,7 @@ public record TenantConfigResponse(
         String welcomeMessage,
         String checkoutNameHint,
         String checkoutPhoneHint,
-        String checkoutNoteHint
+        String checkoutNoteHint,
+        String paymentQrUrl
 ) {
 }

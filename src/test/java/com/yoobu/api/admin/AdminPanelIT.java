@@ -32,6 +32,7 @@ class AdminPanelIT extends IntegrationTestSupport {
         long serviceId = service.get("id").asLong();
         JsonNode booking = createBooking(TENANT_SLUG, 777L, serviceId, 2);
         long bookingId = booking.get("id").asLong();
+        confirmBookingPayment(TENANT_SLUG, bookingId, 777L);
 
         tenantAdminGet(TENANT_SLUG, "/panel", ADMIN_USERNAME, ADMIN_PASSWORD)
                 .andExpect(status().is3xxRedirection())
@@ -161,6 +162,7 @@ class AdminPanelIT extends IntegrationTestSupport {
         long serviceId = service.get("id").asLong();
         JsonNode booking = createBooking(TENANT_SLUG, 777L, serviceId, 2);
         long bookingId = booking.get("id").asLong();
+        confirmBookingPayment(TENANT_SLUG, bookingId, 777L);
 
         tenantAdminGet(TENANT_SLUG, "/panel/bookings", ADMIN_USERNAME, ADMIN_PASSWORD)
                 .andExpect(status().isOk())
@@ -241,6 +243,7 @@ class AdminPanelIT extends IntegrationTestSupport {
         long serviceId = service.get("id").asLong();
         JsonNode booking = createBooking(TENANT_SLUG, 777L, serviceId, 2);
         long bookingId = booking.get("id").asLong();
+        confirmBookingPayment(TENANT_SLUG, bookingId, 777L);
 
         tenantAdminPostForm(
                 TENANT_SLUG,
@@ -263,6 +266,7 @@ class AdminPanelIT extends IntegrationTestSupport {
         JsonNode booking = createBooking(TENANT_SLUG, 777L, serviceId, 2);
         long bookingId = booking.get("id").asLong();
 
+        confirmBookingPayment(TENANT_SLUG, bookingId, 777L);
         updateBookingStatus(TENANT_SLUG, ADMIN_USERNAME, ADMIN_PASSWORD, bookingId, BookingStatus.CONFIRMED);
         updateBookingStatus(TENANT_SLUG, ADMIN_USERNAME, ADMIN_PASSWORD, bookingId, BookingStatus.DONE);
 

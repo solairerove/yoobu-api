@@ -68,6 +68,10 @@ public final class TenantSettings {
         return new PricingSettings(configuredCurrency);
     }
 
+    public PaymentSettings payment() {
+        return new PaymentSettings(values.get(TenantConfigKeys.PAYMENT_QR_URL));
+    }
+
     public record AdminSettings(
             String username,
             String passwordHash,
@@ -97,6 +101,11 @@ public final class TenantSettings {
 
     public record PricingSettings(
             String currency
+    ) {
+    }
+
+    public record PaymentSettings(
+            String qrUrl
     ) {
     }
 }

@@ -43,6 +43,7 @@ class SuperAdminPanelIT extends IntegrationTestSupport {
                 Map.entry("checkoutNameHint", "Your full name"),
                 Map.entry("checkoutPhoneHint", "+84..."),
                 Map.entry("checkoutNoteHint", "No onion, gate code, delivery code"),
+                Map.entry("paymentQrUrl", "https://cdn.example.com/payment-qr.png"),
                 Map.entry("adminUsername", "panel-admin"),
                 Map.entry("adminPassword", "panel-secret")
         ))
@@ -68,6 +69,7 @@ class SuperAdminPanelIT extends IntegrationTestSupport {
                 .andExpect(content().string(containsString("Your full name")))
                 .andExpect(content().string(containsString("+84...")))
                 .andExpect(content().string(containsString("No onion, gate code, delivery code")))
+                .andExpect(content().string(containsString("https://cdn.example.com/payment-qr.png")))
                 .andExpect(content().string(containsString("USD")))
                 .andExpect(content().string(containsString("Edit tenant")))
                 .andExpect(content().string(containsString("/t/panel-tenant/services")));
@@ -97,6 +99,7 @@ class SuperAdminPanelIT extends IntegrationTestSupport {
                 Map.entry("checkoutNameHint", "Contact person"),
                 Map.entry("checkoutPhoneHint", "+1 555..."),
                 Map.entry("checkoutNoteHint", "Ring bell twice"),
+                Map.entry("paymentQrUrl", "https://cdn.example.com/payment-qr-updated.png"),
                 Map.entry("adminUsername", "panel-admin-2"),
                 Map.entry("adminPassword", "panel-secret-2"),
                 Map.entry("active", "true")
@@ -113,6 +116,7 @@ class SuperAdminPanelIT extends IntegrationTestSupport {
                 .andExpect(content().string(containsString("Contact person")))
                 .andExpect(content().string(containsString("+1 555...")))
                 .andExpect(content().string(containsString("Ring bell twice")))
+                .andExpect(content().string(containsString("https://cdn.example.com/payment-qr-updated.png")))
                 .andExpect(content().string(containsString("THB")));
 
         tenantAdminGet("panel-edit", "/services", "panel-admin", "panel-secret")
@@ -140,6 +144,7 @@ class SuperAdminPanelIT extends IntegrationTestSupport {
                 Map.entry("checkoutNameHint", "Your full name"),
                 Map.entry("checkoutPhoneHint", "+84..."),
                 Map.entry("checkoutNoteHint", "No onion, gate code, delivery code"),
+                Map.entry("paymentQrUrl", "https://cdn.example.com/payment-qr.png"),
                 Map.entry("adminUsername", "panel-admin"),
                 Map.entry("adminPassword", "panel-secret")
         ))
@@ -155,6 +160,7 @@ class SuperAdminPanelIT extends IntegrationTestSupport {
                 .get("id").asLong();
         long bookingId = createBooking("panel-audit", 707L, serviceId, 1)
                 .get("id").asLong();
+        confirmBookingPayment("panel-audit", bookingId, 707L);
         updateBookingStatus("panel-audit", "audit-admin", "audit-secret", bookingId, BookingStatus.CONFIRMED);
 
         superAdminGet(PANEL_AUDIT_PATH)
@@ -162,7 +168,7 @@ class SuperAdminPanelIT extends IntegrationTestSupport {
                 .andExpect(content().string(containsString("Audit log")))
                 .andExpect(content().string(containsString("Status updated")))
                 .andExpect(content().string(containsString("audit-admin")))
-                .andExpect(content().string(containsString("status: NEW -&gt; CONFIRMED")))
+                .andExpect(content().string(containsString("status: PAYMENT_PENDING -&gt; CONFIRMED")))
                 .andExpect(content().string(containsString("/superadmin/panel/audit/export")));
 
         superAdminGet(PANEL_AUDIT_PATH + "?tenantId=" + tenantId + "&entity=booking&action=UPDATE_STATUS")
@@ -177,7 +183,7 @@ class SuperAdminPanelIT extends IntegrationTestSupport {
                 .andExpect(status().isOk())
                 .andExpect(content().contentType("text/csv"))
                 .andExpect(header().string("Content-Disposition", containsString("attachment; filename=\"audit-log-")))
-                .andExpect(content().string(containsString("status: NEW -> CONFIRMED")));
+                .andExpect(content().string(containsString("status: PAYMENT_PENDING -> CONFIRMED")));
 
         superAdminGet(PANEL_TENANTS_PATH + "/" + tenantId)
                 .andExpect(status().isOk())

@@ -102,6 +102,21 @@ class BookingLifecycleIT extends IntegrationTestSupport {
                 ADMIN_PASSWORD,
                 java.util.Map.of("status", "CONFIRMED")
         )
+                .andExpect(status().isConflict())
+                .andExpect(status().reason("Invalid booking status transition from NEW to CONFIRMED"));
+
+        tenantPublicPostJson(TENANT_SLUG, "/bookings/" + bookingId + "/confirm-payment", 101L, "")
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(bookingId))
+                .andExpect(jsonPath("$.status").value("PAYMENT_PENDING"));
+
+        tenantAdminPutJson(
+                TENANT_SLUG,
+                "/bookings/" + bookingId + "/status",
+                ADMIN_USERNAME,
+                ADMIN_PASSWORD,
+                java.util.Map.of("status", "CONFIRMED")
+        )
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(bookingId))
                 .andExpect(jsonPath("$.status").value("CONFIRMED"));
@@ -110,7 +125,7 @@ class BookingLifecycleIT extends IntegrationTestSupport {
         JsonNode oldValue = oldAuditValue(auditLog);
         JsonNode newValue = newAuditValue(auditLog);
         assertEquals(ADMIN_USERNAME, auditLog.get("actor_id").asText());
-        assertEquals("NEW", oldValue.get("status").asText());
+        assertEquals("PAYMENT_PENDING", oldValue.get("status").asText());
         assertEquals("CONFIRMED", newValue.get("status").asText());
     }
 
@@ -121,6 +136,7 @@ class BookingLifecycleIT extends IntegrationTestSupport {
                 .get("id").asLong();
         long bookingId = createBooking(TENANT_SLUG, 101L, serviceId, 1).get("id").asLong();
 
+        confirmBookingPayment(TENANT_SLUG, bookingId, 101L);
         updateBookingStatus(TENANT_SLUG, ADMIN_USERNAME, ADMIN_PASSWORD, bookingId, BookingStatus.CONFIRMED);
         updateBookingStatus(TENANT_SLUG, ADMIN_USERNAME, ADMIN_PASSWORD, bookingId, BookingStatus.DONE);
 
@@ -136,6 +152,7 @@ class BookingLifecycleIT extends IntegrationTestSupport {
                 .get("id").asLong();
         long bookingId = createBooking(TENANT_SLUG, 101L, serviceId, 1).get("id").asLong();
 
+        confirmBookingPayment(TENANT_SLUG, bookingId, 101L);
         updateBookingStatus(TENANT_SLUG, ADMIN_USERNAME, ADMIN_PASSWORD, bookingId, BookingStatus.CONFIRMED);
         updateBookingStatus(TENANT_SLUG, ADMIN_USERNAME, ADMIN_PASSWORD, bookingId, BookingStatus.DONE);
 
@@ -177,6 +194,7 @@ class BookingLifecycleIT extends IntegrationTestSupport {
                 "Your full name",
                 "+84...",
                 "No onion, gate code, delivery code",
+                "https://cdn.example.com/payment-qr-updated.png",
                 ADMIN_USERNAME,
                 "",
                 true

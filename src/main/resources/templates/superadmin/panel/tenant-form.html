@@ -127,6 +127,11 @@
                 </label>
             </div>
 
+            <label>
+                <span>Payment QR URL</span>
+                <input type="text" th:field="*{paymentQrUrl}" placeholder="https://cdn.example.com/payment-qr.png">
+            </label>
+
             <label th:if="${formMode == 'edit'}">
                 <span>Active</span>
                 <input type="checkbox" th:field="*{active}">

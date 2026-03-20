@@ -139,6 +139,36 @@ public class BookingService {
         return toResponse(savedBooking);
     }
 
+    @Transactional
+    public BookingResponse confirmMyBookingPayment(Long bookingId, Long telegramUserId) {
+        requireFoodOrderTenant();
+        Booking booking = findCustomerBooking(bookingId, telegramUserId);
+
+        if (booking.getStatus() != BookingStatus.NEW) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "Payment can only be confirmed for booking in NEW status"
+            );
+        }
+
+        Map<String, Object> oldSnapshot = toAuditSnapshot(booking);
+        booking.setStatus(BookingStatus.PAYMENT_PENDING);
+        booking.setUpdatedAt(nowUtc());
+
+        Booking savedBooking = persistBookingWithConflictGuard(booking);
+        auditLogService.logAction(
+                savedBooking.getTenant().getId(),
+                ENTITY_NAME,
+                savedBooking.getId(),
+                "CONFIRM_PAYMENT",
+                telegramUserId.toString(),
+                oldSnapshot,
+                toAuditSnapshot(savedBooking)
+        );
+
+        return toResponse(savedBooking);
+    }
+
     @Transactional(readOnly = true)
     public List<BookingResponse> getAdminBookings(BookingStatus status, LocalDate deliveryDate) {
         requireFoodOrderTenant();
@@ -220,9 +250,14 @@ public class BookingService {
 
     public List<BookingStatus> getAllowedAdminStatuses(BookingStatus currentStatus) {
         EnumSet<BookingStatus> allowedStatuses = switch (currentStatus) {
-            case NEW -> EnumSet.of(BookingStatus.NEW, BookingStatus.CONFIRMED, BookingStatus.CANCELLED);
+            case NEW -> EnumSet.of(BookingStatus.NEW, BookingStatus.CANCELLED);
+            case PAYMENT_PENDING -> EnumSet.of(
+                    BookingStatus.PAYMENT_PENDING,
+                    BookingStatus.CONFIRMED,
+                    BookingStatus.CANCELLED
+            );
             case CONFIRMED -> EnumSet.of(BookingStatus.CONFIRMED, BookingStatus.DONE, BookingStatus.CANCELLED);
-            case DONE -> EnumSet.of(BookingStatus.DONE);
+            case DONE -> EnumSet.of(BookingStatus.DONE, BookingStatus.CANCELLED);
             case CANCELLED -> EnumSet.of(BookingStatus.CANCELLED);
         };
         return List.copyOf(allowedStatuses);

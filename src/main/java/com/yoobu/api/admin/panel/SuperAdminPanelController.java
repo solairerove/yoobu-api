@@ -216,6 +216,7 @@ public class SuperAdminPanelController {
                 form.getCheckoutNameHint(),
                 form.getCheckoutPhoneHint(),
                 form.getCheckoutNoteHint(),
+                form.getPaymentQrUrl(),
                 form.getAdminUsername(),
                 form.getAdminPassword()
         );
@@ -235,6 +236,7 @@ public class SuperAdminPanelController {
                 form.getCheckoutNameHint(),
                 form.getCheckoutPhoneHint(),
                 form.getCheckoutNoteHint(),
+                form.getPaymentQrUrl(),
                 form.getAdminUsername(),
                 form.getAdminPassword(),
                 form.isActive()
@@ -257,6 +259,7 @@ public class SuperAdminPanelController {
         form.setCheckoutNameHint(config.get(TenantConfigKeys.CHECKOUT_NAME_HINT));
         form.setCheckoutPhoneHint(config.get(TenantConfigKeys.CHECKOUT_PHONE_HINT));
         form.setCheckoutNoteHint(config.get(TenantConfigKeys.CHECKOUT_NOTE_HINT));
+        form.setPaymentQrUrl(config.get(TenantConfigKeys.PAYMENT_QR_URL));
         form.setAdminUsername(config.get(TenantConfigKeys.ADMIN_USERNAME));
         form.setActive(tenant.active());
         return form;
@@ -341,6 +344,7 @@ public class SuperAdminPanelController {
         labels.put("UPDATE", "Updated");
         labels.put("DELETE", "Deleted");
         labels.put("UPDATE_STATUS", "Status updated");
+        labels.put("CONFIRM_PAYMENT", "Payment confirmed by client");
         labels.put("CANCEL", "Cancelled");
         return labels;
     }

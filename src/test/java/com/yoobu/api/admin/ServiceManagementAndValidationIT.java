@@ -36,7 +36,8 @@ class ServiceManagementAndValidationIT extends IntegrationTestSupport {
                 .andExpect(jsonPath("$.welcomeMessage").value("Hello from test"))
                 .andExpect(jsonPath("$.checkoutNameHint").value("Your full name"))
                 .andExpect(jsonPath("$.checkoutPhoneHint").value("+84..."))
-                .andExpect(jsonPath("$.checkoutNoteHint").value("No onion, gate code, delivery code"));
+                .andExpect(jsonPath("$.checkoutNoteHint").value("No onion, gate code, delivery code"))
+                .andExpect(jsonPath("$.paymentQrUrl").value("https://cdn.example.com/payment-qr.png"));
     }
 
     @Test
@@ -123,6 +124,7 @@ class ServiceManagementAndValidationIT extends IntegrationTestSupport {
         long firstBookingId = createBooking(TENANT_SLUG, 101L, serviceId, 1).get("id").asLong();
         long secondBookingId = createBooking(TENANT_SLUG, 202L, serviceId, 2).get("id").asLong();
 
+        confirmBookingPayment(TENANT_SLUG, secondBookingId, 202L);
         updateBookingStatus(TENANT_SLUG, ADMIN_USERNAME, ADMIN_PASSWORD, secondBookingId, "CONFIRMED");
 
         tenantAdminGet(TENANT_SLUG, "/bookings?status=CONFIRMED", ADMIN_USERNAME, ADMIN_PASSWORD)

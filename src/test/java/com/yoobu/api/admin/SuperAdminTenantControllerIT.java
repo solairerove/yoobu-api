@@ -138,6 +138,7 @@ class SuperAdminTenantControllerIT extends IntegrationTestSupport {
                 "Contact person",
                 "+1 555...",
                 "Ring bell twice",
+                "https://cdn.example.com/payment-qr-updated.png",
                 "admin-after",
                 "secret-after",
                 true
@@ -167,7 +168,8 @@ class SuperAdminTenantControllerIT extends IntegrationTestSupport {
                 .andExpect(jsonPath("$.config.welcome_message").value("Updated welcome"))
                 .andExpect(jsonPath("$.config.checkout_name_hint").value("Contact person"))
                 .andExpect(jsonPath("$.config.checkout_phone_hint").value("+1 555..."))
-                .andExpect(jsonPath("$.config.checkout_note_hint").value("Ring bell twice"));
+                .andExpect(jsonPath("$.config.checkout_note_hint").value("Ring bell twice"))
+                .andExpect(jsonPath("$.config.payment_qr_url").value("https://cdn.example.com/payment-qr-updated.png"));
 
         tenantAdminGet("tenant-edit", "/services", "admin-before", "secret-before")
                 .andExpect(status().isUnauthorized());
@@ -203,6 +205,7 @@ class SuperAdminTenantControllerIT extends IntegrationTestSupport {
                 "Receiver name",
                 "+66...",
                 "Leave at lobby",
+                "https://cdn.example.com/payment-qr-updated.png",
                 "admin-after",
                 "",
                 true
@@ -222,7 +225,8 @@ class SuperAdminTenantControllerIT extends IntegrationTestSupport {
                 .andExpect(jsonPath("$.config.primary_color").value("#778899"))
                 .andExpect(jsonPath("$.config.checkout_name_hint").value("Receiver name"))
                 .andExpect(jsonPath("$.config.checkout_phone_hint").value("+66..."))
-                .andExpect(jsonPath("$.config.checkout_note_hint").value("Leave at lobby"));
+                .andExpect(jsonPath("$.config.checkout_note_hint").value("Leave at lobby"))
+                .andExpect(jsonPath("$.config.payment_qr_url").value("https://cdn.example.com/payment-qr-updated.png"));
 
         tenantAdminGet("tenant-keep-pass", "/services", "admin-before", "secret-before")
                 .andExpect(status().isUnauthorized());
@@ -241,6 +245,7 @@ class SuperAdminTenantControllerIT extends IntegrationTestSupport {
                 TenantType.FOOD_ORDER,
                 "",
                 null,
+                "",
                 "",
                 "",
                 "",
@@ -274,7 +279,8 @@ class SuperAdminTenantControllerIT extends IntegrationTestSupport {
                 .andExpect(jsonPath("$.config.welcome_message").doesNotExist())
                 .andExpect(jsonPath("$.config.checkout_name_hint").doesNotExist())
                 .andExpect(jsonPath("$.config.checkout_phone_hint").doesNotExist())
-                .andExpect(jsonPath("$.config.checkout_note_hint").doesNotExist());
+                .andExpect(jsonPath("$.config.checkout_note_hint").doesNotExist())
+                .andExpect(jsonPath("$.config.payment_qr_url").doesNotExist());
 
         ResponseStatusException publicAccessFailure = assertTenantNotFound(() ->
                 tenantPublicGet("tenant-clear", "/services"));
