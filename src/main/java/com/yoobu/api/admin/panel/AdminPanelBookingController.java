@@ -3,7 +3,6 @@ package com.yoobu.api.admin.panel;
 import com.yoobu.api.booking.BookingService;
 import com.yoobu.api.booking.BookingStatus;
 import com.yoobu.api.booking.dto.BookingResponse;
-import com.yoobu.api.tenant.TenantSettingsService;
 import jakarta.validation.Valid;
 import java.time.LocalDate;
 import java.util.Map;
@@ -34,7 +33,6 @@ public class AdminPanelBookingController {
     private static final String FLASH_TYPE_ERROR = "error";
 
     private final BookingService bookingService;
-    private final TenantSettingsService tenantSettingsService;
 
     @GetMapping({"", "/"})
     public String panelHome(@PathVariable String slug) {
@@ -96,7 +94,6 @@ public class AdminPanelBookingController {
     private String bookingDetailView(String slug, BookingResponse booking, BookingStatusForm form, Model model) {
         model.addAttribute("slug", slug);
         model.addAttribute("booking", booking);
-        model.addAttribute("currency", tenantSettingsService.getCurrentTenantSettings().pricing().currency());
         model.addAttribute("statusOptions", bookingService.getAllowedAdminStatuses(booking.status()));
         model.addAttribute(STATUS_FORM_ATTRIBUTE, form);
         return BOOKING_DETAIL_VIEW;
@@ -128,7 +125,6 @@ public class AdminPanelBookingController {
         model.addAttribute("statusOptionsByBookingId", statusOptionsByBookingId);
         model.addAttribute("bookingPage", bookingPage);
         model.addAttribute("size", bookingPage.getSize());
-        model.addAttribute("currency", tenantSettingsService.getCurrentTenantSettings().pricing().currency());
     }
 
     private String bookingsRedirect(String slug) {

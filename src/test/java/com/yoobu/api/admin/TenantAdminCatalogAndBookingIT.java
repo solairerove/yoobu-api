@@ -56,7 +56,9 @@ class TenantAdminCatalogAndBookingIT extends IntegrationTestSupport {
                 .andExpect(jsonPath("$.items.length()").value(1))
                 .andExpect(jsonPath("$.items[0].serviceName").value("Pizza"))
                 .andExpect(jsonPath("$.items[0].quantity").value(2))
-                .andExpect(jsonPath("$.items[0].unitPrice").value(12.5));
+                .andExpect(jsonPath("$.items[0].unitPrice").value(12.5))
+                .andExpect(jsonPath("$.items[0].currency").value("USD"))
+                .andExpect(jsonPath("$.currency").value("USD"));
 
         tenantAdminGet(TENANT_SLUG, "/bookings", ADMIN_USERNAME, ADMIN_PASSWORD)
                 .andExpect(status().isOk())

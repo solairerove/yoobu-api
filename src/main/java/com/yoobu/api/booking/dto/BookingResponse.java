@@ -14,6 +14,7 @@ public record BookingResponse(
         String customerName,
         String customerPhone,
         BigDecimal totalPrice,
+        String currency,
         LocalDate deliveryDate,
         String note,
         List<BookingItemResponse> items,

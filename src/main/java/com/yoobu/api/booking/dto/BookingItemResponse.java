@@ -5,6 +5,7 @@ import java.math.BigDecimal;
 public record BookingItemResponse(
         String serviceName,
         int quantity,
-        BigDecimal unitPrice
+        BigDecimal unitPrice,
+        String currency
 ) {
 }

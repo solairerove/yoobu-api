@@ -30,6 +30,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 import org.springframework.web.server.ResponseStatusException;
 
 @Service
@@ -49,7 +50,9 @@ public class BookingService {
     @Transactional
     public BookingResponse createFoodOrder(CreateBookingRequest request, Long telegramUserId) {
         Tenant tenant = requireFoodOrderTenant();
-        validateDeliveryDate(request.deliveryDate(), tenant);
+        TenantSettings tenantSettings = tenantSettingsService.getSettings(tenant.getId());
+        validateDeliveryDate(request.deliveryDate(), tenant, tenantSettings);
+        String currency = resolveBookingCurrency(tenantSettings);
         OffsetDateTime now = nowUtc();
 
         Booking booking = new Booking();
@@ -67,7 +70,7 @@ public class BookingService {
         Booking savedBooking = bookingRepository.save(booking);
 
         List<BookingItem> bookingItems = request.items().stream()
-                .map(item -> toBookingItem(savedBooking, item, tenant.getId()))
+                .map(item -> toBookingItem(savedBooking, item, tenant.getId(), currency))
                 .toList();
 
         bookingItemRepository.saveAll(bookingItems);
@@ -232,10 +235,10 @@ public class BookingService {
         return tenant;
     }
 
-    private void validateDeliveryDate(LocalDate deliveryDate, Tenant tenant) {
+    private void validateDeliveryDate(LocalDate deliveryDate, Tenant tenant, TenantSettings tenantSettings) {
         LocalDate earliestAllowedDate = tenantTimeService.earliestDeliveryDate(
                 tenant,
-                tenantSettingsService.getSettings(tenant.getId())
+                tenantSettings
         );
         if (deliveryDate.isBefore(earliestAllowedDate)) {
             throw new ResponseStatusException(
@@ -262,7 +265,7 @@ public class BookingService {
                 .orElseThrow(this::bookingNotFound);
     }
 
-    private BookingItem toBookingItem(Booking booking, BookingItemRequest item, Long tenantId) {
+    private BookingItem toBookingItem(Booking booking, BookingItemRequest item, Long tenantId, String currency) {
         CatalogService service = catalogServiceRepository.findByIdAndTenantIdAndStatus(
                         item.serviceId(), tenantId, com.yoobu.api.catalog.ServiceStatus.ACTIVE)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Service not found"));
@@ -276,6 +279,7 @@ public class BookingService {
         bookingItem.setService(service);
         bookingItem.setQuantity(item.quantity());
         bookingItem.setUnitPrice(service.getPrice());
+        bookingItem.setCurrency(currency);
         return bookingItem;
     }
 
@@ -295,7 +299,7 @@ public class BookingService {
     }
 
     private BookingResponse toResponse(Booking booking, List<BookingItem> items) {
-        return bookingMapper.toResponse(booking, items);
+        return bookingMapper.toResponse(booking, items, resolveBookingCurrency(items));
     }
 
     private Map<String, Object> toAuditSnapshot(Booking booking) {
@@ -310,6 +314,7 @@ public class BookingService {
                     itemSnapshot.put("serviceName", item.getService().getName());
                     itemSnapshot.put("quantity", item.getQuantity());
                     itemSnapshot.put("unitPrice", item.getUnitPrice());
+                    itemSnapshot.put("currency", item.getCurrency());
                     return itemSnapshot;
                 })
                 .toList();
@@ -341,6 +346,23 @@ public class BookingService {
                         LinkedHashMap::new,
                         java.util.stream.Collectors.toList()
                 ));
+    }
+
+    private String resolveBookingCurrency(TenantSettings settings) {
+        String configuredCurrency = settings.pricing().currency();
+        if (StringUtils.hasText(configuredCurrency)) {
+            return configuredCurrency.trim();
+        }
+        return TenantSettings.DEFAULT_CURRENCY;
+    }
+
+    private String resolveBookingCurrency(List<BookingItem> items) {
+        for (BookingItem item : items) {
+            if (StringUtils.hasText(item.getCurrency())) {
+                return item.getCurrency().trim();
+            }
+        }
+        return TenantSettings.DEFAULT_CURRENCY;
     }
 
     private ResponseStatusException bookingNotFound() {

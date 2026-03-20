@@ -7,6 +7,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.fasterxml.jackson.databind.JsonNode;
 import com.yoobu.api.IntegrationTestSupport;
 import com.yoobu.api.booking.BookingStatus;
+import com.yoobu.api.tenant.TenantType;
+import com.yoobu.api.tenant.dto.UpdateTenantRequest;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.context.TestPropertySource;
 
@@ -146,5 +148,53 @@ class BookingLifecycleIT extends IntegrationTestSupport {
         )
                 .andExpect(status().isConflict())
                 .andExpect(status().reason("Invalid booking status transition from DONE to NEW"));
+    }
+
+    @Test
+    void existingBookingCurrencyStaysUnchangedWhenTenantCurrencyChanges() throws Exception {
+        long tenantId = createFoodOrderTenant(TENANT_SLUG, "Food Tenant", "food-bot", ADMIN_USERNAME, ADMIN_PASSWORD)
+                .get("id").asLong();
+        long serviceId = createService(TENANT_SLUG, ADMIN_USERNAME, ADMIN_PASSWORD, "Pizza", "12.50")
+                .get("id").asLong();
+
+        long firstBookingId = createBooking(TENANT_SLUG, 101L, serviceId, 1).get("id").asLong();
+
+        tenantPublicGetAsUser(TENANT_SLUG, "/bookings/" + firstBookingId, 101L)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.currency").value("USD"))
+                .andExpect(jsonPath("$.items[0].currency").value("USD"));
+
+        UpdateTenantRequest updateRequest = new UpdateTenantRequest(
+                "Food Tenant",
+                TenantType.FOOD_ORDER,
+                "food-bot",
+                123456789L,
+                DEFAULT_TENANT_TIMEZONE,
+                "THB",
+                "#112233",
+                "https://cdn.example.com/logo.png",
+                "Hello from test",
+                "Your full name",
+                "+84...",
+                "No onion, gate code, delivery code",
+                ADMIN_USERNAME,
+                "",
+                true
+        );
+
+        superAdminPutJson("/superadmin/tenants/" + tenantId, updateRequest)
+                .andExpect(status().isOk());
+
+        long secondBookingId = createBooking(TENANT_SLUG, 101L, serviceId, 1).get("id").asLong();
+
+        tenantPublicGetAsUser(TENANT_SLUG, "/bookings/" + firstBookingId, 101L)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.currency").value("USD"))
+                .andExpect(jsonPath("$.items[0].currency").value("USD"));
+
+        tenantPublicGetAsUser(TENANT_SLUG, "/bookings/" + secondBookingId, 101L)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.currency").value("THB"))
+                .andExpect(jsonPath("$.items[0].currency").value("THB"));
     }
 }
