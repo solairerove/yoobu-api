@@ -40,11 +40,12 @@
             </label>
             <input type="hidden" name="size" th:value="${size}">
             <input type="hidden" name="page" value="0">
-            <button type="submit">Search</button>
+            <button type="submit" class="button-secondary">Search</button>
         </form>
     </section>
 
     <section class="card">
+        <div class="table-wrap">
         <table>
             <thead>
             <tr>
@@ -62,10 +63,10 @@
                 <td colspan="7" class="empty">No tenants yet.</td>
             </tr>
             <tr th:each="tenant : ${tenants}">
-                <td>
+                  <td>
                     <a th:href="@{/superadmin/panel/tenants/{tenantId}(tenantId=${tenant.id})}"
                        th:text="${tenant.name}">Dark Kitchen</a>
-                </td>
+                  </td>
                 <td th:text="${tenant.slug}">dark-kitchen</td>
                 <td th:text="${tenant.type}">FOOD_ORDER</td>
                 <td>
@@ -75,12 +76,13 @@
                 </td>
                 <td th:text="${tenant.timezone}">Asia/Ho_Chi_Minh</td>
                 <td th:text="${tenant.createdAt != null ? #temporals.format(tenant.createdAt, 'yyyy-MM-dd HH:mm') : 'N/A'}">2026-03-14 00:00</td>
-                <td>
-                    <a th:href="@{/admin/{slug}/panel(slug=${tenant.slug})}">Open admin panel</a>
-                </td>
+                  <td>
+                    <a class="table-link" th:href="@{/admin/{slug}/panel(slug=${tenant.slug})}">Open admin panel</a>
+                  </td>
             </tr>
             </tbody>
         </table>
+        </div>
         <div class="pager" th:if="${tenantPage.totalPages > 1}">
             <a class="nav-link"
                th:if="${tenantPage.hasPrevious()}"
