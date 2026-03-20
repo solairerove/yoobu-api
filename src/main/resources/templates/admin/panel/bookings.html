@@ -69,7 +69,7 @@
             <tr th:each="booking : ${bookings}">
                 <td th:text="${booking.id}">1</td>
                 <td th:text="${booking.customerName}">Alice</td>
-                <td>
+                  <td>
                     <form class="inline-status-form"
                           method="post"
                           th:action="@{/admin/{slug}/panel/bookings/{bookingId}/status(slug=${slug}, bookingId=${booking.id})}">
@@ -85,14 +85,14 @@
                         <input type="hidden" name="returnTo" value="list">
                         <button type="submit" class="button-secondary button-compact">Update</button>
                     </form>
-                </td>
+                  </td>
                 <td th:text="${booking.deliveryDate}">2026-03-14</td>
                 <td th:text="${@adminPanelViewFormats.money(booking.totalPrice, booking.currency)}">USD 12.50</td>
-                <td>
-                    <a th:href="@{/admin/{slug}/panel/bookings/{bookingId}(slug=${slug}, bookingId=${booking.id})}">
+                  <td>
+                    <a class="table-link" th:href="@{/admin/{slug}/panel/bookings/{bookingId}(slug=${slug}, bookingId=${booking.id})}">
                         View
                     </a>
-                </td>
+                  </td>
             </tr>
             </tbody>
         </table>

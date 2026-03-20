@@ -96,9 +96,9 @@
                 <td th:text="${(entityLabels[entry.entity] ?: entry.entity) + ' #' + entry.entityId}">Booking #1</td>
                 <td th:text="${actionLabels[entry.action] ?: entry.action}">Status updated</td>
                 <td th:text="${entry.actorId ?: 'N/A'}">superadmin</td>
-                <td>
-                    <div th:each="line : ${auditDiffById[entry.id]}" th:text="${line}">status: NEW -> CONFIRMED</div>
-                </td>
+                  <td>
+                    <div class="audit-diff" th:each="line : ${auditDiffById[entry.id]}" th:text="${line}">status: NEW -> CONFIRMED</div>
+                  </td>
             </tr>
             </tbody>
         </table>

@@ -67,7 +67,7 @@
                 <td th:text="${service.unit}">pcs</td>
                 <td th:text="${service.durationMinutes ?: 'N/A'}">N/A</td>
                 <td th:text="${service.sortOrder}">0</td>
-                <td>
+                  <td>
                     <form class="inline-status-form"
                           method="post"
                           th:action="@{/admin/{slug}/panel/services/{serviceId}/status(slug=${slug}, serviceId=${service.id})}">
@@ -86,12 +86,12 @@
                         </select>
                         <button type="submit" class="button-secondary button-compact">Update</button>
                     </form>
-                </td>
-                <td>
-                    <a th:href="@{/admin/{slug}/panel/services/{serviceId}/edit(slug=${slug}, serviceId=${service.id})}">
+                  </td>
+                  <td>
+                    <a class="table-link" th:href="@{/admin/{slug}/panel/services/{serviceId}/edit(slug=${slug}, serviceId=${service.id})}">
                         Edit
                     </a>
-                </td>
+                  </td>
             </tr>
             </tbody>
         </table>

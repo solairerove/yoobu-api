@@ -88,6 +88,7 @@ textarea:focus-visible {
 
 .toolbar {
     margin-top: var(--space-3);
+    flex-wrap: wrap;
 }
 
 .eyebrow {
@@ -154,6 +155,12 @@ button {
 button:hover {
     background: var(--primary-hover);
     border-color: var(--primary-hover);
+}
+
+button:disabled,
+button[disabled] {
+    opacity: 0.6;
+    cursor: not-allowed;
 }
 
 .button-secondary {
@@ -267,6 +274,12 @@ textarea {
     color: inherit;
 }
 
+input[readonly] {
+    background: #f4efe7;
+    color: #6f6254;
+    cursor: not-allowed;
+}
+
 textarea {
     resize: vertical;
 }
@@ -319,6 +332,11 @@ td {
     border-bottom: 1px solid #ece3d7;
     text-align: left;
     vertical-align: top;
+}
+
+.table-link {
+    font-weight: 600;
+    white-space: nowrap;
 }
 
 thead th {
@@ -428,6 +446,17 @@ tbody tr:hover {
 .summary dd {
     margin: 0;
     font-weight: 600;
+}
+
+.summary dd a {
+    word-break: break-word;
+}
+
+.audit-diff {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 13px;
+    line-height: 1.4;
+    color: #5a4b3d;
 }
 
 @media (max-width: 900px) {
