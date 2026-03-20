@@ -36,6 +36,7 @@ public class TenantManagementService {
     private final TenantSettingsService tenantSettingsService;
     private final TenantMapper tenantMapper;
     private final PasswordEncoder passwordEncoder;
+    private final PaymentQrUrlValidator paymentQrUrlValidator;
 
     @Transactional(readOnly = true)
     public List<TenantSummaryResponse> getAllTenants() {
@@ -150,7 +151,13 @@ public class TenantManagementService {
         upsertConfig(existingConfigs, savedTenant, TenantConfigKeys.CHECKOUT_NAME_HINT, request.checkoutNameHint(), true);
         upsertConfig(existingConfigs, savedTenant, TenantConfigKeys.CHECKOUT_PHONE_HINT, request.checkoutPhoneHint(), true);
         upsertConfig(existingConfigs, savedTenant, TenantConfigKeys.CHECKOUT_NOTE_HINT, request.checkoutNoteHint(), true);
-        upsertConfig(existingConfigs, savedTenant, TenantConfigKeys.PAYMENT_QR_URL, request.paymentQrUrl(), true);
+        upsertConfig(
+                existingConfigs,
+                savedTenant,
+                TenantConfigKeys.PAYMENT_QR_URL,
+                paymentQrUrlValidator.normalizePaymentQrUrl(request.paymentQrUrl()),
+                true
+        );
         auditLogService.logUpdate(
                 savedTenant.getId(),
                 ENTITY_NAME,
@@ -191,7 +198,12 @@ public class TenantManagementService {
         addConfig(configs, tenant, TenantConfigKeys.CHECKOUT_NAME_HINT, request.checkoutNameHint());
         addConfig(configs, tenant, TenantConfigKeys.CHECKOUT_PHONE_HINT, request.checkoutPhoneHint());
         addConfig(configs, tenant, TenantConfigKeys.CHECKOUT_NOTE_HINT, request.checkoutNoteHint());
-        addConfig(configs, tenant, TenantConfigKeys.PAYMENT_QR_URL, request.paymentQrUrl());
+        addConfig(
+                configs,
+                tenant,
+                TenantConfigKeys.PAYMENT_QR_URL,
+                paymentQrUrlValidator.normalizePaymentQrUrl(request.paymentQrUrl())
+        );
         return configs;
     }
 

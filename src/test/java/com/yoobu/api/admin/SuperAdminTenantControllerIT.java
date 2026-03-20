@@ -10,6 +10,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.yoobu.api.IntegrationTestSupport;
 import com.yoobu.api.tenant.TenantType;
+import com.yoobu.api.tenant.dto.CreateTenantRequest;
 import com.yoobu.api.tenant.dto.UpdateTenantRequest;
 import org.junit.jupiter.api.function.Executable;
 import org.junit.jupiter.api.Test;
@@ -112,6 +113,61 @@ class SuperAdminTenantControllerIT extends IntegrationTestSupport {
         superAdminPostJson(SUPERADMIN_TENANTS_PATH, request)
                 .andExpect(status().isConflict())
                 .andExpect(status().reason("Tenant slug already exists"));
+    }
+
+    @Test
+    void superAdminRejectsInvalidPaymentQrUrlOnCreate() throws Exception {
+        CreateTenantRequest request = new CreateTenantRequest(
+                "invalid-payment-qr-create",
+                "Invalid Payment QR Create",
+                TenantType.FOOD_ORDER,
+                "bot-token",
+                123456789L,
+                DEFAULT_TENANT_TIMEZONE,
+                "USD",
+                "#112233",
+                "https://cdn.example.com/logo.png",
+                "Hello from test",
+                "Your full name",
+                "+84...",
+                "No onion, gate code, delivery code",
+                "not-a-url",
+                "admin",
+                "secret"
+        );
+
+        superAdminPostJson(SUPERADMIN_TENANTS_PATH, request)
+                .andExpect(status().isBadRequest())
+                .andExpect(status().reason("paymentQrUrl must be a valid absolute http(s) URL"));
+    }
+
+    @Test
+    void superAdminRejectsInvalidPaymentQrUrlOnUpdate() throws Exception {
+        long tenantId = createFoodOrderTenant("invalid-payment-qr-update", "Tenant Before", "bot-before", "admin-before", "secret-before")
+                .get("id").asLong();
+
+        UpdateTenantRequest request = new UpdateTenantRequest(
+                "Tenant After",
+                TenantType.FOOD_ORDER,
+                "bot-after",
+                999999L,
+                "Asia/Ho_Chi_Minh",
+                "THB",
+                "#445566",
+                "https://cdn.example.com/updated-logo.png",
+                "Updated welcome",
+                "Contact person",
+                "+1 555...",
+                "Ring bell twice",
+                "bad-url",
+                "admin-after",
+                "secret-after",
+                true
+        );
+
+        superAdminPutJson(SUPERADMIN_TENANTS_PATH + "/" + tenantId, request)
+                .andExpect(status().isBadRequest())
+                .andExpect(status().reason("paymentQrUrl must be a valid absolute http(s) URL"));
     }
 
     @Test
