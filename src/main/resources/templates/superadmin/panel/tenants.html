@@ -16,11 +16,32 @@
         <nav class="nav">
             <a class="nav-link active" th:href="@{/superadmin/panel/tenants}">Tenants</a>
             <a class="nav-link" th:href="@{/superadmin/panel/tenants/new}">Create tenant</a>
+            <a class="nav-link" th:href="@{/superadmin/panel/audit}">Audit log</a>
         </nav>
     </header>
 
+    <section class="card" th:if="${flashMessage}">
+        <p class="flash"
+           th:classappend="${flashType == 'success'} ? ' flash-success' : ' flash-error'"
+           th:text="${flashMessage}">
+            Tenant updated.
+        </p>
+    </section>
+
     <section class="toolbar">
         <a class="button-link" th:href="@{/superadmin/panel/tenants/new}">New tenant</a>
+    </section>
+
+    <section class="card">
+        <form class="filters" method="get" th:action="@{/superadmin/panel/tenants}">
+            <label>
+                <span>Search by name or slug</span>
+                <input type="text" name="query" th:value="${query}" placeholder="dark-kitchen">
+            </label>
+            <input type="hidden" name="size" th:value="${size}">
+            <input type="hidden" name="page" value="0">
+            <button type="submit">Search</button>
+        </form>
     </section>
 
     <section class="card">
@@ -53,13 +74,27 @@
                           th:text="${tenant.active} ? 'Active' : 'Inactive'">Active</span>
                 </td>
                 <td th:text="${tenant.timezone}">Asia/Ho_Chi_Minh</td>
-                <td th:text="${tenant.createdAt}">2026-03-14T00:00Z</td>
+                <td th:text="${tenant.createdAt != null ? #temporals.format(tenant.createdAt, 'yyyy-MM-dd HH:mm') : 'N/A'}">2026-03-14 00:00</td>
                 <td>
                     <a th:href="@{/admin/{slug}/panel(slug=${tenant.slug})}">Open admin panel</a>
                 </td>
             </tr>
             </tbody>
         </table>
+        <div class="pager" th:if="${tenantPage.totalPages > 1}">
+            <a class="nav-link"
+               th:if="${tenantPage.hasPrevious()}"
+               th:href="@{/superadmin/panel/tenants(query=${query}, page=${tenantPage.number - 1}, size=${size})}">
+                Previous
+            </a>
+            <span class="pager-info"
+                  th:text="${'Page ' + (tenantPage.number + 1) + ' of ' + tenantPage.totalPages}">Page 1 of 1</span>
+            <a class="nav-link"
+               th:if="${tenantPage.hasNext()}"
+               th:href="@{/superadmin/panel/tenants(query=${query}, page=${tenantPage.number + 1}, size=${size})}">
+                Next
+            </a>
+        </div>
     </section>
 </div>
 </body>

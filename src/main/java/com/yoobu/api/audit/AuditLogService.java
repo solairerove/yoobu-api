@@ -2,22 +2,33 @@ package com.yoobu.api.audit;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.yoobu.api.audit.dto.AuditLogItemResponse;
 import java.lang.reflect.Array;
-import java.time.temporal.TemporalAccessor;
 import java.time.OffsetDateTime;
+import java.time.temporal.TemporalAccessor;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
 @Service
 @RequiredArgsConstructor
 public class AuditLogService {
+
+    private static final int DEFAULT_PAGE_SIZE = 20;
+    private static final int MAX_PAGE_SIZE = 50;
+    private static final int MAX_EXPORT_SIZE = 5_000;
 
     private final AuditLogRepository auditLogRepository;
     private final ObjectMapper objectMapper;
@@ -60,6 +71,41 @@ public class AuditLogService {
         return null;
     }
 
+    public Page<AuditLogItemResponse> search(
+            Long tenantId,
+            String entity,
+            String action,
+            String actorId,
+            OffsetDateTime createdFrom,
+            OffsetDateTime createdTo,
+            int page,
+            int size
+    ) {
+        Page<AuditLog> logs = searchLogs(tenantId, entity, action, actorId, createdFrom, createdTo, page, size, MAX_PAGE_SIZE);
+
+        List<AuditLogItemResponse> items = logs.stream()
+                .map(this::toResponse)
+                .toList();
+        return new PageImpl<>(items, logs.getPageable(), logs.getTotalElements());
+    }
+
+    public List<AuditLogItemResponse> searchForExport(
+            Long tenantId,
+            String entity,
+            String action,
+            String actorId,
+            OffsetDateTime createdFrom,
+            OffsetDateTime createdTo,
+            int size
+    ) {
+        Page<AuditLog> logs = searchLogs(tenantId, entity, action, actorId, createdFrom, createdTo, 0, size, MAX_EXPORT_SIZE);
+        return logs.stream().map(this::toResponse).toList();
+    }
+
+    public int exportLimit() {
+        return MAX_EXPORT_SIZE;
+    }
+
     private void log(
             Long tenantId,
             String entity,
@@ -91,6 +137,20 @@ public class AuditLogService {
         } catch (JsonProcessingException ex) {
             throw new IllegalStateException("Failed to serialize audit payload", ex);
         }
+    }
+
+    private AuditLogItemResponse toResponse(AuditLog log) {
+        return new AuditLogItemResponse(
+                log.getId(),
+                log.getTenantId(),
+                log.getEntity(),
+                log.getEntityId(),
+                log.getAction(),
+                log.getActorId(),
+                parseJson(log.getOldValue()),
+                parseJson(log.getNewValue()),
+                log.getCreatedAt()
+        );
     }
 
     private Object normalize(Object value) {
@@ -131,5 +191,96 @@ public class AuditLogService {
         }
 
         return String.valueOf(value);
+    }
+
+    private Object parseJson(String value) {
+        if (!StringUtils.hasText(value)) {
+            return null;
+        }
+        try {
+            Object parsed = objectMapper.readValue(value, Object.class);
+            if (parsed instanceof String nested) {
+                String trimmedNested = nested.trim();
+                if (trimmedNested.startsWith("{") || trimmedNested.startsWith("[")) {
+                    return objectMapper.readValue(trimmedNested, Object.class);
+                }
+            }
+            return parsed;
+        } catch (JsonProcessingException ex) {
+            throw new IllegalStateException("Failed to parse audit payload", ex);
+        }
+    }
+
+    private String normalizeOptional(String value) {
+        return StringUtils.hasText(value) ? value.trim() : null;
+    }
+
+    private int normalizePageSize(int requestedSize, int maxAllowedSize) {
+        if (requestedSize < 1) {
+            return DEFAULT_PAGE_SIZE;
+        }
+        return Math.min(requestedSize, maxAllowedSize);
+    }
+
+    private Page<AuditLog> searchLogs(
+            Long tenantId,
+            String entity,
+            String action,
+            String actorId,
+            OffsetDateTime createdFrom,
+            OffsetDateTime createdTo,
+            int page,
+            int size,
+            int maxAllowedSize
+    ) {
+        var pageable = PageRequest.of(
+                Math.max(page, 0),
+                normalizePageSize(size, maxAllowedSize),
+                Sort.by(Sort.Direction.DESC, "createdAt").and(Sort.by(Sort.Direction.DESC, "id"))
+        );
+
+        return auditLogRepository.findAll(
+                buildSearchSpec(
+                        tenantId,
+                        normalizeOptional(entity),
+                        normalizeOptional(action),
+                        normalizeOptional(actorId),
+                        createdFrom,
+                        createdTo
+                ),
+                pageable
+        );
+    }
+
+    private Specification<AuditLog> buildSearchSpec(
+            Long tenantId,
+            String entity,
+            String action,
+            String actorId,
+            OffsetDateTime createdFrom,
+            OffsetDateTime createdTo
+    ) {
+        return (root, query, cb) -> {
+            List<jakarta.persistence.criteria.Predicate> predicates = new ArrayList<>();
+            if (tenantId != null) {
+                predicates.add(cb.equal(root.get("tenantId"), tenantId));
+            }
+            if (StringUtils.hasText(entity)) {
+                predicates.add(cb.equal(root.get("entity"), entity));
+            }
+            if (StringUtils.hasText(action)) {
+                predicates.add(cb.equal(root.get("action"), action));
+            }
+            if (StringUtils.hasText(actorId)) {
+                predicates.add(cb.equal(root.get("actorId"), actorId));
+            }
+            if (createdFrom != null) {
+                predicates.add(cb.greaterThanOrEqualTo(root.get("createdAt"), createdFrom));
+            }
+            if (createdTo != null) {
+                predicates.add(cb.lessThanOrEqualTo(root.get("createdAt"), createdTo));
+            }
+            return cb.and(predicates.toArray(jakarta.persistence.criteria.Predicate[]::new));
+        };
     }
 }

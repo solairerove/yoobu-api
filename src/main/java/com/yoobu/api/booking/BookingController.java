@@ -49,4 +49,12 @@ public class BookingController {
     ) {
         return bookingService.cancelMyBooking(bookingId, user.id());
     }
+
+    @PostMapping("/{bookingId}/confirm-payment")
+    public BookingResponse confirmPayment(
+            @PathVariable Long bookingId,
+            @TelegramPrincipal TelegramUser user
+    ) {
+        return bookingService.confirmMyBookingPayment(bookingId, user.id());
+    }
 }

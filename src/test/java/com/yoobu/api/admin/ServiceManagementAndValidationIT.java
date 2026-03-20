@@ -2,11 +2,14 @@ package com.yoobu.api.admin;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.yoobu.api.IntegrationTestSupport;
+import com.yoobu.api.tenant.TenantType;
+import com.yoobu.api.tenant.dto.UpdateTenantRequest;
 import java.time.LocalDate;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.context.TestPropertySource;
@@ -30,9 +33,80 @@ class ServiceManagementAndValidationIT extends IntegrationTestSupport {
                 .andExpect(jsonPath("$.slug").value(TENANT_SLUG))
                 .andExpect(jsonPath("$.name").value("Food Tenant"))
                 .andExpect(jsonPath("$.type").value("FOOD_ORDER"))
+                .andExpect(jsonPath("$.currency").value("USD"))
                 .andExpect(jsonPath("$.primaryColor").value("#112233"))
                 .andExpect(jsonPath("$.logoUrl").value("https://cdn.example.com/logo.png"))
-                .andExpect(jsonPath("$.welcomeMessage").value("Hello from test"));
+                .andExpect(jsonPath("$.welcomeMessage").value("Hello from test"))
+                .andExpect(jsonPath("$.checkoutNameHint").value("Your full name"))
+                .andExpect(jsonPath("$.checkoutPhoneHint").value("+84..."))
+                .andExpect(jsonPath("$.checkoutNoteHint").value("No onion, gate code, delivery code"))
+                .andExpect(jsonPath("$.paymentQrUrl").value("https://cdn.example.com/payment-qr.png"));
+    }
+
+    @Test
+    void tenantPublicConfigReflectsUpdatedPaymentQrUrl() throws Exception {
+        long tenantId = createFoodOrderTenant(TENANT_SLUG, "Food Tenant", "food-bot", ADMIN_USERNAME, ADMIN_PASSWORD)
+                .get("id").asLong();
+
+        UpdateTenantRequest updateRequest = new UpdateTenantRequest(
+                "Food Tenant",
+                TenantType.FOOD_ORDER,
+                "food-bot",
+                123456789L,
+                DEFAULT_TENANT_TIMEZONE,
+                "USD",
+                "#112233",
+                "https://cdn.example.com/logo.png",
+                "Hello from test",
+                "Your full name",
+                "+84...",
+                "No onion, gate code, delivery code",
+                "https://cdn.example.com/payment-qr-updated.png",
+                ADMIN_USERNAME,
+                "",
+                true
+        );
+
+        superAdminPutJson("/superadmin/tenants/" + tenantId, updateRequest)
+                .andExpect(status().isOk());
+
+        tenantPublicGet(TENANT_SLUG, "/config")
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.paymentQrUrl").value("https://cdn.example.com/payment-qr-updated.png"));
+    }
+
+    @Test
+    void tenantPublicConfigAllowsClearingPaymentQrUrl() throws Exception {
+        long tenantId = createFoodOrderTenant(TENANT_SLUG, "Food Tenant", "food-bot", ADMIN_USERNAME, ADMIN_PASSWORD)
+                .get("id").asLong();
+
+        UpdateTenantRequest updateRequest = new UpdateTenantRequest(
+                "Food Tenant",
+                TenantType.FOOD_ORDER,
+                "food-bot",
+                123456789L,
+                DEFAULT_TENANT_TIMEZONE,
+                "USD",
+                "#112233",
+                "https://cdn.example.com/logo.png",
+                "Hello from test",
+                "Your full name",
+                "+84...",
+                "No onion, gate code, delivery code",
+                "",
+                ADMIN_USERNAME,
+                "",
+                true
+        );
+
+        superAdminPutJson("/superadmin/tenants/" + tenantId, updateRequest)
+                .andExpect(status().isOk());
+
+        JsonNode configResponse = readJson(tenantPublicGet(TENANT_SLUG, "/config")
+                .andExpect(status().isOk())
+                .andReturn());
+        JsonNode paymentQrUrl = configResponse.get("paymentQrUrl");
+        assertTrue(paymentQrUrl == null || paymentQrUrl.isNull());
     }
 
     @Test
@@ -119,6 +193,7 @@ class ServiceManagementAndValidationIT extends IntegrationTestSupport {
         long firstBookingId = createBooking(TENANT_SLUG, 101L, serviceId, 1).get("id").asLong();
         long secondBookingId = createBooking(TENANT_SLUG, 202L, serviceId, 2).get("id").asLong();
 
+        confirmBookingPayment(TENANT_SLUG, secondBookingId, 202L);
         updateBookingStatus(TENANT_SLUG, ADMIN_USERNAME, ADMIN_PASSWORD, secondBookingId, "CONFIRMED");
 
         tenantAdminGet(TENANT_SLUG, "/bookings?status=CONFIRMED", ADMIN_USERNAME, ADMIN_PASSWORD)
@@ -165,6 +240,7 @@ class ServiceManagementAndValidationIT extends IntegrationTestSupport {
                         {
                           "customerName": "",
                           "customerPhone": "",
+                          "deliveryAddress": "",
                           "deliveryDate": null,
                           "items": []
                         }

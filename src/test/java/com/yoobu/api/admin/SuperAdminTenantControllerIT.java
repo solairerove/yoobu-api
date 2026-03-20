@@ -10,6 +10,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.yoobu.api.IntegrationTestSupport;
 import com.yoobu.api.tenant.TenantType;
+import com.yoobu.api.tenant.dto.CreateTenantRequest;
 import com.yoobu.api.tenant.dto.UpdateTenantRequest;
 import org.junit.jupiter.api.function.Executable;
 import org.junit.jupiter.api.Test;
@@ -71,6 +72,11 @@ class SuperAdminTenantControllerIT extends IntegrationTestSupport {
                 .andExpect(jsonPath("$[0].timezone").value("Europe/Warsaw"))
                 .andExpect(jsonPath("$[0].createdAt").isString());
 
+        superAdminGet(SUPERADMIN_TENANTS_PATH + "/1")
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.config.currency").value("USD"))
+                .andExpect(jsonPath("$.config.checkout_name_hint").value("Your full name"));
+
         var auditLog = latestAuditLog("tenant", "CREATE");
         assertEquals(1, auditLogCount());
         assertEquals("tenant", auditLog.get("entity").asText());
@@ -110,6 +116,61 @@ class SuperAdminTenantControllerIT extends IntegrationTestSupport {
     }
 
     @Test
+    void superAdminRejectsInvalidPaymentQrUrlOnCreate() throws Exception {
+        CreateTenantRequest request = new CreateTenantRequest(
+                "invalid-payment-qr-create",
+                "Invalid Payment QR Create",
+                TenantType.FOOD_ORDER,
+                "bot-token",
+                123456789L,
+                DEFAULT_TENANT_TIMEZONE,
+                "USD",
+                "#112233",
+                "https://cdn.example.com/logo.png",
+                "Hello from test",
+                "Your full name",
+                "+84...",
+                "No onion, gate code, delivery code",
+                "not-a-url",
+                "admin",
+                "secret"
+        );
+
+        superAdminPostJson(SUPERADMIN_TENANTS_PATH, request)
+                .andExpect(status().isBadRequest())
+                .andExpect(status().reason("paymentQrUrl must be a valid absolute http(s) URL"));
+    }
+
+    @Test
+    void superAdminRejectsInvalidPaymentQrUrlOnUpdate() throws Exception {
+        long tenantId = createFoodOrderTenant("invalid-payment-qr-update", "Tenant Before", "bot-before", "admin-before", "secret-before")
+                .get("id").asLong();
+
+        UpdateTenantRequest request = new UpdateTenantRequest(
+                "Tenant After",
+                TenantType.FOOD_ORDER,
+                "bot-after",
+                999999L,
+                "Asia/Ho_Chi_Minh",
+                "THB",
+                "#445566",
+                "https://cdn.example.com/updated-logo.png",
+                "Updated welcome",
+                "Contact person",
+                "+1 555...",
+                "Ring bell twice",
+                "bad-url",
+                "admin-after",
+                "secret-after",
+                true
+        );
+
+        superAdminPutJson(SUPERADMIN_TENANTS_PATH + "/" + tenantId, request)
+                .andExpect(status().isBadRequest())
+                .andExpect(status().reason("paymentQrUrl must be a valid absolute http(s) URL"));
+    }
+
+    @Test
     void superAdminCanGetAndUpdateTenantWithoutChangingSlug() throws Exception {
         long tenantId = createFoodOrderTenant("tenant-edit", "Tenant Before", "bot-before", "admin-before", "secret-before")
                 .get("id").asLong();
@@ -126,9 +187,14 @@ class SuperAdminTenantControllerIT extends IntegrationTestSupport {
                 "bot-after",
                 999999L,
                 "Asia/Ho_Chi_Minh",
+                "THB",
                 "#445566",
                 "https://cdn.example.com/updated-logo.png",
                 "Updated welcome",
+                "Contact person",
+                "+1 555...",
+                "Ring bell twice",
+                "https://cdn.example.com/payment-qr-updated.png",
                 "admin-after",
                 "secret-after",
                 true
@@ -152,9 +218,14 @@ class SuperAdminTenantControllerIT extends IntegrationTestSupport {
                 .andExpect(jsonPath("$.botToken").value("bot-after"))
                 .andExpect(jsonPath("$.ownerTelegramId").value(999999L))
                 .andExpect(jsonPath("$.config.admin_username").value("admin-after"))
+                .andExpect(jsonPath("$.config.currency").value("THB"))
                 .andExpect(jsonPath("$.config.primary_color").value("#445566"))
                 .andExpect(jsonPath("$.config.logo_url").value("https://cdn.example.com/updated-logo.png"))
-                .andExpect(jsonPath("$.config.welcome_message").value("Updated welcome"));
+                .andExpect(jsonPath("$.config.welcome_message").value("Updated welcome"))
+                .andExpect(jsonPath("$.config.checkout_name_hint").value("Contact person"))
+                .andExpect(jsonPath("$.config.checkout_phone_hint").value("+1 555..."))
+                .andExpect(jsonPath("$.config.checkout_note_hint").value("Ring bell twice"))
+                .andExpect(jsonPath("$.config.payment_qr_url").value("https://cdn.example.com/payment-qr-updated.png"));
 
         tenantAdminGet("tenant-edit", "/services", "admin-before", "secret-before")
                 .andExpect(status().isUnauthorized());
@@ -183,9 +254,14 @@ class SuperAdminTenantControllerIT extends IntegrationTestSupport {
                 "bot-token-updated",
                 444444L,
                 "Asia/Ho_Chi_Minh",
+                "USD",
                 "#778899",
                 "https://cdn.example.com/keep-pass.png",
                 "Password unchanged",
+                "Receiver name",
+                "+66...",
+                "Leave at lobby",
+                "https://cdn.example.com/payment-qr-updated.png",
                 "admin-after",
                 "",
                 true
@@ -200,8 +276,13 @@ class SuperAdminTenantControllerIT extends IntegrationTestSupport {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.slug").value("tenant-keep-pass"))
                 .andExpect(jsonPath("$.config.admin_username").value("admin-after"))
+                .andExpect(jsonPath("$.config.currency").value("USD"))
                 .andExpect(jsonPath("$.botToken").value("bot-token-updated"))
-                .andExpect(jsonPath("$.config.primary_color").value("#778899"));
+                .andExpect(jsonPath("$.config.primary_color").value("#778899"))
+                .andExpect(jsonPath("$.config.checkout_name_hint").value("Receiver name"))
+                .andExpect(jsonPath("$.config.checkout_phone_hint").value("+66..."))
+                .andExpect(jsonPath("$.config.checkout_note_hint").value("Leave at lobby"))
+                .andExpect(jsonPath("$.config.payment_qr_url").value("https://cdn.example.com/payment-qr-updated.png"));
 
         tenantAdminGet("tenant-keep-pass", "/services", "admin-before", "secret-before")
                 .andExpect(status().isUnauthorized());
@@ -220,6 +301,11 @@ class SuperAdminTenantControllerIT extends IntegrationTestSupport {
                 TenantType.FOOD_ORDER,
                 "",
                 null,
+                "",
+                "",
+                "",
+                "",
+                "",
                 "",
                 "",
                 "",
@@ -243,9 +329,14 @@ class SuperAdminTenantControllerIT extends IntegrationTestSupport {
                 .andExpect(jsonPath("$.ownerTelegramId").doesNotExist())
                 .andExpect(jsonPath("$.timezone").value("Asia/Ho_Chi_Minh"))
                 .andExpect(jsonPath("$.config.admin_username").value("admin-clear"))
+                .andExpect(jsonPath("$.config.currency").value("USD"))
                 .andExpect(jsonPath("$.config.primary_color").doesNotExist())
                 .andExpect(jsonPath("$.config.logo_url").doesNotExist())
-                .andExpect(jsonPath("$.config.welcome_message").doesNotExist());
+                .andExpect(jsonPath("$.config.welcome_message").doesNotExist())
+                .andExpect(jsonPath("$.config.checkout_name_hint").doesNotExist())
+                .andExpect(jsonPath("$.config.checkout_phone_hint").doesNotExist())
+                .andExpect(jsonPath("$.config.checkout_note_hint").doesNotExist())
+                .andExpect(jsonPath("$.config.payment_qr_url").doesNotExist());
 
         ResponseStatusException publicAccessFailure = assertTenantNotFound(() ->
                 tenantPublicGet("tenant-clear", "/services"));

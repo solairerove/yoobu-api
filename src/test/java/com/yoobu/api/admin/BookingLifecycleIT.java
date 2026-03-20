@@ -7,6 +7,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.fasterxml.jackson.databind.JsonNode;
 import com.yoobu.api.IntegrationTestSupport;
 import com.yoobu.api.booking.BookingStatus;
+import com.yoobu.api.tenant.TenantType;
+import com.yoobu.api.tenant.dto.UpdateTenantRequest;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.context.TestPropertySource;
 
@@ -76,6 +78,68 @@ class BookingLifecycleIT extends IntegrationTestSupport {
     }
 
     @Test
+    void customerCanConfirmPaymentAndAuditIsRecorded() throws Exception {
+        createFoodOrderTenant(TENANT_SLUG, "Food Tenant", "food-bot", ADMIN_USERNAME, ADMIN_PASSWORD);
+        long serviceId = createService(TENANT_SLUG, ADMIN_USERNAME, ADMIN_PASSWORD, "Pizza", "12.50")
+                .get("id").asLong();
+        long bookingId = createBooking(TENANT_SLUG, 101L, serviceId, 1).get("id").asLong();
+
+        tenantPublicPostJson(TENANT_SLUG, "/bookings/" + bookingId + "/confirm-payment", 101L, "")
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(bookingId))
+                .andExpect(jsonPath("$.status").value("PAYMENT_PENDING"));
+
+        JsonNode auditLog = latestAuditLog("booking", "CONFIRM_PAYMENT");
+        JsonNode oldValue = oldAuditValue(auditLog);
+        JsonNode newValue = newAuditValue(auditLog);
+        assertEquals("101", auditLog.get("actor_id").asText());
+        assertEquals("NEW", oldValue.get("status").asText());
+        assertEquals("PAYMENT_PENDING", newValue.get("status").asText());
+    }
+
+    @Test
+    void customerCannotConfirmPaymentWhenBookingStatusIsNotNew() throws Exception {
+        createFoodOrderTenant(TENANT_SLUG, "Food Tenant", "food-bot", ADMIN_USERNAME, ADMIN_PASSWORD);
+        long serviceId = createService(TENANT_SLUG, ADMIN_USERNAME, ADMIN_PASSWORD, "Pizza", "12.50")
+                .get("id").asLong();
+        long paymentPendingBookingId = createBooking(TENANT_SLUG, 101L, serviceId, 1).get("id").asLong();
+        long cancelledBookingId = createBooking(TENANT_SLUG, 101L, serviceId, 1).get("id").asLong();
+
+        confirmBookingPayment(TENANT_SLUG, paymentPendingBookingId, 101L);
+        tenantPublicPostJson(TENANT_SLUG, "/bookings/" + paymentPendingBookingId + "/confirm-payment", 101L, "")
+                .andExpect(status().isConflict())
+                .andExpect(status().reason("Payment can only be confirmed for booking in NEW status"));
+
+        tenantPublicPostJson(TENANT_SLUG, "/bookings/" + cancelledBookingId + "/cancel", 101L, "")
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("CANCELLED"));
+        tenantPublicPostJson(TENANT_SLUG, "/bookings/" + cancelledBookingId + "/confirm-payment", 101L, "")
+                .andExpect(status().isConflict())
+                .andExpect(status().reason("Payment can only be confirmed for booking in NEW status"));
+    }
+
+    @Test
+    void customerCannotConfirmAnotherUsersBooking() throws Exception {
+        createFoodOrderTenant(TENANT_SLUG, "Food Tenant", "food-bot", ADMIN_USERNAME, ADMIN_PASSWORD);
+        long serviceId = createService(TENANT_SLUG, ADMIN_USERNAME, ADMIN_PASSWORD, "Pizza", "12.50")
+                .get("id").asLong();
+        long bookingId = createBooking(TENANT_SLUG, 101L, serviceId, 1).get("id").asLong();
+
+        tenantPublicPostJson(TENANT_SLUG, "/bookings/" + bookingId + "/confirm-payment", 202L, "")
+                .andExpect(status().isNotFound())
+                .andExpect(status().reason("Booking not found"));
+    }
+
+    @Test
+    void customerCannotConfirmPaymentForUnknownBooking() throws Exception {
+        createFoodOrderTenant(TENANT_SLUG, "Food Tenant", "food-bot", ADMIN_USERNAME, ADMIN_PASSWORD);
+
+        tenantPublicPostJson(TENANT_SLUG, "/bookings/999999/confirm-payment", 101L, "")
+                .andExpect(status().isNotFound())
+                .andExpect(status().reason("Booking not found"));
+    }
+
+    @Test
     void adminCanListReadAndUpdateBookingStatus() throws Exception {
         createFoodOrderTenant(TENANT_SLUG, "Food Tenant", "food-bot", ADMIN_USERNAME, ADMIN_PASSWORD);
         long serviceId = createService(TENANT_SLUG, ADMIN_USERNAME, ADMIN_PASSWORD, "Pizza", "12.50")
@@ -100,6 +164,21 @@ class BookingLifecycleIT extends IntegrationTestSupport {
                 ADMIN_PASSWORD,
                 java.util.Map.of("status", "CONFIRMED")
         )
+                .andExpect(status().isConflict())
+                .andExpect(status().reason("Invalid booking status transition from NEW to CONFIRMED"));
+
+        tenantPublicPostJson(TENANT_SLUG, "/bookings/" + bookingId + "/confirm-payment", 101L, "")
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(bookingId))
+                .andExpect(jsonPath("$.status").value("PAYMENT_PENDING"));
+
+        tenantAdminPutJson(
+                TENANT_SLUG,
+                "/bookings/" + bookingId + "/status",
+                ADMIN_USERNAME,
+                ADMIN_PASSWORD,
+                java.util.Map.of("status", "CONFIRMED")
+        )
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(bookingId))
                 .andExpect(jsonPath("$.status").value("CONFIRMED"));
@@ -108,8 +187,89 @@ class BookingLifecycleIT extends IntegrationTestSupport {
         JsonNode oldValue = oldAuditValue(auditLog);
         JsonNode newValue = newAuditValue(auditLog);
         assertEquals(ADMIN_USERNAME, auditLog.get("actor_id").asText());
-        assertEquals("NEW", oldValue.get("status").asText());
+        assertEquals("PAYMENT_PENDING", oldValue.get("status").asText());
         assertEquals("CONFIRMED", newValue.get("status").asText());
+    }
+
+    @Test
+    void adminTransitionMatrixRejectsInvalidAndAllowsExpectedTransitions() throws Exception {
+        createFoodOrderTenant(TENANT_SLUG, "Food Tenant", "food-bot", ADMIN_USERNAME, ADMIN_PASSWORD);
+        long serviceId = createService(TENANT_SLUG, ADMIN_USERNAME, ADMIN_PASSWORD, "Pizza", "12.50")
+                .get("id").asLong();
+
+        long firstBookingId = createBooking(TENANT_SLUG, 101L, serviceId, 1).get("id").asLong();
+        tenantAdminPutJson(
+                TENANT_SLUG,
+                "/bookings/" + firstBookingId + "/status",
+                ADMIN_USERNAME,
+                ADMIN_PASSWORD,
+                java.util.Map.of("status", "DONE")
+        )
+                .andExpect(status().isConflict())
+                .andExpect(status().reason("Invalid booking status transition from NEW to DONE"));
+
+        tenantAdminPutJson(
+                TENANT_SLUG,
+                "/bookings/" + firstBookingId + "/status",
+                ADMIN_USERNAME,
+                ADMIN_PASSWORD,
+                java.util.Map.of("status", "CANCELLED")
+        )
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("CANCELLED"));
+
+        tenantAdminPutJson(
+                TENANT_SLUG,
+                "/bookings/" + firstBookingId + "/status",
+                ADMIN_USERNAME,
+                ADMIN_PASSWORD,
+                java.util.Map.of("status", "CONFIRMED")
+        )
+                .andExpect(status().isConflict())
+                .andExpect(status().reason("Invalid booking status transition from CANCELLED to CONFIRMED"));
+
+        long secondBookingId = createBooking(TENANT_SLUG, 202L, serviceId, 1).get("id").asLong();
+        confirmBookingPayment(TENANT_SLUG, secondBookingId, 202L);
+
+        tenantAdminPutJson(
+                TENANT_SLUG,
+                "/bookings/" + secondBookingId + "/status",
+                ADMIN_USERNAME,
+                ADMIN_PASSWORD,
+                java.util.Map.of("status", "DONE")
+        )
+                .andExpect(status().isConflict())
+                .andExpect(status().reason("Invalid booking status transition from PAYMENT_PENDING to DONE"));
+
+        tenantAdminPutJson(
+                TENANT_SLUG,
+                "/bookings/" + secondBookingId + "/status",
+                ADMIN_USERNAME,
+                ADMIN_PASSWORD,
+                java.util.Map.of("status", "CONFIRMED")
+        )
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("CONFIRMED"));
+
+        tenantAdminPutJson(
+                TENANT_SLUG,
+                "/bookings/" + secondBookingId + "/status",
+                ADMIN_USERNAME,
+                ADMIN_PASSWORD,
+                java.util.Map.of("status", "DONE")
+        )
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("DONE"));
+
+        tenantAdminPutJson(
+                TENANT_SLUG,
+                "/bookings/" + secondBookingId + "/status",
+                ADMIN_USERNAME,
+                ADMIN_PASSWORD,
+                java.util.Map.of("status", "CANCELLED")
+        )
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("CANCELLED"));
     }
 
     @Test
@@ -119,10 +279,83 @@ class BookingLifecycleIT extends IntegrationTestSupport {
                 .get("id").asLong();
         long bookingId = createBooking(TENANT_SLUG, 101L, serviceId, 1).get("id").asLong();
 
+        confirmBookingPayment(TENANT_SLUG, bookingId, 101L);
+        updateBookingStatus(TENANT_SLUG, ADMIN_USERNAME, ADMIN_PASSWORD, bookingId, BookingStatus.CONFIRMED);
         updateBookingStatus(TENANT_SLUG, ADMIN_USERNAME, ADMIN_PASSWORD, bookingId, BookingStatus.DONE);
 
         tenantPublicPostJson(TENANT_SLUG, "/bookings/" + bookingId + "/cancel", 101L, "")
                 .andExpect(status().isConflict())
                 .andExpect(status().reason("Completed booking cannot be cancelled"));
+    }
+
+    @Test
+    void adminCannotMoveCompletedBookingBackToNew() throws Exception {
+        createFoodOrderTenant(TENANT_SLUG, "Food Tenant", "food-bot", ADMIN_USERNAME, ADMIN_PASSWORD);
+        long serviceId = createService(TENANT_SLUG, ADMIN_USERNAME, ADMIN_PASSWORD, "Pizza", "12.50")
+                .get("id").asLong();
+        long bookingId = createBooking(TENANT_SLUG, 101L, serviceId, 1).get("id").asLong();
+
+        confirmBookingPayment(TENANT_SLUG, bookingId, 101L);
+        updateBookingStatus(TENANT_SLUG, ADMIN_USERNAME, ADMIN_PASSWORD, bookingId, BookingStatus.CONFIRMED);
+        updateBookingStatus(TENANT_SLUG, ADMIN_USERNAME, ADMIN_PASSWORD, bookingId, BookingStatus.DONE);
+
+        tenantAdminPutJson(
+                TENANT_SLUG,
+                "/bookings/" + bookingId + "/status",
+                ADMIN_USERNAME,
+                ADMIN_PASSWORD,
+                java.util.Map.of("status", "NEW")
+        )
+                .andExpect(status().isConflict())
+                .andExpect(status().reason("Invalid booking status transition from DONE to NEW"));
+    }
+
+    @Test
+    void existingBookingCurrencyStaysUnchangedWhenTenantCurrencyChanges() throws Exception {
+        long tenantId = createFoodOrderTenant(TENANT_SLUG, "Food Tenant", "food-bot", ADMIN_USERNAME, ADMIN_PASSWORD)
+                .get("id").asLong();
+        long serviceId = createService(TENANT_SLUG, ADMIN_USERNAME, ADMIN_PASSWORD, "Pizza", "12.50")
+                .get("id").asLong();
+
+        long firstBookingId = createBooking(TENANT_SLUG, 101L, serviceId, 1).get("id").asLong();
+
+        tenantPublicGetAsUser(TENANT_SLUG, "/bookings/" + firstBookingId, 101L)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.currency").value("USD"))
+                .andExpect(jsonPath("$.items[0].currency").value("USD"));
+
+        UpdateTenantRequest updateRequest = new UpdateTenantRequest(
+                "Food Tenant",
+                TenantType.FOOD_ORDER,
+                "food-bot",
+                123456789L,
+                DEFAULT_TENANT_TIMEZONE,
+                "THB",
+                "#112233",
+                "https://cdn.example.com/logo.png",
+                "Hello from test",
+                "Your full name",
+                "+84...",
+                "No onion, gate code, delivery code",
+                "https://cdn.example.com/payment-qr-updated.png",
+                ADMIN_USERNAME,
+                "",
+                true
+        );
+
+        superAdminPutJson("/superadmin/tenants/" + tenantId, updateRequest)
+                .andExpect(status().isOk());
+
+        long secondBookingId = createBooking(TENANT_SLUG, 101L, serviceId, 1).get("id").asLong();
+
+        tenantPublicGetAsUser(TENANT_SLUG, "/bookings/" + firstBookingId, 101L)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.currency").value("USD"))
+                .andExpect(jsonPath("$.items[0].currency").value("USD"));
+
+        tenantPublicGetAsUser(TENANT_SLUG, "/bookings/" + secondBookingId, 101L)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.currency").value("THB"))
+                .andExpect(jsonPath("$.items[0].currency").value("THB"));
     }
 }

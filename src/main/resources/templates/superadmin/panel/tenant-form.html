@@ -18,6 +18,7 @@
             <a class="nav-link"
                th:classappend="${formMode == 'create'} ? ' active'"
                th:href="@{/superadmin/panel/tenants/new}">Create tenant</a>
+            <a class="nav-link" th:href="@{/superadmin/panel/audit}">Audit log</a>
             <a class="nav-link"
                th:if="${formMode == 'edit'}"
                th:classappend="${formMode == 'edit'} ? ' active'"
@@ -65,6 +66,10 @@
                     <span>Timezone</span>
                     <input type="text" th:field="*{timezone}">
                 </label>
+                <label>
+                    <span>Currency</span>
+                    <input type="text" th:field="*{currency}" placeholder="USD">
+                </label>
             </div>
 
             <div class="field-row">
@@ -74,7 +79,7 @@
                 </label>
                 <label>
                     <span th:text="${formMode == 'edit' ? 'Admin password (leave blank to keep)' : 'Admin password'}">Admin password</span>
-                    <input type="text" th:field="*{adminPassword}">
+                    <input type="password" th:field="*{adminPassword}" autocomplete="new-password">
                 </label>
             </div>
             <p class="error" th:if="${#fields.hasErrors('adminUsername')}" th:errors="*{adminUsername}">Admin user error</p>
@@ -82,8 +87,8 @@
 
             <div class="field-row">
                 <label>
-                    <span>Bot token</span>
-                    <input type="text" th:field="*{botToken}">
+                    <span th:text="${formMode == 'edit' ? 'Bot token (edit with care)' : 'Bot token'}">Bot token</span>
+                    <input type="password" th:field="*{botToken}" autocomplete="off">
                 </label>
                 <label>
                     <span>Owner Telegram ID</span>
@@ -105,6 +110,26 @@
             <label>
                 <span>Welcome message</span>
                 <textarea rows="4" th:field="*{welcomeMessage}"></textarea>
+            </label>
+
+            <div class="field-row">
+                <label>
+                    <span>Checkout name hint</span>
+                    <input type="text" th:field="*{checkoutNameHint}" placeholder="Your full name">
+                </label>
+                <label>
+                    <span>Checkout phone hint</span>
+                    <input type="text" th:field="*{checkoutPhoneHint}" placeholder="+84...">
+                </label>
+                <label>
+                    <span>Checkout note hint</span>
+                    <input type="text" th:field="*{checkoutNoteHint}" placeholder="No onion, gate code, delivery code">
+                </label>
+            </div>
+
+            <label>
+                <span>Payment QR URL</span>
+                <input type="text" th:field="*{paymentQrUrl}" placeholder="https://cdn.example.com/payment-qr.png">
             </label>
 
             <label th:if="${formMode == 'edit'}">

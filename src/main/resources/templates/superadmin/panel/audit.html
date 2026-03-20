@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Audit Log | Superadmin</title>
+    <link rel="stylesheet" th:href="@{/css/admin-panel.css}">
+</head>
+<body>
+<div class="shell">
+    <header class="page-header">
+        <div>
+            <p class="eyebrow">Superadmin panel</p>
+            <h1>Audit log</h1>
+        </div>
+        <nav class="nav">
+            <a class="nav-link" th:href="@{/superadmin/panel/tenants}">Tenants</a>
+            <a class="nav-link" th:href="@{/superadmin/panel/tenants/new}">Create tenant</a>
+            <a class="nav-link active" th:href="@{/superadmin/panel/audit}">Audit log</a>
+        </nav>
+    </header>
+
+    <section class="card">
+        <form class="filters" method="get" th:action="@{/superadmin/panel/audit}">
+            <label>
+                <span>Tenant ID</span>
+                <input type="number" name="tenantId" th:value="${tenantId}">
+            </label>
+            <label>
+                <span>Entity</span>
+                <select name="entity">
+                    <option value="">All</option>
+                    <option th:each="entry : ${entityLabels.entrySet()}"
+                            th:value="${entry.key}"
+                            th:text="${entry.value}"
+                            th:selected="${entry.key == entity}">Tenant</option>
+                </select>
+            </label>
+            <label>
+                <span>Action</span>
+                <select name="action">
+                    <option value="">All</option>
+                    <option th:each="entry : ${actionLabels.entrySet()}"
+                            th:value="${entry.key}"
+                            th:text="${entry.value}"
+                            th:selected="${entry.key == action}">Created</option>
+                </select>
+            </label>
+            <label>
+                <span>Actor ID</span>
+                <input type="text" name="actorId" th:value="${actorId}">
+            </label>
+            <label>
+                <span>From</span>
+                <input type="datetime-local" name="createdFrom" th:value="${createdFrom}">
+            </label>
+            <label>
+                <span>To</span>
+                <input type="datetime-local" name="createdTo" th:value="${createdTo}">
+            </label>
+            <input type="hidden" name="size" th:value="${size}">
+            <input type="hidden" name="page" value="0">
+            <button type="submit">Filter</button>
+            <a class="nav-link"
+               th:href="@{/superadmin/panel/audit/export(tenantId=${tenantId}, entity=${entity}, action=${action}, actorId=${actorId}, createdFrom=${createdFrom}, createdTo=${createdTo})}">
+                Export CSV
+            </a>
+        </form>
+        <p class="flash flash-warning"
+           th:if="${exportTruncated}"
+           th:text="${'CSV export is limited to ' + exportLimit + ' rows. Narrow filters for a full extract.'}">
+            CSV export is limited to 5000 rows. Narrow filters for a full extract.
+        </p>
+    </section>
+
+    <section class="card">
+        <table>
+            <thead>
+            <tr>
+                <th>At</th>
+                <th>Tenant</th>
+                <th>Entity</th>
+                <th>Action</th>
+                <th>Actor</th>
+                <th>Changes</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:if="${#lists.isEmpty(auditEntries)}">
+                <td colspan="6" class="empty">No audit entries found.</td>
+            </tr>
+            <tr th:each="entry : ${auditEntries}">
+                <td th:text="${entry.createdAt != null ? #temporals.format(entry.createdAt, 'yyyy-MM-dd HH:mm') : 'N/A'}">2026-03-18 10:10</td>
+                <td th:text="${entry.tenantId}">1</td>
+                <td th:text="${(entityLabels[entry.entity] ?: entry.entity) + ' #' + entry.entityId}">Booking #1</td>
+                <td th:text="${actionLabels[entry.action] ?: entry.action}">Status updated</td>
+                <td th:text="${entry.actorId ?: 'N/A'}">superadmin</td>
+                <td>
+                    <div th:each="line : ${auditDiffById[entry.id]}" th:text="${line}">status: NEW -> CONFIRMED</div>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+        <div class="pager" th:if="${auditPage.totalPages > 1}">
+            <a class="nav-link"
+               th:if="${auditPage.hasPrevious()}"
+               th:href="@{/superadmin/panel/audit(tenantId=${tenantId}, entity=${entity}, action=${action}, actorId=${actorId}, createdFrom=${createdFrom}, createdTo=${createdTo}, page=${auditPage.number - 1}, size=${size})}">
+                Previous
+            </a>
+            <span class="pager-info"
+                  th:text="${'Page ' + (auditPage.number + 1) + ' of ' + auditPage.totalPages}">Page 1 of 1</span>
+            <a class="nav-link"
+               th:if="${auditPage.hasNext()}"
+               th:href="@{/superadmin/panel/audit(tenantId=${tenantId}, entity=${entity}, action=${action}, actorId=${actorId}, createdFrom=${createdFrom}, createdTo=${createdTo}, page=${auditPage.number + 1}, size=${size})}">
+                Next
+            </a>
+        </div>
+    </section>
+</div>
+</body>
+</html>

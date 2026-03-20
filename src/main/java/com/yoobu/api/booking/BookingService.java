@@ -16,13 +16,21 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.util.EnumSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.OptimisticLockingFailureException;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 import org.springframework.web.server.ResponseStatusException;
 
 @Service
@@ -42,7 +50,9 @@ public class BookingService {
     @Transactional
     public BookingResponse createFoodOrder(CreateBookingRequest request, Long telegramUserId) {
         Tenant tenant = requireFoodOrderTenant();
-        validateDeliveryDate(request.deliveryDate(), tenant);
+        TenantSettings tenantSettings = tenantSettingsService.getSettings(tenant.getId());
+        validateDeliveryDate(request.deliveryDate(), tenant, tenantSettings);
+        String currency = resolveBookingCurrency(tenantSettings);
         OffsetDateTime now = nowUtc();
 
         Booking booking = new Booking();
@@ -51,6 +61,7 @@ public class BookingService {
         booking.setTelegramUserId(telegramUserId);
         booking.setCustomerName(request.customerName());
         booking.setCustomerPhone(request.customerPhone());
+        booking.setDeliveryAddress(request.deliveryAddress());
         booking.setStatus(BookingStatus.NEW);
         booking.setNote(request.note());
         booking.setDeliveryDate(request.deliveryDate());
@@ -60,7 +71,7 @@ public class BookingService {
         Booking savedBooking = bookingRepository.save(booking);
 
         List<BookingItem> bookingItems = request.items().stream()
-                .map(item -> toBookingItem(savedBooking, item, tenant.getId()))
+                .map(item -> toBookingItem(savedBooking, item, tenant.getId(), currency))
                 .toList();
 
         bookingItemRepository.saveAll(bookingItems);
@@ -114,12 +125,42 @@ public class BookingService {
         booking.setStatus(BookingStatus.CANCELLED);
         booking.setUpdatedAt(nowUtc());
 
-        Booking savedBooking = bookingRepository.save(booking);
+        Booking savedBooking = persistBookingWithConflictGuard(booking);
         auditLogService.logAction(
                 savedBooking.getTenant().getId(),
                 ENTITY_NAME,
                 savedBooking.getId(),
                 "CANCEL",
+                telegramUserId.toString(),
+                oldSnapshot,
+                toAuditSnapshot(savedBooking)
+        );
+
+        return toResponse(savedBooking);
+    }
+
+    @Transactional
+    public BookingResponse confirmMyBookingPayment(Long bookingId, Long telegramUserId) {
+        requireFoodOrderTenant();
+        Booking booking = findCustomerBooking(bookingId, telegramUserId);
+
+        if (booking.getStatus() != BookingStatus.NEW) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "Payment can only be confirmed for booking in NEW status"
+            );
+        }
+
+        Map<String, Object> oldSnapshot = toAuditSnapshot(booking);
+        booking.setStatus(BookingStatus.PAYMENT_PENDING);
+        booking.setUpdatedAt(nowUtc());
+
+        Booking savedBooking = persistBookingWithConflictGuard(booking);
+        auditLogService.logAction(
+                savedBooking.getTenant().getId(),
+                ENTITY_NAME,
+                savedBooking.getId(),
+                "CONFIRM_PAYMENT",
                 telegramUserId.toString(),
                 oldSnapshot,
                 toAuditSnapshot(savedBooking)
@@ -151,6 +192,33 @@ public class BookingService {
     }
 
     @Transactional(readOnly = true)
+    public Page<BookingResponse> getAdminBookingsPage(BookingStatus status, LocalDate deliveryDate, int page, int size) {
+        requireFoodOrderTenant();
+
+        Long tenantId = TenantContext.getRequiredTenantId();
+        Pageable pageable = PageRequest.of(
+                Math.max(page, 0),
+                normalizePageSize(size),
+                Sort.by(Sort.Direction.DESC, "createdAt")
+        );
+        Page<Booking> bookingPage;
+
+        if (status != null && deliveryDate != null) {
+            bookingPage = bookingRepository.findByTenantIdAndDeletedAtIsNullAndStatusAndDeliveryDate(
+                    tenantId, status, deliveryDate, pageable);
+        } else if (status != null) {
+            bookingPage = bookingRepository.findByTenantIdAndDeletedAtIsNullAndStatus(tenantId, status, pageable);
+        } else if (deliveryDate != null) {
+            bookingPage = bookingRepository.findByTenantIdAndDeletedAtIsNullAndDeliveryDate(tenantId, deliveryDate, pageable);
+        } else {
+            bookingPage = bookingRepository.findByTenantIdAndDeletedAtIsNull(tenantId, pageable);
+        }
+
+        List<BookingResponse> responses = toResponses(bookingPage.getContent());
+        return new PageImpl<>(responses, pageable, bookingPage.getTotalElements());
+    }
+
+    @Transactional(readOnly = true)
     public BookingResponse getAdminBooking(Long bookingId) {
         requireFoodOrderTenant();
         return toResponse(findAdminBooking(bookingId));
@@ -160,12 +228,13 @@ public class BookingService {
     public BookingResponse updateBookingStatus(Long bookingId, BookingStatus status) {
         requireFoodOrderTenant();
         Booking booking = findAdminBooking(bookingId);
+        validateStatusTransition(booking.getStatus(), status);
         Map<String, Object> oldSnapshot = toAuditSnapshot(booking);
 
         booking.setStatus(status);
         booking.setUpdatedAt(nowUtc());
 
-        Booking savedBooking = bookingRepository.save(booking);
+        Booking savedBooking = persistBookingWithConflictGuard(booking);
         auditLogService.logAction(
                 savedBooking.getTenant().getId(),
                 ENTITY_NAME,
@@ -179,6 +248,21 @@ public class BookingService {
         return toResponse(savedBooking);
     }
 
+    public List<BookingStatus> getAllowedAdminStatuses(BookingStatus currentStatus) {
+        EnumSet<BookingStatus> allowedStatuses = switch (currentStatus) {
+            case NEW -> EnumSet.of(BookingStatus.NEW, BookingStatus.CANCELLED);
+            case PAYMENT_PENDING -> EnumSet.of(
+                    BookingStatus.PAYMENT_PENDING,
+                    BookingStatus.CONFIRMED,
+                    BookingStatus.CANCELLED
+            );
+            case CONFIRMED -> EnumSet.of(BookingStatus.CONFIRMED, BookingStatus.DONE, BookingStatus.CANCELLED);
+            case DONE -> EnumSet.of(BookingStatus.DONE, BookingStatus.CANCELLED);
+            case CANCELLED -> EnumSet.of(BookingStatus.CANCELLED);
+        };
+        return List.copyOf(allowedStatuses);
+    }
+
     private Tenant requireFoodOrderTenant() {
         Tenant tenant = TenantContext.requireCurrentTenant();
         if (tenant.getType() != TenantType.FOOD_ORDER) {
@@ -187,10 +271,10 @@ public class BookingService {
         return tenant;
     }
 
-    private void validateDeliveryDate(LocalDate deliveryDate, Tenant tenant) {
+    private void validateDeliveryDate(LocalDate deliveryDate, Tenant tenant, TenantSettings tenantSettings) {
         LocalDate earliestAllowedDate = tenantTimeService.earliestDeliveryDate(
                 tenant,
-                tenantSettingsService.getSettings(tenant.getId())
+                tenantSettings
         );
         if (deliveryDate.isBefore(earliestAllowedDate)) {
             throw new ResponseStatusException(
@@ -217,7 +301,7 @@ public class BookingService {
                 .orElseThrow(this::bookingNotFound);
     }
 
-    private BookingItem toBookingItem(Booking booking, BookingItemRequest item, Long tenantId) {
+    private BookingItem toBookingItem(Booking booking, BookingItemRequest item, Long tenantId, String currency) {
         CatalogService service = catalogServiceRepository.findByIdAndTenantIdAndStatus(
                         item.serviceId(), tenantId, com.yoobu.api.catalog.ServiceStatus.ACTIVE)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Service not found"));
@@ -231,6 +315,7 @@ public class BookingService {
         bookingItem.setService(service);
         bookingItem.setQuantity(item.quantity());
         bookingItem.setUnitPrice(service.getPrice());
+        bookingItem.setCurrency(currency);
         return bookingItem;
     }
 
@@ -250,7 +335,7 @@ public class BookingService {
     }
 
     private BookingResponse toResponse(Booking booking, List<BookingItem> items) {
-        return bookingMapper.toResponse(booking, items);
+        return bookingMapper.toResponse(booking, items, resolveBookingCurrency(items));
     }
 
     private Map<String, Object> toAuditSnapshot(Booking booking) {
@@ -265,6 +350,7 @@ public class BookingService {
                     itemSnapshot.put("serviceName", item.getService().getName());
                     itemSnapshot.put("quantity", item.getQuantity());
                     itemSnapshot.put("unitPrice", item.getUnitPrice());
+                    itemSnapshot.put("currency", item.getCurrency());
                     return itemSnapshot;
                 })
                 .toList();
@@ -276,6 +362,7 @@ public class BookingService {
         snapshot.put("telegramUserId", booking.getTelegramUserId());
         snapshot.put("customerName", booking.getCustomerName());
         snapshot.put("customerPhone", booking.getCustomerPhone());
+        snapshot.put("deliveryAddress", booking.getDeliveryAddress());
         snapshot.put("status", booking.getStatus());
         snapshot.put("note", booking.getNote());
         snapshot.put("totalPrice", booking.getTotalPrice());
@@ -298,11 +385,58 @@ public class BookingService {
                 ));
     }
 
+    private String resolveBookingCurrency(TenantSettings settings) {
+        String configuredCurrency = settings.pricing().currency();
+        if (StringUtils.hasText(configuredCurrency)) {
+            return configuredCurrency.trim();
+        }
+        return TenantSettings.DEFAULT_CURRENCY;
+    }
+
+    private String resolveBookingCurrency(List<BookingItem> items) {
+        for (BookingItem item : items) {
+            if (StringUtils.hasText(item.getCurrency())) {
+                return item.getCurrency().trim();
+            }
+        }
+        return TenantSettings.DEFAULT_CURRENCY;
+    }
+
     private ResponseStatusException bookingNotFound() {
         return new ResponseStatusException(HttpStatus.NOT_FOUND, "Booking not found");
     }
 
+    private void validateStatusTransition(BookingStatus currentStatus, BookingStatus nextStatus) {
+        if (getAllowedAdminStatuses(currentStatus).contains(nextStatus)) {
+            return;
+        }
+
+        throw new ResponseStatusException(
+                HttpStatus.CONFLICT,
+                "Invalid booking status transition from %s to %s".formatted(currentStatus, nextStatus)
+        );
+    }
+
     private OffsetDateTime nowUtc() {
         return OffsetDateTime.now(ZoneOffset.UTC);
+    }
+
+    private Booking persistBookingWithConflictGuard(Booking booking) {
+        try {
+            return bookingRepository.saveAndFlush(booking);
+        } catch (OptimisticLockingFailureException ex) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "Booking was modified by another request. Refresh and retry.",
+                    ex
+            );
+        }
+    }
+
+    private int normalizePageSize(int requestedSize) {
+        if (requestedSize < 1) {
+            return 10;
+        }
+        return Math.min(requestedSize, 100);
     }
 }

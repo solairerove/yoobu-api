@@ -12,6 +12,9 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -36,6 +39,33 @@ public class AdminCatalogService {
                 .stream()
                 .map(catalogServiceMapper::toResponse)
                 .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public Page<ServiceResponse> getAdminServicesPage(String query, int page, int size) {
+        requireFoodOrderTenant();
+
+        String normalizedQuery = normalizeOptional(query);
+        var pageable = PageRequest.of(
+                Math.max(page, 0),
+                normalizePageSize(size),
+                Sort.by(Sort.Direction.ASC, "sortOrder").and(Sort.by(Sort.Direction.ASC, "id"))
+        );
+
+        Page<CatalogService> servicePage = StringUtils.hasText(normalizedQuery)
+                ? catalogServiceRepository.findByTenantIdAndStatusNotAndNameContainingIgnoreCase(
+                        TenantContext.getRequiredTenantId(),
+                        ServiceStatus.DELETED,
+                        normalizedQuery,
+                        pageable
+                )
+                : catalogServiceRepository.findByTenantIdAndStatusNot(
+                        TenantContext.getRequiredTenantId(),
+                        ServiceStatus.DELETED,
+                        pageable
+                );
+
+        return servicePage.map(catalogServiceMapper::toResponse);
     }
 
     @Transactional(readOnly = true)
@@ -169,5 +199,16 @@ public class AdminCatalogService {
         snapshot.put("sortOrder", service.getSortOrder());
         snapshot.put("deletedAt", service.getDeletedAt());
         return snapshot;
+    }
+
+    private String normalizeOptional(String value) {
+        return StringUtils.hasText(value) ? value.trim() : null;
+    }
+
+    private int normalizePageSize(int requestedSize) {
+        if (requestedSize < 1) {
+            return 20;
+        }
+        return Math.min(requestedSize, 100);
     }
 }

@@ -21,11 +21,21 @@ public class SuperAdminTenantForm {
 
     private String timezone = "Asia/Ho_Chi_Minh";
 
+    private String currency = "USD";
+
     private String primaryColor;
 
     private String logoUrl;
 
     private String welcomeMessage;
+
+    private String checkoutNameHint;
+
+    private String checkoutPhoneHint;
+
+    private String checkoutNoteHint;
+
+    private String paymentQrUrl;
 
     @NotBlank
     private String adminUsername;
@@ -82,6 +92,14 @@ public class SuperAdminTenantForm {
         this.timezone = timezone;
     }
 
+    public String getCurrency() {
+        return currency;
+    }
+
+    public void setCurrency(String currency) {
+        this.currency = currency;
+    }
+
     public String getPrimaryColor() {
         return primaryColor;
     }
@@ -104,6 +122,38 @@ public class SuperAdminTenantForm {
 
     public void setWelcomeMessage(String welcomeMessage) {
         this.welcomeMessage = welcomeMessage;
+    }
+
+    public String getCheckoutPhoneHint() {
+        return checkoutPhoneHint;
+    }
+
+    public void setCheckoutPhoneHint(String checkoutPhoneHint) {
+        this.checkoutPhoneHint = checkoutPhoneHint;
+    }
+
+    public String getCheckoutNameHint() {
+        return checkoutNameHint;
+    }
+
+    public void setCheckoutNameHint(String checkoutNameHint) {
+        this.checkoutNameHint = checkoutNameHint;
+    }
+
+    public String getCheckoutNoteHint() {
+        return checkoutNoteHint;
+    }
+
+    public void setCheckoutNoteHint(String checkoutNoteHint) {
+        this.checkoutNoteHint = checkoutNoteHint;
+    }
+
+    public String getPaymentQrUrl() {
+        return paymentQrUrl;
+    }
+
+    public void setPaymentQrUrl(String paymentQrUrl) {
+        this.paymentQrUrl = paymentQrUrl;
     }
 
     public String getAdminUsername() {

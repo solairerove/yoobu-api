@@ -8,6 +8,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.yoobu.api.IntegrationTestSupport;
+import com.yoobu.api.booking.BookingStatus;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.context.TestPropertySource;
@@ -20,6 +21,7 @@ class SuperAdminPanelIT extends IntegrationTestSupport {
 
     private static final String PANEL_ROOT = "/superadmin/panel";
     private static final String PANEL_TENANTS_PATH = PANEL_ROOT + "/tenants";
+    private static final String PANEL_AUDIT_PATH = PANEL_ROOT + "/audit";
 
     @Test
     void superAdminPanelListsAndCreatesTenants() throws Exception {
@@ -34,9 +36,14 @@ class SuperAdminPanelIT extends IntegrationTestSupport {
                 Map.entry("botToken", "panel-bot"),
                 Map.entry("ownerTelegramId", "123456"),
                 Map.entry("timezone", "Asia/Ho_Chi_Minh"),
+                Map.entry("currency", "USD"),
                 Map.entry("primaryColor", "#112233"),
                 Map.entry("logoUrl", "https://cdn.example.com/logo.png"),
                 Map.entry("welcomeMessage", "Hello from panel"),
+                Map.entry("checkoutNameHint", "Your full name"),
+                Map.entry("checkoutPhoneHint", "+84..."),
+                Map.entry("checkoutNoteHint", "No onion, gate code, delivery code"),
+                Map.entry("paymentQrUrl", "https://cdn.example.com/payment-qr.png"),
                 Map.entry("adminUsername", "panel-admin"),
                 Map.entry("adminPassword", "panel-secret")
         ))
@@ -59,6 +66,11 @@ class SuperAdminPanelIT extends IntegrationTestSupport {
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("Panel Tenant")))
                 .andExpect(content().string(containsString("panel-admin")))
+                .andExpect(content().string(containsString("Your full name")))
+                .andExpect(content().string(containsString("+84...")))
+                .andExpect(content().string(containsString("No onion, gate code, delivery code")))
+                .andExpect(content().string(containsString("https://cdn.example.com/payment-qr.png")))
+                .andExpect(content().string(containsString("USD")))
                 .andExpect(content().string(containsString("Edit tenant")))
                 .andExpect(content().string(containsString("/t/panel-tenant/services")));
     }
@@ -80,9 +92,14 @@ class SuperAdminPanelIT extends IntegrationTestSupport {
                 Map.entry("botToken", ""),
                 Map.entry("ownerTelegramId", ""),
                 Map.entry("timezone", "Asia/Ho_Chi_Minh"),
+                Map.entry("currency", "THB"),
                 Map.entry("primaryColor", ""),
                 Map.entry("logoUrl", "https://cdn.example.com/panel-updated.png"),
                 Map.entry("welcomeMessage", "Updated from panel"),
+                Map.entry("checkoutNameHint", "Contact person"),
+                Map.entry("checkoutPhoneHint", "+1 555..."),
+                Map.entry("checkoutNoteHint", "Ring bell twice"),
+                Map.entry("paymentQrUrl", "https://cdn.example.com/payment-qr-updated.png"),
                 Map.entry("adminUsername", "panel-admin-2"),
                 Map.entry("adminPassword", "panel-secret-2"),
                 Map.entry("active", "true")
@@ -95,7 +112,12 @@ class SuperAdminPanelIT extends IntegrationTestSupport {
                 .andExpect(content().string(containsString("Panel After")))
                 .andExpect(content().string(containsString("panel-admin-2")))
                 .andExpect(content().string(containsString("Yes")))
-                .andExpect(content().string(containsString("https://cdn.example.com/panel-updated.png")));
+                .andExpect(content().string(containsString("https://cdn.example.com/panel-updated.png")))
+                .andExpect(content().string(containsString("Contact person")))
+                .andExpect(content().string(containsString("+1 555...")))
+                .andExpect(content().string(containsString("Ring bell twice")))
+                .andExpect(content().string(containsString("https://cdn.example.com/payment-qr-updated.png")))
+                .andExpect(content().string(containsString("THB")));
 
         tenantAdminGet("panel-edit", "/services", "panel-admin", "panel-secret")
                 .andExpect(status().isUnauthorized());
@@ -115,13 +137,57 @@ class SuperAdminPanelIT extends IntegrationTestSupport {
                 Map.entry("botToken", "panel-bot"),
                 Map.entry("ownerTelegramId", "123456"),
                 Map.entry("timezone", "Asia/Ho_Chi_Minh"),
+                Map.entry("currency", "USD"),
                 Map.entry("primaryColor", "#112233"),
                 Map.entry("logoUrl", "https://cdn.example.com/logo.png"),
                 Map.entry("welcomeMessage", "Hello from panel"),
+                Map.entry("checkoutNameHint", "Your full name"),
+                Map.entry("checkoutPhoneHint", "+84..."),
+                Map.entry("checkoutNoteHint", "No onion, gate code, delivery code"),
+                Map.entry("paymentQrUrl", "https://cdn.example.com/payment-qr.png"),
                 Map.entry("adminUsername", "panel-admin"),
                 Map.entry("adminPassword", "panel-secret")
         ))
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("Tenant slug already exists")));
+    }
+
+    @Test
+    void superAdminPanelAuditPageRendersAndSupportsTenantFilter() throws Exception {
+        long tenantId = createFoodOrderTenant("panel-audit", "Panel Audit", "bot-audit", "audit-admin", "audit-secret")
+                .get("id").asLong();
+        long serviceId = createService("panel-audit", "audit-admin", "audit-secret", "Pizza", "12.50")
+                .get("id").asLong();
+        long bookingId = createBooking("panel-audit", 707L, serviceId, 1)
+                .get("id").asLong();
+        confirmBookingPayment("panel-audit", bookingId, 707L);
+        updateBookingStatus("panel-audit", "audit-admin", "audit-secret", bookingId, BookingStatus.CONFIRMED);
+
+        superAdminGet(PANEL_AUDIT_PATH)
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("Audit log")))
+                .andExpect(content().string(containsString("Status updated")))
+                .andExpect(content().string(containsString("audit-admin")))
+                .andExpect(content().string(containsString("status: PAYMENT_PENDING -&gt; CONFIRMED")))
+                .andExpect(content().string(containsString("/superadmin/panel/audit/export")));
+
+        superAdminGet(PANEL_AUDIT_PATH + "?tenantId=" + tenantId + "&entity=booking&action=UPDATE_STATUS")
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("Booking #" + bookingId)))
+                .andExpect(content().string(containsString("Status updated")))
+                .andExpect(content().string(containsString(
+                        "/superadmin/panel/audit/export?tenantId=" + tenantId + "&amp;entity=booking&amp;action=UPDATE_STATUS"
+                )));
+
+        superAdminGet(PANEL_AUDIT_PATH + "/export?tenantId=" + tenantId + "&entity=booking&action=UPDATE_STATUS")
+                .andExpect(status().isOk())
+                .andExpect(content().contentType("text/csv"))
+                .andExpect(header().string("Content-Disposition", containsString("attachment; filename=\"audit-log-")))
+                .andExpect(content().string(containsString("status: PAYMENT_PENDING -> CONFIRMED")));
+
+        superAdminGet(PANEL_TENANTS_PATH + "/" + tenantId)
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("/superadmin/panel/audit?tenantId=" + tenantId)))
+                .andExpect(content().string(containsString("Audit log")));
     }
 }

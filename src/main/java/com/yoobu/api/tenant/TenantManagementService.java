@@ -13,6 +13,9 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -33,12 +36,33 @@ public class TenantManagementService {
     private final TenantSettingsService tenantSettingsService;
     private final TenantMapper tenantMapper;
     private final PasswordEncoder passwordEncoder;
+    private final PaymentQrUrlValidator paymentQrUrlValidator;
 
     @Transactional(readOnly = true)
     public List<TenantSummaryResponse> getAllTenants() {
         return tenantRepository.findAllByOrderByCreatedAtDesc().stream()
                 .map(tenantMapper::toSummaryResponse)
                 .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public Page<TenantSummaryResponse> getAllTenantsPage(String query, int page, int size) {
+        String normalizedQuery = normalizeOptional(query);
+        var pageable = PageRequest.of(
+                Math.max(page, 0),
+                normalizePageSize(size),
+                Sort.by(Sort.Direction.DESC, "createdAt")
+        );
+
+        Page<Tenant> tenantPage = StringUtils.hasText(normalizedQuery)
+                ? tenantRepository.findByNameContainingIgnoreCaseOrSlugContainingIgnoreCase(
+                        normalizedQuery,
+                        normalizedQuery,
+                        pageable
+                )
+                : tenantRepository.findAll(pageable);
+
+        return tenantPage.map(tenantMapper::toSummaryResponse);
     }
 
     @Transactional(readOnly = true)
@@ -111,6 +135,7 @@ public class TenantManagementService {
 
         Tenant savedTenant = tenantRepository.save(tenant);
         upsertConfig(existingConfigs, savedTenant, TenantConfigKeys.ADMIN_USERNAME, request.adminUsername(), false);
+        upsertCurrency(existingConfigs, savedTenant, request.currency());
         if (StringUtils.hasText(request.adminPassword())) {
             upsertConfig(
                     existingConfigs,
@@ -123,6 +148,16 @@ public class TenantManagementService {
         upsertConfig(existingConfigs, savedTenant, TenantConfigKeys.PRIMARY_COLOR, request.primaryColor(), true);
         upsertConfig(existingConfigs, savedTenant, TenantConfigKeys.LOGO_URL, request.logoUrl(), true);
         upsertConfig(existingConfigs, savedTenant, TenantConfigKeys.WELCOME_MESSAGE, request.welcomeMessage(), true);
+        upsertConfig(existingConfigs, savedTenant, TenantConfigKeys.CHECKOUT_NAME_HINT, request.checkoutNameHint(), true);
+        upsertConfig(existingConfigs, savedTenant, TenantConfigKeys.CHECKOUT_PHONE_HINT, request.checkoutPhoneHint(), true);
+        upsertConfig(existingConfigs, savedTenant, TenantConfigKeys.CHECKOUT_NOTE_HINT, request.checkoutNoteHint(), true);
+        upsertConfig(
+                existingConfigs,
+                savedTenant,
+                TenantConfigKeys.PAYMENT_QR_URL,
+                paymentQrUrlValidator.normalizePaymentQrUrl(request.paymentQrUrl()),
+                true
+        );
         auditLogService.logUpdate(
                 savedTenant.getId(),
                 ENTITY_NAME,
@@ -156,9 +191,19 @@ public class TenantManagementService {
         List<TenantConfig> configs = new ArrayList<>();
         addConfig(configs, tenant, TenantConfigKeys.ADMIN_USERNAME, request.adminUsername());
         addConfig(configs, tenant, TenantConfigKeys.ADMIN_PASSWORD, passwordEncoder.encode(request.adminPassword()));
+        addConfig(configs, tenant, TenantConfigKeys.CURRENCY, resolveCurrency(request.currency()));
         addConfig(configs, tenant, TenantConfigKeys.PRIMARY_COLOR, request.primaryColor());
         addConfig(configs, tenant, TenantConfigKeys.LOGO_URL, request.logoUrl());
         addConfig(configs, tenant, TenantConfigKeys.WELCOME_MESSAGE, request.welcomeMessage());
+        addConfig(configs, tenant, TenantConfigKeys.CHECKOUT_NAME_HINT, request.checkoutNameHint());
+        addConfig(configs, tenant, TenantConfigKeys.CHECKOUT_PHONE_HINT, request.checkoutPhoneHint());
+        addConfig(configs, tenant, TenantConfigKeys.CHECKOUT_NOTE_HINT, request.checkoutNoteHint());
+        addConfig(
+                configs,
+                tenant,
+                TenantConfigKeys.PAYMENT_QR_URL,
+                paymentQrUrlValidator.normalizePaymentQrUrl(request.paymentQrUrl())
+        );
         return configs;
     }
 
@@ -209,12 +254,36 @@ public class TenantManagementService {
         existingConfigs.put(key, savedConfig);
     }
 
+    private void upsertCurrency(
+            Map<String, TenantConfig> existingConfigs,
+            Tenant tenant,
+            String requestedCurrency
+    ) {
+        String normalizedCurrency = normalizeOptional(requestedCurrency);
+        if (StringUtils.hasText(normalizedCurrency)) {
+            upsertConfig(existingConfigs, tenant, TenantConfigKeys.CURRENCY, normalizedCurrency, false);
+            return;
+        }
+
+        if (!existingConfigs.containsKey(TenantConfigKeys.CURRENCY)) {
+            upsertConfig(existingConfigs, tenant, TenantConfigKeys.CURRENCY, TenantSettings.DEFAULT_CURRENCY, false);
+        }
+    }
+
     private String normalizeOptional(String value) {
         return StringUtils.hasText(value) ? value.trim() : null;
     }
 
     private String normalizeTimezone(String timezone) {
         return StringUtils.hasText(timezone) ? timezone.trim() : DEFAULT_TIMEZONE;
+    }
+
+    private String resolveCurrency(String currency) {
+        String normalizedCurrency = normalizeOptional(currency);
+        if (StringUtils.hasText(normalizedCurrency)) {
+            return normalizedCurrency;
+        }
+        return TenantSettings.DEFAULT_CURRENCY;
     }
 
     private Map<String, Object> toAuditSnapshot(Tenant tenant, Map<String, TenantConfig> configs) {
@@ -224,6 +293,9 @@ public class TenantManagementService {
     private Map<String, Object> toAuditSnapshot(Tenant tenant, TenantSettings settings) {
         TenantSettings.AdminSettings admin = settings.admin();
         TenantSettings.BrandingSettings branding = settings.branding();
+        TenantSettings.CheckoutSettings checkout = settings.checkout();
+        TenantSettings.PricingSettings pricing = settings.pricing();
+        TenantSettings.PaymentSettings payment = settings.payment();
         Map<String, Object> snapshot = new LinkedHashMap<>();
         snapshot.put("id", tenant.getId());
         snapshot.put("slug", tenant.getSlug());
@@ -238,6 +310,18 @@ public class TenantManagementService {
         snapshot.put("primaryColor", branding.primaryColor());
         snapshot.put("logoUrl", branding.logoUrl());
         snapshot.put("welcomeMessage", branding.welcomeMessage());
+        snapshot.put("checkoutNameHint", checkout.nameHint());
+        snapshot.put("checkoutPhoneHint", checkout.phoneHint());
+        snapshot.put("checkoutNoteHint", checkout.noteHint());
+        snapshot.put("paymentQrUrl", payment.qrUrl());
+        snapshot.put("currency", pricing.currency());
         return snapshot;
+    }
+
+    private int normalizePageSize(int requestedSize) {
+        if (requestedSize < 1) {
+            return 20;
+        }
+        return Math.min(requestedSize, 100);
     }
 }

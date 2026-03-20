@@ -19,15 +19,24 @@
         </nav>
     </header>
 
+    <section class="card" th:if="${flashMessage}">
+        <p class="flash"
+           th:classappend="${flashType == 'success'} ? ' flash-success' : ' flash-error'"
+           th:text="${flashMessage}">
+            Status updated.
+        </p>
+    </section>
+
     <section class="detail-grid">
         <article class="card">
             <h2>Summary</h2>
             <dl class="summary">
                 <div><dt>Status</dt><dd th:text="${booking.status}">NEW</dd></div>
                 <div><dt>Customer</dt><dd th:text="${booking.customerName}">Alice</dd></div>
+                <div><dt>Delivery address</dt><dd th:text="${booking.deliveryAddress ?: 'N/A'}">123 Main St</dd></div>
                 <div><dt>Delivery date</dt><dd th:text="${booking.deliveryDate}">2026-03-14</dd></div>
-                <div><dt>Total</dt><dd th:text="${booking.totalPrice}">25.00</dd></div>
-                <div><dt>Created</dt><dd th:text="${booking.createdAt}">2026-03-14T00:00Z</dd></div>
+                <div><dt>Total</dt><dd th:text="${@adminPanelViewFormats.money(booking.totalPrice, booking.currency)}">USD 25.00</dd></div>
+                <div><dt>Created</dt><dd th:text="${@adminPanelViewFormats.timestamp(booking.createdAt)}">2026-03-14 00:00 Europe/Warsaw</dd></div>
                 <div><dt>Note</dt><dd th:text="${booking.note ?: 'N/A'}">Leave at the door</dd></div>
             </dl>
         </article>
@@ -40,12 +49,13 @@
                 <label>
                     <span>Status</span>
                     <select th:field="*{status}">
-                        <option th:each="statusOption : ${statuses}"
+                        <option th:each="statusOption : ${statusOptions}"
                                 th:value="${statusOption}"
                                 th:text="${statusOption}"></option>
                     </select>
                 </label>
                 <p class="error" th:if="${#fields.hasErrors('status')}" th:errors="*{status}">Invalid status</p>
+                <input type="hidden" name="returnTo" value="detail">
                 <button type="submit">Save status</button>
             </form>
         </article>
@@ -65,7 +75,7 @@
             <tr th:each="item : ${booking.items}">
                 <td th:text="${item.serviceName}">Pizza</td>
                 <td th:text="${item.quantity}">2</td>
-                <td th:text="${item.unitPrice}">12.50</td>
+                <td th:text="${@adminPanelViewFormats.money(item.unitPrice, item.currency)}">USD 12.50</td>
             </tr>
             </tbody>
         </table>

@@ -19,8 +19,28 @@
         </nav>
     </header>
 
+    <section class="card" th:if="${flashMessage}">
+        <p class="flash"
+           th:classappend="${flashType == 'success'} ? ' flash-success' : ' flash-error'"
+           th:text="${flashMessage}">
+            Service updated.
+        </p>
+    </section>
+
     <section class="toolbar">
         <a class="button-link" th:href="@{/admin/{slug}/panel/services/new(slug=${slug})}">New service</a>
+    </section>
+
+    <section class="card">
+        <form class="filters" method="get" th:action="@{/admin/{slug}/panel/services(slug=${slug})}">
+            <label>
+                <span>Search by name</span>
+                <input type="text" name="query" th:value="${query}" placeholder="Pizza, Pasta...">
+            </label>
+            <input type="hidden" name="size" th:value="${size}">
+            <input type="hidden" name="page" value="0">
+            <button type="submit">Search</button>
+        </form>
     </section>
 
     <section class="card">
@@ -42,16 +62,29 @@
             </tr>
             <tr th:each="service : ${services}">
                 <td th:text="${service.name}">Pizza</td>
-                <td th:text="${service.price}">12.50</td>
+                <td th:text="${@adminPanelViewFormats.money(service.price, currency)}">USD 12.50</td>
                 <td th:text="${service.unit}">pcs</td>
                 <td th:text="${service.durationMinutes ?: 'N/A'}">N/A</td>
                 <td th:text="${service.sortOrder}">0</td>
                 <td>
-                    <span class="badge"
-                          th:classappend="${service.status.name() == 'ACTIVE'} ? ' badge-success' : ' badge-muted'"
-                          th:text="${#strings.capitalize(#strings.toLowerCase(service.status.name()))}">
-                        Active
-                    </span>
+                    <form class="inline-status-form"
+                          method="post"
+                          th:action="@{/admin/{slug}/panel/services/{serviceId}/status(slug=${slug}, serviceId=${service.id})}">
+                        <label class="sr-only" th:for="${'service-status-' + service.id}">
+                            <span th:text="${'Status for service ' + service.name}">Status for service</span>
+                        </label>
+                        <select name="status"
+                                th:id="${'service-status-' + service.id}"
+                                th:classappend="${service.status.name() == 'ACTIVE'} ? ' status-select-active' : ' status-select-inactive'">
+                            <option th:each="statusOption : ${serviceStatuses}"
+                                    th:value="${statusOption}"
+                                    th:text="${#strings.capitalize(#strings.toLowerCase(statusOption.name()))}"
+                                    th:selected="${statusOption == service.status}">
+                                Active
+                            </option>
+                        </select>
+                        <button type="submit">Update</button>
+                    </form>
                 </td>
                 <td>
                     <a th:href="@{/admin/{slug}/panel/services/{serviceId}/edit(slug=${slug}, serviceId=${service.id})}">
@@ -61,6 +94,20 @@
             </tr>
             </tbody>
         </table>
+        <div class="pager" th:if="${servicePage.totalPages > 1}">
+            <a class="nav-link"
+               th:if="${servicePage.hasPrevious()}"
+               th:href="@{/admin/{slug}/panel/services(slug=${slug}, query=${query}, page=${servicePage.number - 1}, size=${size})}">
+                Previous
+            </a>
+            <span class="pager-info"
+                  th:text="${'Page ' + (servicePage.number + 1) + ' of ' + servicePage.totalPages}">Page 1 of 1</span>
+            <a class="nav-link"
+               th:if="${servicePage.hasNext()}"
+               th:href="@{/admin/{slug}/panel/services(slug=${slug}, query=${query}, page=${servicePage.number + 1}, size=${size})}">
+                Next
+            </a>
+        </div>
     </section>
 </div>
 </body>

@@ -16,13 +16,23 @@
         <nav class="nav">
             <a class="nav-link" th:href="@{/superadmin/panel/tenants}">Tenants</a>
             <a class="nav-link" th:href="@{/superadmin/panel/tenants/new}">Create tenant</a>
+            <a class="nav-link" th:href="@{/superadmin/panel/audit}">Audit log</a>
             <a class="nav-link active" th:href="@{/superadmin/panel/tenants/{tenantId}(tenantId=${tenant.id})}">Detail</a>
         </nav>
     </header>
 
+    <section class="card" th:if="${flashMessage}">
+        <p class="flash"
+           th:classappend="${flashType == 'success'} ? ' flash-success' : ' flash-error'"
+           th:text="${flashMessage}">
+            Tenant updated.
+        </p>
+    </section>
+
     <section class="toolbar">
         <a class="button-link" th:href="@{/admin/{slug}/panel(slug=${tenant.slug})}">Open admin panel</a>
         <a class="button-link" th:href="@{/superadmin/panel/tenants/{tenantId}/edit(tenantId=${tenant.id})}">Edit tenant</a>
+        <a class="button-link" th:href="@{/superadmin/panel/audit(tenantId=${tenant.id})}">View tenant audit</a>
     </section>
 
     <section class="detail-grid">
@@ -34,7 +44,7 @@
                 <div><dt>Type</dt><dd th:text="${tenant.type}">FOOD_ORDER</dd></div>
                 <div><dt>Timezone</dt><dd th:text="${tenant.timezone}">Asia/Ho_Chi_Minh</dd></div>
                 <div><dt>Owner Telegram ID</dt><dd th:text="${tenant.ownerTelegramId ?: 'N/A'}">N/A</dd></div>
-                <div><dt>Created</dt><dd th:text="${tenant.createdAt}">2026-03-14T00:00Z</dd></div>
+                <div><dt>Created</dt><dd th:text="${tenant.createdAt != null ? #temporals.format(tenant.createdAt, 'yyyy-MM-dd HH:mm') : 'N/A'}">2026-03-14 00:00</dd></div>
                 <div><dt>Active</dt><dd th:text="${tenant.active ? 'Yes' : 'No'}">Yes</dd></div>
             </dl>
         </article>
@@ -42,10 +52,15 @@
         <article class="card">
             <h2>Integrations</h2>
             <dl class="summary">
-                <div><dt>Bot token</dt><dd th:text="${tenant.botToken ?: 'N/A'}">N/A</dd></div>
+                <div><dt>Bot token</dt><dd th:text="${tenant.botToken != null ? 'Configured' : 'N/A'}">Configured</dd></div>
                 <div><dt>Primary color</dt><dd th:text="${tenant.config['primary_color'] ?: 'N/A'}">#112233</dd></div>
                 <div><dt>Logo URL</dt><dd th:text="${tenant.config['logo_url'] ?: 'N/A'}">N/A</dd></div>
                 <div><dt>Welcome message</dt><dd th:text="${tenant.config['welcome_message'] ?: 'N/A'}">N/A</dd></div>
+                <div><dt>Checkout name hint</dt><dd th:text="${tenant.config['checkout_name_hint'] ?: 'N/A'}">Your full name</dd></div>
+                <div><dt>Checkout phone hint</dt><dd th:text="${tenant.config['checkout_phone_hint'] ?: 'N/A'}">+84...</dd></div>
+                <div><dt>Checkout note hint</dt><dd th:text="${tenant.config['checkout_note_hint'] ?: 'N/A'}">No onion, gate code, delivery code</dd></div>
+                <div><dt>Payment QR URL</dt><dd th:text="${tenant.config['payment_qr_url'] ?: 'N/A'}">https://cdn.example.com/payment-qr.png</dd></div>
+                <div><dt>Currency</dt><dd th:text="${tenant.config['currency'] ?: 'USD'}">USD</dd></div>
                 <div><dt>Admin username</dt><dd th:text="${tenant.config['admin_username'] ?: 'N/A'}">admin</dd></div>
             </dl>
         </article>

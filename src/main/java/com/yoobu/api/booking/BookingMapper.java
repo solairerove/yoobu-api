@@ -11,7 +11,8 @@ import org.mapstruct.Mapping;
 public interface BookingMapper {
 
     @Mapping(target = "items", source = "items")
-    BookingResponse toResponse(Booking booking, List<BookingItem> items);
+    @Mapping(target = "currency", source = "currency")
+    BookingResponse toResponse(Booking booking, List<BookingItem> items, String currency);
 
     @Mapping(target = "serviceName", source = "service.name")
     BookingItemResponse toResponse(BookingItem item);

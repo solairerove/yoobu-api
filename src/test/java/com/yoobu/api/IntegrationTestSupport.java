@@ -115,9 +115,14 @@ public abstract class IntegrationTestSupport {
                 botToken,
                 123456789L,
                 DEFAULT_TENANT_TIMEZONE,
+                null,
                 "#112233",
                 "https://cdn.example.com/logo.png",
                 "Hello from test",
+                "Your full name",
+                "+84...",
+                "No onion, gate code, delivery code",
+                "https://cdn.example.com/payment-qr.png",
                 adminUsername,
                 adminPassword
         );
@@ -239,6 +244,11 @@ public abstract class IntegrationTestSupport {
                 .andExpect(status().isOk());
     }
 
+    protected void confirmBookingPayment(String slug, long bookingId, long telegramUserId) throws Exception {
+        mockMvc.perform(withTelegramUser(post(publicPath(slug, "/bookings/" + bookingId + "/confirm-payment")), telegramUserId))
+                .andExpect(status().isOk());
+    }
+
     protected String bookingPayload(long serviceId, int quantity) {
         return bookingPayload(serviceId, quantity, tomorrow());
     }
@@ -248,6 +258,7 @@ public abstract class IntegrationTestSupport {
                 {
                   "customerName": "Alice",
                   "customerPhone": "+48123456789",
+                  "deliveryAddress": "123 Nguyen Van Linh, Hai Chau",
                   "deliveryDate": "%s",
                   "note": "Leave at the door",
                   "items": [

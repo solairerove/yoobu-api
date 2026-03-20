@@ -11,9 +11,14 @@ public record CreateTenantRequest(
         String botToken,
         Long ownerTelegramId,
         String timezone,
+        String currency,
         String primaryColor,
         String logoUrl,
         String welcomeMessage,
+        String checkoutNameHint,
+        String checkoutPhoneHint,
+        String checkoutNoteHint,
+        String paymentQrUrl,
         @NotBlank String adminUsername,
         @NotBlank String adminPassword
 ) {

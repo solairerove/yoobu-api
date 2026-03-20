@@ -4,17 +4,23 @@ import com.yoobu.api.catalog.AdminCatalogService;
 import com.yoobu.api.catalog.ServiceStatus;
 import com.yoobu.api.catalog.dto.AdminUpsertServiceRequest;
 import com.yoobu.api.catalog.dto.ServiceResponse;
+import com.yoobu.api.tenant.TenantSettingsService;
 import jakarta.validation.Valid;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
-import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.server.ResponseStatusException;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 @Controller
 @RequiredArgsConstructor
@@ -28,13 +34,22 @@ public class AdminPanelServiceController {
     private static final String CREATE_SERVICE_LABEL = "Create service";
     private static final String EDIT_SERVICE_TITLE = "Edit service";
     private static final String SAVE_CHANGES_LABEL = "Save changes";
+    private static final String STATUS_FORM_ATTRIBUTE = "statusForm";
+    private static final String FLASH_TYPE_SUCCESS = "success";
+    private static final String FLASH_TYPE_ERROR = "error";
 
     private final AdminCatalogService adminCatalogService;
+    private final TenantSettingsService tenantSettingsService;
 
     @GetMapping
-    public String services(@PathVariable String slug, Model model) {
-        model.addAttribute("slug", slug);
-        model.addAttribute("services", adminCatalogService.getAdminServices());
+    public String services(
+            @PathVariable String slug,
+            @RequestParam(required = false) String query,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
+            Model model
+    ) {
+        populateServicesModel(slug, query, page, size, model);
         return SERVICES_VIEW;
     }
 
@@ -48,13 +63,21 @@ public class AdminPanelServiceController {
             @PathVariable String slug,
             @Valid @ModelAttribute("serviceForm") ServiceForm form,
             BindingResult bindingResult,
-            Model model
+            Model model,
+            RedirectAttributes redirectAttributes
     ) {
         if (bindingResult.hasErrors()) {
             return serviceFormView(slug, form, model, NEW_SERVICE_TITLE, CREATE_SERVICE_LABEL, null);
         }
 
-        adminCatalogService.createService(toRequest(form));
+        try {
+            adminCatalogService.createService(toRequest(form));
+        } catch (ResponseStatusException ex) {
+            setFlashError(redirectAttributes, ex.getReason());
+            return servicesRedirect(slug);
+        }
+        redirectAttributes.addFlashAttribute("flashMessage", "Service created.");
+        redirectAttributes.addFlashAttribute("flashType", FLASH_TYPE_SUCCESS);
         return servicesRedirect(slug);
     }
 
@@ -77,20 +100,91 @@ public class AdminPanelServiceController {
             @PathVariable Long serviceId,
             @Valid @ModelAttribute("serviceForm") ServiceForm form,
             BindingResult bindingResult,
-            Model model
+            Model model,
+            RedirectAttributes redirectAttributes
     ) {
         if (bindingResult.hasErrors()) {
             return serviceFormView(slug, form, model, EDIT_SERVICE_TITLE, SAVE_CHANGES_LABEL, serviceId);
         }
 
-        adminCatalogService.updateService(serviceId, toRequest(form));
+        try {
+            adminCatalogService.updateService(serviceId, toRequest(form));
+        } catch (ResponseStatusException ex) {
+            setFlashError(redirectAttributes, ex.getReason());
+            return servicesRedirect(slug);
+        }
+        redirectAttributes.addFlashAttribute("flashMessage", "Service updated.");
+        redirectAttributes.addFlashAttribute("flashType", FLASH_TYPE_SUCCESS);
         return servicesRedirect(slug);
     }
 
     @PostMapping("/{serviceId}/delete")
-    public String deleteService(@PathVariable String slug, @PathVariable Long serviceId) {
-        adminCatalogService.deleteService(serviceId);
+    public String deleteService(
+            @PathVariable String slug,
+            @PathVariable Long serviceId,
+            @RequestParam(required = false) String confirmName,
+            RedirectAttributes redirectAttributes
+    ) {
+        ServiceResponse service = adminCatalogService.getAdminService(serviceId);
+        String normalizedConfirmName = normalize(confirmName);
+        if (!StringUtils.hasText(normalizedConfirmName) || !service.name().equals(normalizedConfirmName)) {
+            setFlashError(redirectAttributes, "Delete confirmation failed. Type the exact service name.");
+            return editServiceRedirect(slug, serviceId);
+        }
+
+        try {
+            adminCatalogService.deleteService(serviceId);
+        } catch (ResponseStatusException ex) {
+            setFlashError(redirectAttributes, ex.getReason());
+            return servicesRedirect(slug);
+        }
+        redirectAttributes.addFlashAttribute("flashMessage", "Service deleted.");
+        redirectAttributes.addFlashAttribute("flashType", FLASH_TYPE_SUCCESS);
         return servicesRedirect(slug);
+    }
+
+    @PostMapping("/{serviceId}/status")
+    public String updateStatus(
+            @PathVariable String slug,
+            @PathVariable Long serviceId,
+            @Valid @ModelAttribute(STATUS_FORM_ATTRIBUTE) ServiceStatusForm form,
+            BindingResult bindingResult,
+            RedirectAttributes redirectAttributes
+    ) {
+        if (bindingResult.hasErrors()) {
+            setFlashError(redirectAttributes, "Please choose a valid service status.");
+            return servicesRedirect(slug);
+        }
+
+        try {
+            ServiceResponse service = adminCatalogService.getAdminService(serviceId);
+            adminCatalogService.updateService(serviceId, new AdminUpsertServiceRequest(
+                    service.name(),
+                    service.description(),
+                    service.price(),
+                    service.unit(),
+                    service.durationMinutes(),
+                    service.sortOrder(),
+                    form.getStatus()
+            ));
+        } catch (ResponseStatusException ex) {
+            setFlashError(redirectAttributes, ex.getReason());
+            return servicesRedirect(slug);
+        }
+        redirectAttributes.addFlashAttribute("flashMessage", "Service status updated.");
+        redirectAttributes.addFlashAttribute("flashType", FLASH_TYPE_SUCCESS);
+        return servicesRedirect(slug);
+    }
+
+    private void populateServicesModel(String slug, String query, int page, int size, Model model) {
+        Page<ServiceResponse> servicePage = adminCatalogService.getAdminServicesPage(query, page, size);
+        model.addAttribute("slug", slug);
+        model.addAttribute("services", servicePage.getContent());
+        model.addAttribute("serviceStatuses", SERVICE_STATUSES);
+        model.addAttribute("servicePage", servicePage);
+        model.addAttribute("query", query);
+        model.addAttribute("size", servicePage.getSize());
+        model.addAttribute("currency", tenantSettingsService.getCurrentTenantSettings().pricing().currency());
     }
 
     private String serviceFormView(
@@ -152,5 +246,18 @@ public class AdminPanelServiceController {
 
     private String servicesPath(String slug) {
         return "/admin/" + slug + "/panel/services";
+    }
+
+    private String editServiceRedirect(String slug, Long serviceId) {
+        return "redirect:" + servicesPath(slug) + "/" + serviceId + "/edit";
+    }
+
+    private String normalize(String value) {
+        return value == null ? null : value.trim();
+    }
+
+    private void setFlashError(RedirectAttributes redirectAttributes, String message) {
+        redirectAttributes.addFlashAttribute("flashMessage", message != null ? message : "Unable to update service.");
+        redirectAttributes.addFlashAttribute("flashType", FLASH_TYPE_ERROR);
     }
 }
