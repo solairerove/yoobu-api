@@ -156,6 +156,7 @@ class BookingControllerWebMvcTest {
                 id,
                 BookingType.ORDER,
                 status,
+                null,
                 "Alex",
                 "+1000000000",
                 "Main st. 1",

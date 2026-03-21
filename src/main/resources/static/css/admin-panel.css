@@ -452,6 +452,35 @@ tbody tr:hover {
     word-break: break-word;
 }
 
+.summary-actions {
+    margin-top: var(--space-4);
+    padding-top: var(--space-3);
+    border-top: 1px solid #ece3d7;
+}
+
+.summary-actions h2 {
+    margin-bottom: var(--space-3);
+}
+
+.tracking-url-group {
+    min-height: 84px;
+    transition: opacity 0.18s ease;
+}
+
+.tracking-url-group.is-collapsed {
+    opacity: 0;
+    pointer-events: none;
+}
+
+.tracking-url-group.is-collapsed input,
+.tracking-url-group.is-collapsed span {
+    visibility: hidden;
+}
+
+.hidden {
+    display: none !important;
+}
+
 .audit-diff {
     font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
     font-size: 13px;

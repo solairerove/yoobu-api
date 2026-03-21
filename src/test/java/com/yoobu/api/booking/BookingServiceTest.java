@@ -1,12 +1,6 @@
 package com.yoobu.api.booking;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.yoobu.api.audit.AuditLog;
 import com.yoobu.api.audit.AuditLogRepository;
 import com.yoobu.api.audit.AuditLogService;
 import com.yoobu.api.booking.dto.BookingItemRequest;
@@ -18,13 +12,22 @@ import com.yoobu.api.catalog.CatalogServiceRepository;
 import com.yoobu.api.catalog.ServiceStatus;
 import com.yoobu.api.tenant.Tenant;
 import com.yoobu.api.tenant.TenantConfig;
-import com.yoobu.api.tenant.TenantConfigRepository;
 import com.yoobu.api.tenant.TenantConfigKeys;
+import com.yoobu.api.tenant.TenantConfigRepository;
 import com.yoobu.api.tenant.TenantContext;
 import com.yoobu.api.tenant.TenantSettings;
 import com.yoobu.api.tenant.TenantSettingsService;
 import com.yoobu.api.tenant.TenantTimeService;
 import com.yoobu.api.tenant.TenantType;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
+
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Proxy;
 import java.math.BigDecimal;
@@ -36,14 +39,12 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.Pageable;
-import org.springframework.http.HttpStatus;
-import org.springframework.web.server.ResponseStatusException;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class BookingServiceTest {
 
@@ -118,6 +119,76 @@ class BookingServiceTest {
     }
 
     @Test
+    void updateBookingStatusToDeliveringStoresTrackingUrl() {
+        bookingRepository.lookupBooking = booking(42L, BookingStatus.CONFIRMED);
+
+        BookingResponse response = bookingService.updateBookingStatus(
+                42L,
+                BookingStatus.DELIVERING,
+                " https://grab.example.com/track/abc-1 "
+        );
+
+        assertEquals(BookingStatus.DELIVERING, response.status());
+        assertEquals("https://grab.example.com/track/abc-1", response.trackingUrl());
+        assertTrue(bookingRepository.saveAndFlushCalled);
+    }
+
+    @Test
+    void updateBookingStatusCanSetTrackingWithoutChangingStatus() {
+        bookingRepository.lookupBooking = booking(42L, BookingStatus.DELIVERING);
+
+        BookingResponse response = bookingService.updateBookingStatus(
+                42L,
+                BookingStatus.DELIVERING,
+                "https://grab.example.com/track/abc-2"
+        );
+
+        assertEquals(BookingStatus.DELIVERING, response.status());
+        assertEquals("https://grab.example.com/track/abc-2", response.trackingUrl());
+        assertTrue(bookingRepository.saveAndFlushCalled);
+    }
+
+    @Test
+    void updateBookingStatusWithNullTrackingDoesNotOverwriteExistingValue() {
+        Booking booking = booking(42L, BookingStatus.DELIVERING);
+        booking.setTrackingUrl("https://grab.example.com/track/existing");
+        bookingRepository.lookupBooking = booking;
+
+        BookingResponse response = bookingService.updateBookingStatus(42L, BookingStatus.DONE, null);
+
+        assertEquals(BookingStatus.DONE, response.status());
+        assertEquals("https://grab.example.com/track/existing", response.trackingUrl());
+        assertTrue(bookingRepository.saveAndFlushCalled);
+    }
+
+    @Test
+    void updateBookingStatusWithBlankTrackingClearsValue() {
+        Booking booking = booking(42L, BookingStatus.DELIVERING);
+        booking.setTrackingUrl("https://grab.example.com/track/existing");
+        bookingRepository.lookupBooking = booking;
+
+        BookingResponse response = bookingService.updateBookingStatus(42L, BookingStatus.DONE, "   ");
+
+        assertEquals(BookingStatus.DONE, response.status());
+        assertNull(response.trackingUrl());
+        assertTrue(bookingRepository.saveAndFlushCalled);
+    }
+
+    @Test
+    void updateBookingStatusRejectsInvalidTrackingUrl() {
+        bookingRepository.lookupBooking = booking(42L, BookingStatus.CONFIRMED);
+
+        ResponseStatusException exception = assertThrows(
+                ResponseStatusException.class,
+                () -> bookingService.updateBookingStatus(42L, BookingStatus.DELIVERING, "grab://tracking")
+        );
+
+        assertEquals(HttpStatus.BAD_REQUEST, exception.getStatusCode());
+        assertEquals("Tracking URL must use http or https", exception.getReason());
+        assertFalse(bookingRepository.saveAndFlushCalled);
+    }
+
+    @Test
     void getAdminBookingsPageNormalizesInvalidPageAndTooLargeSize() {
         bookingService.getAdminBookingsPage(null, null, -3, 1000);
 
@@ -146,6 +217,14 @@ class BookingServiceTest {
         assertEquals(List.of(BookingStatus.CANCELLED), bookingService.getAllowedAdminStatuses(BookingStatus.CANCELLED));
     }
 
+    @Test
+    void getAllowedAdminStatusesForConfirmedRequiresDeliveringBeforeDone() {
+        List<BookingStatus> statuses = bookingService.getAllowedAdminStatuses(BookingStatus.CONFIRMED);
+
+        assertTrue(statuses.contains(BookingStatus.DELIVERING));
+        assertFalse(statuses.contains(BookingStatus.DONE));
+    }
+
     private static BookingMapper mapper() {
         return (BookingMapper) Proxy.newProxyInstance(
                 BookingMapper.class.getClassLoader(),
@@ -160,6 +239,7 @@ class BookingServiceTest {
                                 booking.getId(),
                                 booking.getType(),
                                 booking.getStatus(),
+                                booking.getTrackingUrl(),
                                 booking.getCustomerName(),
                                 booking.getCustomerPhone(),
                                 booking.getDeliveryAddress(),

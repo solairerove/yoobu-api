@@ -58,6 +58,7 @@ public class AdminPanelBookingController {
 
         BookingStatusForm form = new BookingStatusForm();
         form.setStatus(booking.status());
+        form.setTrackingUrl(booking.trackingUrl());
 
         return bookingDetailView(slug, booking, form, model);
     }
@@ -72,12 +73,12 @@ public class AdminPanelBookingController {
             RedirectAttributes redirectAttributes
     ) {
         if (bindingResult.hasErrors()) {
-            setFlashError(redirectAttributes, "Please choose a valid booking status.");
+            setFlashError(redirectAttributes, "Please provide a valid booking status and tracking URL.");
             return redirectTo(slug, bookingId, returnTo);
         }
 
         try {
-            bookingService.updateBookingStatus(bookingId, form.getStatus());
+            bookingService.updateBookingStatus(bookingId, form.getStatus(), form.getTrackingUrl());
         } catch (ResponseStatusException ex) {
             setFlashError(redirectAttributes, ex.getReason());
             return redirectTo(slug, bookingId, returnTo);

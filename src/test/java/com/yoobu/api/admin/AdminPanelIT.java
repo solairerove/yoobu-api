@@ -268,6 +268,7 @@ class AdminPanelIT extends IntegrationTestSupport {
 
         confirmBookingPayment(TENANT_SLUG, bookingId, 777L);
         updateBookingStatus(TENANT_SLUG, ADMIN_USERNAME, ADMIN_PASSWORD, bookingId, BookingStatus.CONFIRMED);
+        updateBookingStatus(TENANT_SLUG, ADMIN_USERNAME, ADMIN_PASSWORD, bookingId, BookingStatus.DELIVERING);
         updateBookingStatus(TENANT_SLUG, ADMIN_USERNAME, ADMIN_PASSWORD, bookingId, BookingStatus.DONE);
 
         tenantAdminPostForm(
@@ -281,5 +282,120 @@ class AdminPanelIT extends IntegrationTestSupport {
                 .andExpect(header().string("Location", PANEL_ROOT + "/bookings/" + bookingId))
                 .andExpect(flash().attribute("flashType", "error"))
                 .andExpect(flash().attribute("flashMessage", "Invalid booking status transition from DONE to NEW"));
+    }
+
+    @Test
+    void bookingDetailFormCanUpdateTrackingUrl() throws Exception {
+        createFoodOrderTenant(TENANT_SLUG, "Food Tenant", "food-bot-token", ADMIN_USERNAME, ADMIN_PASSWORD);
+        JsonNode service = createService(TENANT_SLUG, ADMIN_USERNAME, ADMIN_PASSWORD, "Pizza", "12.50");
+        long serviceId = service.get("id").asLong();
+        JsonNode booking = createBooking(TENANT_SLUG, 777L, serviceId, 2);
+        long bookingId = booking.get("id").asLong();
+        String trackingUrl = "https://grab.example.com/track/booking-" + bookingId;
+
+        confirmBookingPayment(TENANT_SLUG, bookingId, 777L);
+        updateBookingStatus(TENANT_SLUG, ADMIN_USERNAME, ADMIN_PASSWORD, bookingId, BookingStatus.CONFIRMED);
+
+        tenantAdminPostForm(
+                TENANT_SLUG,
+                "/panel/bookings/" + bookingId + "/status",
+                ADMIN_USERNAME,
+                ADMIN_PASSWORD,
+                Map.of("status", "DELIVERING", "trackingUrl", trackingUrl, "returnTo", "detail")
+        )
+                .andExpect(status().is3xxRedirection())
+                .andExpect(header().string("Location", PANEL_ROOT + "/bookings/" + bookingId))
+                .andExpect(flash().attribute("flashType", "success"))
+                .andExpect(flash().attribute("flashMessage", containsString("updated to DELIVERING")));
+
+        tenantAdminGet(TENANT_SLUG, "/bookings/" + bookingId, ADMIN_USERNAME, ADMIN_PASSWORD)
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("DELIVERING")))
+                .andExpect(content().string(containsString(trackingUrl)));
+
+        tenantAdminGet(TENANT_SLUG, "/panel/bookings/" + bookingId, ADMIN_USERNAME, ADMIN_PASSWORD)
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("name=\"trackingUrl\"")))
+                .andExpect(content().string(containsString(trackingUrl)));
+    }
+
+    @Test
+    void bookingDetailFormKeepsTrackingInputHiddenAndDisabledBeforeDelivering() throws Exception {
+        createFoodOrderTenant(TENANT_SLUG, "Food Tenant", "food-bot-token", ADMIN_USERNAME, ADMIN_PASSWORD);
+        JsonNode service = createService(TENANT_SLUG, ADMIN_USERNAME, ADMIN_PASSWORD, "Pizza", "12.50");
+        long serviceId = service.get("id").asLong();
+        JsonNode booking = createBooking(TENANT_SLUG, 777L, serviceId, 1);
+        long bookingId = booking.get("id").asLong();
+
+        tenantAdminGet(TENANT_SLUG, "/panel/bookings/" + bookingId, ADMIN_USERNAME, ADMIN_PASSWORD)
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("id=\"tracking-url-group\"")))
+                .andExpect(content().string(containsString("tracking-url-group")))
+                .andExpect(content().string(containsString("is-collapsed")))
+                .andExpect(content().string(containsString("id=\"tracking-url-input\"")))
+                .andExpect(content().string(containsString("disabled=\"disabled\"")));
+    }
+
+    @Test
+    void bookingDetailStatusUpdateToDoneKeepsExistingTrackingUrlWhenFieldNotSubmitted() throws Exception {
+        createFoodOrderTenant(TENANT_SLUG, "Food Tenant", "food-bot-token", ADMIN_USERNAME, ADMIN_PASSWORD);
+        JsonNode service = createService(TENANT_SLUG, ADMIN_USERNAME, ADMIN_PASSWORD, "Pizza", "12.50");
+        long serviceId = service.get("id").asLong();
+        JsonNode booking = createBooking(TENANT_SLUG, 777L, serviceId, 2);
+        long bookingId = booking.get("id").asLong();
+        String trackingUrl = "https://grab.example.com/track/persist-" + bookingId;
+
+        confirmBookingPayment(TENANT_SLUG, bookingId, 777L);
+        updateBookingStatus(TENANT_SLUG, ADMIN_USERNAME, ADMIN_PASSWORD, bookingId, BookingStatus.CONFIRMED);
+
+        tenantAdminPostForm(
+                TENANT_SLUG,
+                "/panel/bookings/" + bookingId + "/status",
+                ADMIN_USERNAME,
+                ADMIN_PASSWORD,
+                Map.of("status", "DELIVERING", "trackingUrl", trackingUrl, "returnTo", "detail")
+        )
+                .andExpect(status().is3xxRedirection())
+                .andExpect(header().string("Location", PANEL_ROOT + "/bookings/" + bookingId));
+
+        tenantAdminPostForm(
+                TENANT_SLUG,
+                "/panel/bookings/" + bookingId + "/status",
+                ADMIN_USERNAME,
+                ADMIN_PASSWORD,
+                Map.of("status", "DONE", "returnTo", "detail")
+        )
+                .andExpect(status().is3xxRedirection())
+                .andExpect(header().string("Location", PANEL_ROOT + "/bookings/" + bookingId));
+
+        tenantAdminGet(TENANT_SLUG, "/bookings/" + bookingId, ADMIN_USERNAME, ADMIN_PASSWORD)
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("DONE")))
+                .andExpect(content().string(containsString(trackingUrl)));
+    }
+
+    @Test
+    void bookingDetailFormRejectsTooLongTrackingUrl() throws Exception {
+        createFoodOrderTenant(TENANT_SLUG, "Food Tenant", "food-bot-token", ADMIN_USERNAME, ADMIN_PASSWORD);
+        JsonNode service = createService(TENANT_SLUG, ADMIN_USERNAME, ADMIN_PASSWORD, "Pizza", "12.50");
+        long serviceId = service.get("id").asLong();
+        JsonNode booking = createBooking(TENANT_SLUG, 777L, serviceId, 1);
+        long bookingId = booking.get("id").asLong();
+        String tooLongTrackingUrl = "https://grab.example.com/track/" + "a".repeat(2100);
+
+        confirmBookingPayment(TENANT_SLUG, bookingId, 777L);
+        updateBookingStatus(TENANT_SLUG, ADMIN_USERNAME, ADMIN_PASSWORD, bookingId, BookingStatus.CONFIRMED);
+
+        tenantAdminPostForm(
+                TENANT_SLUG,
+                "/panel/bookings/" + bookingId + "/status",
+                ADMIN_USERNAME,
+                ADMIN_PASSWORD,
+                Map.of("status", "DELIVERING", "trackingUrl", tooLongTrackingUrl, "returnTo", "detail")
+        )
+                .andExpect(status().is3xxRedirection())
+                .andExpect(header().string("Location", PANEL_ROOT + "/bookings/" + bookingId))
+                .andExpect(flash().attribute("flashType", "error"))
+                .andExpect(flash().attribute("flashMessage", "Please provide a valid booking status and tracking URL."));
     }
 }

@@ -57,6 +57,9 @@ public class Booking {
     @Column(nullable = false, length = 20)
     private BookingStatus status;
 
+    @Column(name = "tracking_url", columnDefinition = "TEXT")
+    private String trackingUrl;
+
     @Column(columnDefinition = "TEXT")
     private String note;
 

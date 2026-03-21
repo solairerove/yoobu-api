@@ -27,38 +27,58 @@
         </p>
     </section>
 
-    <section class="detail-grid">
-        <article class="card">
-            <h2>Summary</h2>
-            <dl class="summary">
-                <div><dt>Status</dt><dd th:text="${booking.status}">NEW</dd></div>
-                <div><dt>Customer</dt><dd th:text="${booking.customerName}">Alice</dd></div>
-                <div><dt>Delivery address</dt><dd th:text="${booking.deliveryAddress ?: 'N/A'}">123 Main St</dd></div>
-                <div><dt>Delivery date</dt><dd th:text="${booking.deliveryDate}">2026-03-14</dd></div>
-                <div><dt>Total</dt><dd th:text="${@adminPanelViewFormats.money(booking.totalPrice, booking.currency)}">USD 25.00</dd></div>
-                <div><dt>Created</dt><dd th:text="${@adminPanelViewFormats.timestamp(booking.createdAt)}">2026-03-14 00:00 Europe/Warsaw</dd></div>
-                <div><dt>Note</dt><dd th:text="${booking.note ?: 'N/A'}">Leave at the door</dd></div>
-            </dl>
-        </article>
+    <section class="card">
+        <h2>Summary</h2>
+        <dl class="summary">
+            <div><dt>Status</dt><dd th:text="${booking.status}">NEW</dd></div>
+            <div><dt>Customer</dt><dd th:text="${booking.customerName}">Alice</dd></div>
+            <div><dt>Delivery address</dt><dd th:text="${booking.deliveryAddress ?: 'N/A'}">123 Main St</dd></div>
+            <div><dt>Delivery date</dt><dd th:text="${booking.deliveryDate}">2026-03-14</dd></div>
+            <div>
+                <dt>Tracking URL</dt>
+                <dd>
+                    <a th:if="${booking.trackingUrl}" th:href="${booking.trackingUrl}" target="_blank" rel="noopener"
+                       th:text="${booking.trackingUrl}">https://grab.example.com/track/abc-123</a>
+                    <span th:if="${booking.trackingUrl == null or #strings.isEmpty(booking.trackingUrl)}">N/A</span>
+                </dd>
+            </div>
+            <div><dt>Total</dt><dd th:text="${@adminPanelViewFormats.money(booking.totalPrice, booking.currency)}">USD 25.00</dd></div>
+            <div><dt>Created</dt><dd th:text="${@adminPanelViewFormats.timestamp(booking.createdAt)}">2026-03-14 00:00 Europe/Warsaw</dd></div>
+            <div><dt>Note</dt><dd th:text="${booking.note ?: 'N/A'}">Leave at the door</dd></div>
+        </dl>
 
-        <article class="card">
-            <h2>Update status</h2>
+        <div class="summary-actions">
+            <h2>Update booking</h2>
             <form method="post"
                   th:action="@{/admin/{slug}/panel/bookings/{bookingId}/status(slug=${slug}, bookingId=${booking.id})}"
                   th:object="${statusForm}">
                 <label>
                     <span>Status</span>
-                    <select th:field="*{status}">
+                    <select th:field="*{status}" id="status-select">
                         <option th:each="statusOption : ${statusOptions}"
                                 th:value="${statusOption}"
                                 th:text="${statusOption}"></option>
                     </select>
                 </label>
+                <div id="tracking-url-group"
+                     class="tracking-url-group"
+                     th:classappend="${statusForm.status != T(com.yoobu.api.booking.BookingStatus).DELIVERING} ? ' is-collapsed' : ''">
+                    <label>
+                        <span>Tracking URL</span>
+                        <input type="url"
+                               th:field="*{trackingUrl}"
+                               id="tracking-url-input"
+                               maxlength="2048"
+                               th:disabled="${statusForm.status != T(com.yoobu.api.booking.BookingStatus).DELIVERING}"
+                               placeholder="https://grab.example.com/track/...">
+                    </label>
+                </div>
                 <p class="error" th:if="${#fields.hasErrors('status')}" th:errors="*{status}">Invalid status</p>
+                <p class="error" th:if="${#fields.hasErrors('trackingUrl')}" th:errors="*{trackingUrl}">Invalid tracking URL</p>
                 <input type="hidden" name="returnTo" value="detail">
                 <button type="submit">Save status</button>
             </form>
-        </article>
+        </div>
     </section>
 
     <section class="card">
@@ -83,5 +103,24 @@
         </div>
     </section>
 </div>
+<script>
+    (() => {
+        const statusSelect = document.getElementById('status-select');
+        const trackingGroup = document.getElementById('tracking-url-group');
+        const trackingInput = document.getElementById('tracking-url-input');
+        if (!statusSelect || !trackingGroup || !trackingInput) {
+            return;
+        }
+
+        const toggleTrackingField = () => {
+            const delivering = statusSelect.value === 'DELIVERING';
+            trackingGroup.classList.toggle('is-collapsed', !delivering);
+            trackingInput.disabled = !delivering;
+        };
+
+        statusSelect.addEventListener('change', toggleTrackingField);
+        toggleTrackingField();
+    })();
+</script>
 </body>
 </html>
