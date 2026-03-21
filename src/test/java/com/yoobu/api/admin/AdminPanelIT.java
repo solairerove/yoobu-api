@@ -329,7 +329,9 @@ class AdminPanelIT extends IntegrationTestSupport {
 
         tenantAdminGet(TENANT_SLUG, "/panel/bookings/" + bookingId, ADMIN_USERNAME, ADMIN_PASSWORD)
                 .andExpect(status().isOk())
-                .andExpect(content().string(containsString("id=\"tracking-url-group\" class=\" hidden\"")))
+                .andExpect(content().string(containsString("id=\"tracking-url-group\"")))
+                .andExpect(content().string(containsString("tracking-url-group")))
+                .andExpect(content().string(containsString("is-collapsed")))
                 .andExpect(content().string(containsString("id=\"tracking-url-input\"")))
                 .andExpect(content().string(containsString("disabled=\"disabled\"")));
     }

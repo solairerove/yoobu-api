@@ -61,7 +61,8 @@
                     </select>
                 </label>
                 <div id="tracking-url-group"
-                     th:classappend="${statusForm.status != T(com.yoobu.api.booking.BookingStatus).DELIVERING} ? ' hidden' : ''">
+                     class="tracking-url-group"
+                     th:classappend="${statusForm.status != T(com.yoobu.api.booking.BookingStatus).DELIVERING} ? ' is-collapsed' : ''">
                     <label>
                         <span>Tracking URL</span>
                         <input type="url"
@@ -113,7 +114,7 @@
 
         const toggleTrackingField = () => {
             const delivering = statusSelect.value === 'DELIVERING';
-            trackingGroup.classList.toggle('hidden', !delivering);
+            trackingGroup.classList.toggle('is-collapsed', !delivering);
             trackingInput.disabled = !delivering;
         };
 

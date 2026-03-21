@@ -462,6 +462,21 @@ tbody tr:hover {
     margin-bottom: var(--space-3);
 }
 
+.tracking-url-group {
+    min-height: 84px;
+    transition: opacity 0.18s ease;
+}
+
+.tracking-url-group.is-collapsed {
+    opacity: 0;
+    pointer-events: none;
+}
+
+.tracking-url-group.is-collapsed input,
+.tracking-url-group.is-collapsed span {
+    visibility: hidden;
+}
+
 .hidden {
     display: none !important;
 }
