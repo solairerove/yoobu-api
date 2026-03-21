@@ -192,6 +192,41 @@ class BookingLifecycleIT extends IntegrationTestSupport {
     }
 
     @Test
+    void adminCanSetTrackingUrlWhenMovingBookingToDelivering() throws Exception {
+        createFoodOrderTenant(TENANT_SLUG, "Food Tenant", "food-bot", ADMIN_USERNAME, ADMIN_PASSWORD);
+        long serviceId = createService(TENANT_SLUG, ADMIN_USERNAME, ADMIN_PASSWORD, "Pizza", "12.50")
+                .get("id").asLong();
+        long bookingId = createBooking(TENANT_SLUG, 101L, serviceId, 1).get("id").asLong();
+        String trackingUrl = "https://grab.example.com/track/abc-123";
+
+        confirmBookingPayment(TENANT_SLUG, bookingId, 101L);
+        updateBookingStatus(TENANT_SLUG, ADMIN_USERNAME, ADMIN_PASSWORD, bookingId, BookingStatus.CONFIRMED);
+
+        tenantAdminPutJson(
+                TENANT_SLUG,
+                "/bookings/" + bookingId + "/status",
+                ADMIN_USERNAME,
+                ADMIN_PASSWORD,
+                java.util.Map.of("status", "DELIVERING", "trackingUrl", trackingUrl)
+        )
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("DELIVERING"))
+                .andExpect(jsonPath("$.trackingUrl").value(trackingUrl));
+
+        tenantPublicGetAsUser(TENANT_SLUG, "/bookings/" + bookingId, 101L)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("DELIVERING"))
+                .andExpect(jsonPath("$.trackingUrl").value(trackingUrl));
+
+        JsonNode auditLog = latestAuditLog("booking", "UPDATE_STATUS");
+        JsonNode oldValue = oldAuditValue(auditLog);
+        JsonNode newValue = newAuditValue(auditLog);
+        assertEquals("CONFIRMED", oldValue.get("status").asText());
+        assertEquals("DELIVERING", newValue.get("status").asText());
+        assertEquals(trackingUrl, newValue.get("trackingUrl").asText());
+    }
+
+    @Test
     void adminTransitionMatrixRejectsInvalidAndAllowsExpectedTransitions() throws Exception {
         createFoodOrderTenant(TENANT_SLUG, "Food Tenant", "food-bot", ADMIN_USERNAME, ADMIN_PASSWORD);
         long serviceId = createService(TENANT_SLUG, ADMIN_USERNAME, ADMIN_PASSWORD, "Pizza", "12.50")
@@ -258,6 +293,26 @@ class BookingLifecycleIT extends IntegrationTestSupport {
                 ADMIN_PASSWORD,
                 java.util.Map.of("status", "DONE")
         )
+                .andExpect(status().isConflict())
+                .andExpect(status().reason("Invalid booking status transition from CONFIRMED to DONE"));
+
+        tenantAdminPutJson(
+                TENANT_SLUG,
+                "/bookings/" + secondBookingId + "/status",
+                ADMIN_USERNAME,
+                ADMIN_PASSWORD,
+                java.util.Map.of("status", "DELIVERING")
+        )
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("DELIVERING"));
+
+        tenantAdminPutJson(
+                TENANT_SLUG,
+                "/bookings/" + secondBookingId + "/status",
+                ADMIN_USERNAME,
+                ADMIN_PASSWORD,
+                java.util.Map.of("status", "DONE")
+        )
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("DONE"));
 
@@ -281,6 +336,7 @@ class BookingLifecycleIT extends IntegrationTestSupport {
 
         confirmBookingPayment(TENANT_SLUG, bookingId, 101L);
         updateBookingStatus(TENANT_SLUG, ADMIN_USERNAME, ADMIN_PASSWORD, bookingId, BookingStatus.CONFIRMED);
+        updateBookingStatus(TENANT_SLUG, ADMIN_USERNAME, ADMIN_PASSWORD, bookingId, BookingStatus.DELIVERING);
         updateBookingStatus(TENANT_SLUG, ADMIN_USERNAME, ADMIN_PASSWORD, bookingId, BookingStatus.DONE);
 
         tenantPublicPostJson(TENANT_SLUG, "/bookings/" + bookingId + "/cancel", 101L, "")
@@ -297,6 +353,7 @@ class BookingLifecycleIT extends IntegrationTestSupport {
 
         confirmBookingPayment(TENANT_SLUG, bookingId, 101L);
         updateBookingStatus(TENANT_SLUG, ADMIN_USERNAME, ADMIN_PASSWORD, bookingId, BookingStatus.CONFIRMED);
+        updateBookingStatus(TENANT_SLUG, ADMIN_USERNAME, ADMIN_PASSWORD, bookingId, BookingStatus.DELIVERING);
         updateBookingStatus(TENANT_SLUG, ADMIN_USERNAME, ADMIN_PASSWORD, bookingId, BookingStatus.DONE);
 
         tenantAdminPutJson(

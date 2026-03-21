@@ -13,6 +13,8 @@ import com.yoobu.api.tenant.TenantSettingsService;
 import com.yoobu.api.tenant.TenantTimeService;
 import com.yoobu.api.tenant.TenantType;
 import java.math.BigDecimal;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
@@ -226,12 +228,20 @@ public class BookingService {
 
     @Transactional
     public BookingResponse updateBookingStatus(Long bookingId, BookingStatus status) {
+        return updateBookingStatus(bookingId, status, null);
+    }
+
+    @Transactional
+    public BookingResponse updateBookingStatus(Long bookingId, BookingStatus status, String trackingUrl) {
         requireFoodOrderTenant();
         Booking booking = findAdminBooking(bookingId);
         validateStatusTransition(booking.getStatus(), status);
         Map<String, Object> oldSnapshot = toAuditSnapshot(booking);
 
         booking.setStatus(status);
+        if (trackingUrl != null) {
+            booking.setTrackingUrl(normalizeTrackingUrl(trackingUrl));
+        }
         booking.setUpdatedAt(nowUtc());
 
         Booking savedBooking = persistBookingWithConflictGuard(booking);
@@ -256,7 +266,8 @@ public class BookingService {
                     BookingStatus.CONFIRMED,
                     BookingStatus.CANCELLED
             );
-            case CONFIRMED -> EnumSet.of(BookingStatus.CONFIRMED, BookingStatus.DONE, BookingStatus.CANCELLED);
+            case CONFIRMED -> EnumSet.of(BookingStatus.CONFIRMED, BookingStatus.DELIVERING, BookingStatus.CANCELLED);
+            case DELIVERING -> EnumSet.of(BookingStatus.DELIVERING, BookingStatus.DONE, BookingStatus.CANCELLED);
             case DONE -> EnumSet.of(BookingStatus.DONE, BookingStatus.CANCELLED);
             case CANCELLED -> EnumSet.of(BookingStatus.CANCELLED);
         };
@@ -364,6 +375,7 @@ public class BookingService {
         snapshot.put("customerPhone", booking.getCustomerPhone());
         snapshot.put("deliveryAddress", booking.getDeliveryAddress());
         snapshot.put("status", booking.getStatus());
+        snapshot.put("trackingUrl", booking.getTrackingUrl());
         snapshot.put("note", booking.getNote());
         snapshot.put("totalPrice", booking.getTotalPrice());
         snapshot.put("deliveryDate", booking.getDeliveryDate());
@@ -419,6 +431,26 @@ public class BookingService {
 
     private OffsetDateTime nowUtc() {
         return OffsetDateTime.now(ZoneOffset.UTC);
+    }
+
+    private String normalizeTrackingUrl(String trackingUrl) {
+        String normalized = trackingUrl.trim();
+        if (!StringUtils.hasText(normalized)) {
+            return null;
+        }
+        try {
+            URI uri = new URI(normalized);
+            String scheme = uri.getScheme();
+            if (!"http".equalsIgnoreCase(scheme) && !"https".equalsIgnoreCase(scheme)) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Tracking URL must use http or https");
+            }
+            if (!StringUtils.hasText(uri.getHost())) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Tracking URL must include a host");
+            }
+            return normalized;
+        } catch (URISyntaxException ex) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Tracking URL is invalid", ex);
+        }
     }
 
     private Booking persistBookingWithConflictGuard(Booking booking) {

@@ -11,6 +11,7 @@ public record BookingResponse(
         Long id,
         BookingType type,
         BookingStatus status,
+        String trackingUrl,
         String customerName,
         String customerPhone,
         String deliveryAddress,

@@ -42,6 +42,6 @@ public class AdminBookingController {
             @PathVariable Long bookingId,
             @Valid @RequestBody UpdateStatusRequest request
     ) {
-        return bookingService.updateBookingStatus(bookingId, request.status());
+        return bookingService.updateBookingStatus(bookingId, request.status(), request.trackingUrl());
     }
 }

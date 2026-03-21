@@ -268,6 +268,7 @@ class AdminPanelIT extends IntegrationTestSupport {
 
         confirmBookingPayment(TENANT_SLUG, bookingId, 777L);
         updateBookingStatus(TENANT_SLUG, ADMIN_USERNAME, ADMIN_PASSWORD, bookingId, BookingStatus.CONFIRMED);
+        updateBookingStatus(TENANT_SLUG, ADMIN_USERNAME, ADMIN_PASSWORD, bookingId, BookingStatus.DELIVERING);
         updateBookingStatus(TENANT_SLUG, ADMIN_USERNAME, ADMIN_PASSWORD, bookingId, BookingStatus.DONE);
 
         tenantAdminPostForm(
@@ -281,5 +282,40 @@ class AdminPanelIT extends IntegrationTestSupport {
                 .andExpect(header().string("Location", PANEL_ROOT + "/bookings/" + bookingId))
                 .andExpect(flash().attribute("flashType", "error"))
                 .andExpect(flash().attribute("flashMessage", "Invalid booking status transition from DONE to NEW"));
+    }
+
+    @Test
+    void bookingDetailFormCanUpdateTrackingUrl() throws Exception {
+        createFoodOrderTenant(TENANT_SLUG, "Food Tenant", "food-bot-token", ADMIN_USERNAME, ADMIN_PASSWORD);
+        JsonNode service = createService(TENANT_SLUG, ADMIN_USERNAME, ADMIN_PASSWORD, "Pizza", "12.50");
+        long serviceId = service.get("id").asLong();
+        JsonNode booking = createBooking(TENANT_SLUG, 777L, serviceId, 2);
+        long bookingId = booking.get("id").asLong();
+        String trackingUrl = "https://grab.example.com/track/booking-" + bookingId;
+
+        confirmBookingPayment(TENANT_SLUG, bookingId, 777L);
+        updateBookingStatus(TENANT_SLUG, ADMIN_USERNAME, ADMIN_PASSWORD, bookingId, BookingStatus.CONFIRMED);
+
+        tenantAdminPostForm(
+                TENANT_SLUG,
+                "/panel/bookings/" + bookingId + "/status",
+                ADMIN_USERNAME,
+                ADMIN_PASSWORD,
+                Map.of("status", "DELIVERING", "trackingUrl", trackingUrl, "returnTo", "detail")
+        )
+                .andExpect(status().is3xxRedirection())
+                .andExpect(header().string("Location", PANEL_ROOT + "/bookings/" + bookingId))
+                .andExpect(flash().attribute("flashType", "success"))
+                .andExpect(flash().attribute("flashMessage", containsString("updated to DELIVERING")));
+
+        tenantAdminGet(TENANT_SLUG, "/bookings/" + bookingId, ADMIN_USERNAME, ADMIN_PASSWORD)
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("DELIVERING")))
+                .andExpect(content().string(containsString(trackingUrl)));
+
+        tenantAdminGet(TENANT_SLUG, "/panel/bookings/" + bookingId, ADMIN_USERNAME, ADMIN_PASSWORD)
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("name=\"trackingUrl\"")))
+                .andExpect(content().string(containsString(trackingUrl)));
     }
 }
