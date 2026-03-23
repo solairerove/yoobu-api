@@ -22,6 +22,12 @@ app:
   superadmin:
     username: ${SUPERADMIN_USER:superadmin}
     password: ${SUPERADMIN_PASS:superadmin}
+  media:
+    r2-endpoint: ${R2_ENDPOINT}
+    r2-access-key: ${R2_ACCESS_KEY}
+    r2-secret-key: ${R2_SECRET_KEY}
+    r2-bucket: ${R2_BUCKET}
+    cdn-base-url: ${CDN_BASE_URL}
 
 server:
   port: ${PORT:8080}

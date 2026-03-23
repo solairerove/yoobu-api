@@ -56,6 +56,9 @@ public class CatalogService {
     @Column(name = "sort_order", nullable = false)
     private int sortOrder;
 
+    @Column(name = "image_url", columnDefinition = "TEXT")
+    private String imageUrl;
+
     @Column(name = "deleted_at")
     private OffsetDateTime deletedAt;
 

@@ -66,6 +66,11 @@ public abstract class IntegrationTestSupport {
         registry.add("spring.datasource.password", POSTGRES::getPassword);
         registry.add("app.superadmin.username", () -> SUPERADMIN_USERNAME);
         registry.add("app.superadmin.password", () -> SUPERADMIN_PASSWORD);
+        registry.add("app.media.r2-endpoint", () -> "https://test.r2.cloudflarestorage.com");
+        registry.add("app.media.r2-access-key", () -> "test-access-key");
+        registry.add("app.media.r2-secret-key", () -> "test-secret-key");
+        registry.add("app.media.r2-bucket", () -> "test-bucket");
+        registry.add("app.media.cdn-base-url", () -> "https://media.test.example.com");
     }
 
     @BeforeEach

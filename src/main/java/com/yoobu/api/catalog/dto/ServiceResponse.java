@@ -11,6 +11,7 @@ public record ServiceResponse(
         String unit,
         Integer durationMinutes,
         int sortOrder,
-        ServiceStatus status
+        ServiceStatus status,
+        String imageUrl
 ) {
 }

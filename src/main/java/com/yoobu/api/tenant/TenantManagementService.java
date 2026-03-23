@@ -75,6 +75,14 @@ public class TenantManagementService {
         return tenantMapper.toDetailResponse(tenant, settings.asMap());
     }
 
+    @Transactional
+    public void updatePaymentQrUrl(Long tenantId, String cdnUrl) {
+        Tenant tenant = tenantRepository.findById(tenantId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Tenant not found"));
+        Map<String, TenantConfig> configs = loadConfigsByKey(tenantId);
+        upsertConfig(configs, tenant, TenantConfigKeys.PAYMENT_QR_URL, cdnUrl, false);
+    }
+
     @Transactional(readOnly = true)
     public boolean isSlugAvailable(String slug) {
         String normalizedSlug = normalizeOptional(slug);

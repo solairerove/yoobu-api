@@ -4,6 +4,7 @@ import com.yoobu.api.audit.AuditLogChangeFormatter;
 import com.yoobu.api.audit.AuditLogCsvExporter;
 import com.yoobu.api.audit.AuditLogService;
 import com.yoobu.api.audit.dto.AuditLogItemResponse;
+import com.yoobu.api.media.MediaStorageService;
 import com.yoobu.api.tenant.TenantManagementService;
 import com.yoobu.api.tenant.TenantConfigKeys;
 import com.yoobu.api.tenant.TenantSettings;
@@ -37,6 +38,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
@@ -61,6 +63,7 @@ public class SuperAdminPanelController {
     private final AuditLogService auditLogService;
     private final AuditLogChangeFormatter auditLogChangeFormatter;
     private final AuditLogCsvExporter auditLogCsvExporter;
+    private final MediaStorageService mediaStorageService;
 
     @GetMapping({"", "/"})
     public String panelHome() {
@@ -173,9 +176,34 @@ public class SuperAdminPanelController {
 
     @GetMapping("/tenants/{tenantId}/edit")
     public String editTenant(@PathVariable Long tenantId, Model model) {
-        model.addAttribute("tenantForm", toForm(tenantManagementService.getTenant(tenantId)));
+        TenantDetailResponse tenant = tenantManagementService.getTenant(tenantId);
+        model.addAttribute("tenantForm", toForm(tenant));
         model.addAttribute("tenantId", tenantId);
+        model.addAttribute("currentQrUrl", tenant.config().get(TenantConfigKeys.PAYMENT_QR_URL));
         return populateFormModel(model, EDIT_MODE);
+    }
+
+    @PostMapping("/tenants/{tenantId}/payment-qr")
+    public String uploadPaymentQr(
+            @PathVariable Long tenantId,
+            @RequestParam("file") MultipartFile file,
+            RedirectAttributes redirectAttributes
+    ) {
+        try {
+            TenantDetailResponse tenant = tenantManagementService.getTenant(tenantId);
+            String oldUrl = tenant.config().get(TenantConfigKeys.PAYMENT_QR_URL);
+            String cdnUrl = mediaStorageService.uploadPaymentQr(tenantId, file);
+            if (oldUrl != null) {
+                mediaStorageService.deleteByUrl(oldUrl);
+            }
+            tenantManagementService.updatePaymentQrUrl(tenantId, cdnUrl);
+            redirectAttributes.addFlashAttribute("flashMessage", "Payment QR updated.");
+            redirectAttributes.addFlashAttribute("flashType", FLASH_TYPE_SUCCESS);
+        } catch (ResponseStatusException ex) {
+            redirectAttributes.addFlashAttribute("flashMessage", ex.getReason());
+            redirectAttributes.addFlashAttribute("flashType", "error");
+        }
+        return "redirect:/superadmin/panel/tenants/" + tenantId + "/edit";
     }
 
     @PostMapping("/tenants/{tenantId}")

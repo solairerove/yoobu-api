@@ -27,6 +27,12 @@
     </header>
 
     <section class="card">
+        <p class="flash"
+           th:if="${flashMessage}"
+           th:classappend="${flashType == 'success'} ? ' flash-success' : ' flash-error'"
+           th:text="${flashMessage}">
+        </p>
+
         <form method="post"
               th:action="${formMode == 'edit'} ? @{/superadmin/panel/tenants/{tenantId}(tenantId=${tenantId})} : @{/superadmin/panel/tenants}"
               th:object="${tenantForm}">
@@ -131,6 +137,11 @@
                 <span>Payment QR URL</span>
                 <input type="text" th:field="*{paymentQrUrl}" placeholder="https://cdn.example.com/payment-qr.png">
             </label>
+            <div th:if="${formMode == 'edit' and currentQrUrl != null}" style="margin-top: 0.5rem; margin-bottom: 0.25rem;">
+                <p class="field-hint" style="margin-bottom: 0.5rem;">Current QR:</p>
+                <img th:src="${currentQrUrl}" alt="Payment QR"
+                     style="max-width: 140px; max-height: 140px; display: block; border: 1px solid var(--border); border-radius: 6px; padding: 4px;">
+            </div>
 
             <label th:if="${formMode == 'edit'}">
                 <span>Active</span>
@@ -141,6 +152,22 @@
                 <a class="secondary-link"
                    th:href="${formMode == 'edit'} ? @{/superadmin/panel/tenants/{tenantId}(tenantId=${tenantId})} : @{/superadmin/panel/tenants}">Cancel</a>
                 <button type="submit" th:text="${formMode == 'edit' ? 'Save changes' : 'Create tenant'}">Submit</button>
+            </div>
+        </form>
+    </section>
+
+    <section class="card" th:if="${formMode == 'edit'}">
+        <h2 style="margin-top: 0; margin-bottom: 1rem; font-size: 1rem;">Upload Payment QR image</h2>
+        <p class="field-hint">Upload a new QR image to replace the URL above. Accepted: JPEG, PNG, WebP · max 2 MB.</p>
+        <form method="post"
+              enctype="multipart/form-data"
+              th:action="@{/superadmin/panel/tenants/{tenantId}/payment-qr(tenantId=${tenantId})}">
+            <label>
+                <span>QR image file</span>
+                <input type="file" name="file" accept="image/jpeg,image/png,image/webp" required>
+            </label>
+            <div class="actions">
+                <button type="submit">Upload &amp; update QR</button>
             </div>
         </form>
     </section>

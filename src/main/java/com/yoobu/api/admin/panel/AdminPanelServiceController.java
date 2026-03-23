@@ -19,6 +19,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
@@ -55,7 +56,7 @@ public class AdminPanelServiceController {
 
     @GetMapping("/new")
     public String newService(@PathVariable String slug, Model model) {
-        return serviceFormView(slug, newServiceForm(), model, NEW_SERVICE_TITLE, CREATE_SERVICE_LABEL, null);
+        return serviceFormView(slug, newServiceForm(), model, NEW_SERVICE_TITLE, CREATE_SERVICE_LABEL, null, null);
     }
 
     @PostMapping
@@ -63,15 +64,19 @@ public class AdminPanelServiceController {
             @PathVariable String slug,
             @Valid @ModelAttribute("serviceForm") ServiceForm form,
             BindingResult bindingResult,
+            @RequestParam(value = "imageFile", required = false) MultipartFile imageFile,
             Model model,
             RedirectAttributes redirectAttributes
     ) {
         if (bindingResult.hasErrors()) {
-            return serviceFormView(slug, form, model, NEW_SERVICE_TITLE, CREATE_SERVICE_LABEL, null);
+            return serviceFormView(slug, form, model, NEW_SERVICE_TITLE, CREATE_SERVICE_LABEL, null, null);
         }
 
         try {
-            adminCatalogService.createService(toRequest(form));
+            ServiceResponse created = adminCatalogService.createService(toRequest(form));
+            if (imageFile != null && !imageFile.isEmpty()) {
+                adminCatalogService.uploadServiceImage(created.id(), imageFile);
+            }
         } catch (ResponseStatusException ex) {
             setFlashError(redirectAttributes, ex.getReason());
             return servicesRedirect(slug);
@@ -90,7 +95,8 @@ public class AdminPanelServiceController {
                 model,
                 EDIT_SERVICE_TITLE,
                 SAVE_CHANGES_LABEL,
-                serviceId
+                serviceId,
+                service.imageUrl()
         );
     }
 
@@ -100,15 +106,20 @@ public class AdminPanelServiceController {
             @PathVariable Long serviceId,
             @Valid @ModelAttribute("serviceForm") ServiceForm form,
             BindingResult bindingResult,
+            @RequestParam(value = "imageFile", required = false) MultipartFile imageFile,
             Model model,
             RedirectAttributes redirectAttributes
     ) {
         if (bindingResult.hasErrors()) {
-            return serviceFormView(slug, form, model, EDIT_SERVICE_TITLE, SAVE_CHANGES_LABEL, serviceId);
+            ServiceResponse current = adminCatalogService.getAdminService(serviceId);
+            return serviceFormView(slug, form, model, EDIT_SERVICE_TITLE, SAVE_CHANGES_LABEL, serviceId, current.imageUrl());
         }
 
         try {
             adminCatalogService.updateService(serviceId, toRequest(form));
+            if (imageFile != null && !imageFile.isEmpty()) {
+                adminCatalogService.uploadServiceImage(serviceId, imageFile);
+            }
         } catch (ResponseStatusException ex) {
             setFlashError(redirectAttributes, ex.getReason());
             return servicesRedirect(slug);
@@ -193,7 +204,8 @@ public class AdminPanelServiceController {
             Model model,
             String formTitle,
             String submitLabel,
-            Long serviceId
+            Long serviceId,
+            String currentImageUrl
     ) {
         model.addAttribute("slug", slug);
         model.addAttribute("serviceForm", form);
@@ -202,6 +214,7 @@ public class AdminPanelServiceController {
         model.addAttribute("editServiceId", serviceId);
         model.addAttribute("serviceStatuses", SERVICE_STATUSES);
         model.addAttribute("formAction", formAction(slug, serviceId));
+        model.addAttribute("currentImageUrl", currentImageUrl);
         return SERVICE_FORM_VIEW;
     }
 
