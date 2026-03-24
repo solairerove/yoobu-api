@@ -201,7 +201,7 @@ class BookingControllerWebMvcTest {
         private List<BookingResponse> myBookings = List.of();
 
         RecordingBookingService() {
-            super(null, null, null, null, null, null, null);
+            super(null, null, null, null, null, null, null, null);
         }
 
         @Override

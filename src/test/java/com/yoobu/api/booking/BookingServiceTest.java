@@ -3,6 +3,9 @@ package com.yoobu.api.booking;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.yoobu.api.audit.AuditLogRepository;
 import com.yoobu.api.audit.AuditLogService;
+import com.yoobu.api.notification.event.BookingCreatedEvent;
+import com.yoobu.api.notification.event.BookingStatusChangedEvent;
+import com.yoobu.api.notification.event.PaymentConfirmedEvent;
 import com.yoobu.api.booking.dto.BookingItemRequest;
 import com.yoobu.api.booking.dto.BookingItemResponse;
 import com.yoobu.api.booking.dto.BookingResponse;
@@ -27,6 +30,8 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
+
+import org.springframework.context.ApplicationEventPublisher;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Proxy;
@@ -67,7 +72,8 @@ class BookingServiceTest {
                 bookingMapper,
                 catalogServiceRepository.proxy,
                 tenantSettingsService,
-                tenantTimeService
+                tenantTimeService,
+                noopEventPublisher()
         );
         TenantContext.setCurrentTenant(foodTenant(77L));
     }
@@ -327,6 +333,22 @@ class BookingServiceTest {
         public TenantSettings getSettings(Long tenantId) {
             return settings;
         }
+    }
+
+    private static ApplicationEventPublisher noopEventPublisher() {
+        return (ApplicationEventPublisher) Proxy.newProxyInstance(
+                ApplicationEventPublisher.class.getClassLoader(),
+                new Class<?>[]{ApplicationEventPublisher.class},
+                (proxy, method, args) -> {
+                    if ("publishEvent".equals(method.getName())) {
+                        return null;
+                    }
+                    if ("toString".equals(method.getName())) {
+                        return "NoopEventPublisher";
+                    }
+                    throw new UnsupportedOperationException("Unexpected call: " + method.getName());
+                }
+        );
     }
 
     private static TenantConfigRepository emptyTenantConfigRepository() {

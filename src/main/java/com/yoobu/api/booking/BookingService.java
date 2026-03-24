@@ -6,6 +6,9 @@ import com.yoobu.api.booking.dto.BookingResponse;
 import com.yoobu.api.booking.dto.CreateBookingRequest;
 import com.yoobu.api.catalog.CatalogService;
 import com.yoobu.api.catalog.CatalogServiceRepository;
+import com.yoobu.api.notification.event.BookingCreatedEvent;
+import com.yoobu.api.notification.event.BookingStatusChangedEvent;
+import com.yoobu.api.notification.event.PaymentConfirmedEvent;
 import com.yoobu.api.tenant.Tenant;
 import com.yoobu.api.tenant.TenantContext;
 import com.yoobu.api.tenant.TenantSettings;
@@ -23,6 +26,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -48,6 +52,7 @@ public class BookingService {
     private final CatalogServiceRepository catalogServiceRepository;
     private final TenantSettingsService tenantSettingsService;
     private final TenantTimeService tenantTimeService;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Transactional
     public BookingResponse createFoodOrder(CreateBookingRequest request, Long telegramUserId) {
@@ -93,6 +98,11 @@ public class BookingService {
                 telegramUserId.toString(),
                 toAuditSnapshot(persistedBooking, bookingItems)
         );
+
+        List<BookingCreatedEvent.OrderItem> orderItems = bookingItems.stream()
+                .map(item -> new BookingCreatedEvent.OrderItem(item.getService().getName(), item.getQuantity()))
+                .toList();
+        eventPublisher.publishEvent(new BookingCreatedEvent(persistedBooking, currency, orderItems, tenant));
 
         return toResponse(persistedBooking, bookingItems);
     }
@@ -143,7 +153,7 @@ public class BookingService {
 
     @Transactional
     public BookingResponse confirmMyBookingPayment(Long bookingId, Long telegramUserId) {
-        requireFoodOrderTenant();
+        Tenant tenant = requireFoodOrderTenant();
         Booking booking = findCustomerBooking(bookingId, telegramUserId);
 
         if (booking.getStatus() != BookingStatus.NEW) {
@@ -167,6 +177,9 @@ public class BookingService {
                 oldSnapshot,
                 toAuditSnapshot(savedBooking)
         );
+
+        List<BookingItem> items = bookingItemRepository.findByBookingIdOrderByIdAsc(savedBooking.getId());
+        eventPublisher.publishEvent(new PaymentConfirmedEvent(savedBooking, resolveBookingCurrency(items), tenant));
 
         return toResponse(savedBooking);
     }
@@ -233,9 +246,10 @@ public class BookingService {
 
     @Transactional
     public BookingResponse updateBookingStatus(Long bookingId, BookingStatus status, String trackingUrl) {
-        requireFoodOrderTenant();
+        Tenant tenant = requireFoodOrderTenant();
         Booking booking = findAdminBooking(bookingId);
         validateStatusTransition(booking.getStatus(), status);
+        BookingStatus oldStatus = booking.getStatus();
         Map<String, Object> oldSnapshot = toAuditSnapshot(booking);
 
         booking.setStatus(status);
@@ -254,6 +268,8 @@ public class BookingService {
                 oldSnapshot,
                 toAuditSnapshot(savedBooking)
         );
+
+        eventPublisher.publishEvent(new BookingStatusChangedEvent(savedBooking, oldStatus, status, tenant));
 
         return toResponse(savedBooking);
     }

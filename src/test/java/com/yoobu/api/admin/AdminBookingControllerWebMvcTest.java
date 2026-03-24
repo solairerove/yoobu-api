@@ -157,7 +157,7 @@ class AdminBookingControllerWebMvcTest {
         private BookingResponse response;
 
         RecordingBookingService() {
-            super(null, null, null, null, null, null, null);
+            super(null, null, null, null, null, null, null, null);
         }
 
         @Override
