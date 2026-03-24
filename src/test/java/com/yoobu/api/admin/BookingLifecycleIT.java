@@ -397,7 +397,9 @@ class BookingLifecycleIT extends IntegrationTestSupport {
                 "https://cdn.example.com/payment-qr-updated.png",
                 ADMIN_USERNAME,
                 "",
-                true
+                true,
+                null,
+                null
         );
 
         superAdminPutJson("/superadmin/tenants/" + tenantId, updateRequest)

@@ -2,6 +2,7 @@ package com.yoobu.api.admin;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.http.HttpHeaders.WWW_AUTHENTICATE;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
@@ -133,7 +134,9 @@ class SuperAdminTenantControllerIT extends IntegrationTestSupport {
                 "No onion, gate code, delivery code",
                 "not-a-url",
                 "admin",
-                "secret"
+                "secret",
+                null,
+                null
         );
 
         superAdminPostJson(SUPERADMIN_TENANTS_PATH, request)
@@ -162,7 +165,9 @@ class SuperAdminTenantControllerIT extends IntegrationTestSupport {
                 "bad-url",
                 "admin-after",
                 "secret-after",
-                true
+                true,
+                null,
+                null
         );
 
         superAdminPutJson(SUPERADMIN_TENANTS_PATH + "/" + tenantId, request)
@@ -197,7 +202,9 @@ class SuperAdminTenantControllerIT extends IntegrationTestSupport {
                 "https://cdn.example.com/payment-qr-updated.png",
                 "admin-after",
                 "secret-after",
-                true
+                true,
+                null,
+                null
         );
 
         superAdminPutJson(SUPERADMIN_TENANTS_PATH + "/" + tenantId, request)
@@ -264,7 +271,9 @@ class SuperAdminTenantControllerIT extends IntegrationTestSupport {
                 "https://cdn.example.com/payment-qr-updated.png",
                 "admin-after",
                 "",
-                true
+                true,
+                null,
+                null
         );
 
         superAdminPutJson(SUPERADMIN_TENANTS_PATH + "/" + tenantId, request)
@@ -312,7 +321,9 @@ class SuperAdminTenantControllerIT extends IntegrationTestSupport {
                 "",
                 "admin-clear",
                 "",
-                false
+                false,
+                null,
+                null
         );
 
         superAdminPutJson(SUPERADMIN_TENANTS_PATH + "/" + tenantId, request)
@@ -325,7 +336,7 @@ class SuperAdminTenantControllerIT extends IntegrationTestSupport {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.slug").value("tenant-clear"))
                 .andExpect(jsonPath("$.active").value(false))
-                .andExpect(jsonPath("$.botToken").doesNotExist())
+                .andExpect(jsonPath("$.botToken").value("bot-clear"))
                 .andExpect(jsonPath("$.ownerTelegramId").doesNotExist())
                 .andExpect(jsonPath("$.timezone").value("Asia/Ho_Chi_Minh"))
                 .andExpect(jsonPath("$.config.admin_username").value("admin-clear"))
@@ -345,6 +356,223 @@ class SuperAdminTenantControllerIT extends IntegrationTestSupport {
         ResponseStatusException adminAccessFailure = assertTenantNotFound(() ->
                 tenantAdminGet("tenant-clear", "/services", "admin-clear", "secret-clear"));
         assertEquals("Tenant not found", adminAccessFailure.getReason());
+    }
+
+    @Test
+    void superAdminCanCreateTenantWithCutoffAndReadItBack() throws Exception {
+        CreateTenantRequest request = new CreateTenantRequest(
+                "tenant-with-cutoff",
+                "Cutoff Tenant",
+                TenantType.FOOD_ORDER,
+                "bot-token",
+                123456789L,
+                DEFAULT_TENANT_TIMEZONE,
+                "USD",
+                null, null, null, null, null, null,
+                null,
+                "admin",
+                "secret",
+                18,
+                30
+        );
+
+        long tenantId = readJson(superAdminPostJson(SUPERADMIN_TENANTS_PATH, request)
+                .andExpect(status().isOk())
+                .andReturn()).get("id").asLong();
+
+        superAdminGet(SUPERADMIN_TENANTS_PATH + "/" + tenantId)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.config.cutoff_hour").value("18"))
+                .andExpect(jsonPath("$.config.cutoff_minute").value("30"));
+
+        var auditLog = latestAuditLog("tenant", "CREATE");
+        assertEquals("18", newAuditValue(auditLog).get("cutoffHour").asText());
+        assertEquals("30", newAuditValue(auditLog).get("cutoffMinute").asText());
+    }
+
+    @Test
+    void superAdminCanUpdateTenantToSetCutoff() throws Exception {
+        long tenantId = createFoodOrderTenant("tenant-set-cutoff", "Set Cutoff", "bot", "admin", "secret")
+                .get("id").asLong();
+
+        superAdminGet(SUPERADMIN_TENANTS_PATH + "/" + tenantId)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.config.cutoff_hour").doesNotExist())
+                .andExpect(jsonPath("$.config.cutoff_minute").doesNotExist());
+
+        UpdateTenantRequest request = new UpdateTenantRequest(
+                "Set Cutoff",
+                TenantType.FOOD_ORDER,
+                "bot",
+                123456789L,
+                DEFAULT_TENANT_TIMEZONE,
+                "USD",
+                null, null, null, null, null, null,
+                null,
+                "admin",
+                "",
+                true,
+                12,
+                0
+        );
+
+        superAdminPutJson(SUPERADMIN_TENANTS_PATH + "/" + tenantId, request)
+                .andExpect(status().isOk());
+
+        superAdminGet(SUPERADMIN_TENANTS_PATH + "/" + tenantId)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.config.cutoff_hour").value("12"))
+                .andExpect(jsonPath("$.config.cutoff_minute").value("0"));
+
+        var auditLog = latestAuditLog("tenant", "UPDATE");
+        assertTrue(newAuditValue(auditLog).get("cutoffHour").isTextual());
+        assertEquals("12", newAuditValue(auditLog).get("cutoffHour").asText());
+        assertEquals("0", newAuditValue(auditLog).get("cutoffMinute").asText());
+    }
+
+    @Test
+    void superAdminCanUpdateTenantToClearCutoff() throws Exception {
+        CreateTenantRequest createRequest = new CreateTenantRequest(
+                "tenant-clear-cutoff",
+                "Clear Cutoff",
+                TenantType.FOOD_ORDER,
+                "bot",
+                123456789L,
+                DEFAULT_TENANT_TIMEZONE,
+                "USD",
+                null, null, null, null, null, null,
+                null,
+                "admin",
+                "secret",
+                18,
+                0
+        );
+
+        long tenantId = readJson(superAdminPostJson(SUPERADMIN_TENANTS_PATH, createRequest)
+                .andExpect(status().isOk())
+                .andReturn()).get("id").asLong();
+
+        superAdminGet(SUPERADMIN_TENANTS_PATH + "/" + tenantId)
+                .andExpect(jsonPath("$.config.cutoff_hour").value("18"));
+
+        UpdateTenantRequest clearRequest = new UpdateTenantRequest(
+                "Clear Cutoff",
+                TenantType.FOOD_ORDER,
+                "bot",
+                123456789L,
+                DEFAULT_TENANT_TIMEZONE,
+                "USD",
+                null, null, null, null, null, null,
+                null,
+                "admin",
+                "",
+                true,
+                null,
+                null
+        );
+
+        superAdminPutJson(SUPERADMIN_TENANTS_PATH + "/" + tenantId, clearRequest)
+                .andExpect(status().isOk());
+
+        superAdminGet(SUPERADMIN_TENANTS_PATH + "/" + tenantId)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.config.cutoff_hour").doesNotExist())
+                .andExpect(jsonPath("$.config.cutoff_minute").doesNotExist());
+    }
+
+    @Test
+    void superAdminRejectsPartialCutoffHourOnlyOnCreate() throws Exception {
+        CreateTenantRequest request = new CreateTenantRequest(
+                "tenant-partial-hour",
+                "Partial Hour",
+                TenantType.FOOD_ORDER,
+                "bot",
+                123456789L,
+                DEFAULT_TENANT_TIMEZONE,
+                "USD",
+                null, null, null, null, null, null,
+                null,
+                "admin",
+                "secret",
+                18,
+                null
+        );
+
+        superAdminPostJson(SUPERADMIN_TENANTS_PATH, request)
+                .andExpect(status().isBadRequest())
+                .andExpect(status().reason("Both cutoffHour and cutoffMinute must be set, or both must be empty"));
+    }
+
+    @Test
+    void superAdminRejectsPartialCutoffMinuteOnlyOnUpdate() throws Exception {
+        long tenantId = createFoodOrderTenant("tenant-partial-minute", "Partial Minute", "bot", "admin", "secret")
+                .get("id").asLong();
+
+        UpdateTenantRequest request = new UpdateTenantRequest(
+                "Partial Minute",
+                TenantType.FOOD_ORDER,
+                "bot",
+                123456789L,
+                DEFAULT_TENANT_TIMEZONE,
+                "USD",
+                null, null, null, null, null, null,
+                null,
+                "admin",
+                "",
+                true,
+                null,
+                45
+        );
+
+        superAdminPutJson(SUPERADMIN_TENANTS_PATH + "/" + tenantId, request)
+                .andExpect(status().isBadRequest())
+                .andExpect(status().reason("Both cutoffHour and cutoffMinute must be set, or both must be empty"));
+    }
+
+    @Test
+    void superAdminRejectsOutOfRangeCutoffHour() throws Exception {
+        CreateTenantRequest request = new CreateTenantRequest(
+                "tenant-bad-hour",
+                "Bad Hour",
+                TenantType.FOOD_ORDER,
+                "bot",
+                123456789L,
+                DEFAULT_TENANT_TIMEZONE,
+                "USD",
+                null, null, null, null, null, null,
+                null,
+                "admin",
+                "secret",
+                24,
+                0
+        );
+
+        superAdminPostJson(SUPERADMIN_TENANTS_PATH, request)
+                .andExpect(status().isBadRequest())
+                .andExpect(status().reason("cutoffHour must be 0-23"));
+    }
+
+    @Test
+    void superAdminRejectsOutOfRangeCutoffMinute() throws Exception {
+        CreateTenantRequest request = new CreateTenantRequest(
+                "tenant-bad-minute",
+                "Bad Minute",
+                TenantType.FOOD_ORDER,
+                "bot",
+                123456789L,
+                DEFAULT_TENANT_TIMEZONE,
+                "USD",
+                null, null, null, null, null, null,
+                null,
+                "admin",
+                "secret",
+                12,
+                60
+        );
+
+        superAdminPostJson(SUPERADMIN_TENANTS_PATH, request)
+                .andExpect(status().isBadRequest())
+                .andExpect(status().reason("cutoffMinute must be 0-59"));
     }
 
     private ResponseStatusException assertTenantNotFound(Executable executable) {

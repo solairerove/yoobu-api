@@ -5,9 +5,74 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title th:text="${tenant.name} + ' | Superadmin'">Tenant detail</title>
     <link rel="stylesheet" th:href="@{/css/admin-panel.css}">
+    <style>
+        .detail-section {
+            padding: var(--space-4) 0;
+            border-top: 1px solid var(--border);
+        }
+        .detail-section:first-child {
+            padding-top: 0;
+            border-top: none;
+        }
+        .detail-section h3 {
+            margin: 0 0 var(--space-3);
+            font-size: 13px;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: var(--text-muted);
+        }
+        .detail-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 14px 24px;
+        }
+        .detail-field dt {
+            color: #8a6f5c;
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            margin-bottom: 3px;
+        }
+        .detail-field dd {
+            margin: 0;
+            font-weight: 600;
+            word-break: break-word;
+        }
+        .detail-field dd.muted {
+            color: var(--text-muted);
+            font-weight: 400;
+        }
+        .detail-field dd a {
+            word-break: break-word;
+        }
+        .card-header {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: var(--space-3);
+            flex-wrap: wrap;
+            margin-bottom: var(--space-4);
+        }
+        .card-title {
+            display: flex;
+            align-items: center;
+            gap: var(--space-2);
+            flex-wrap: wrap;
+        }
+        .card-title h2 {
+            font-size: 22px;
+        }
+        .card-actions {
+            display: flex;
+            gap: var(--space-2);
+            flex-wrap: wrap;
+        }
+    </style>
 </head>
 <body>
-<div class="shell">
+<div class="shell shell-narrow">
     <header class="page-header">
         <div>
             <p class="eyebrow">Superadmin panel</p>
@@ -21,56 +86,185 @@
         </nav>
     </header>
 
-    <section class="card" th:if="${flashMessage}">
-        <p class="flash"
-           th:classappend="${flashType == 'success'} ? ' flash-success' : ' flash-error'"
-           th:text="${flashMessage}">
-            Tenant updated.
-        </p>
-    </section>
+    <p class="flash card"
+       style="margin-top: var(--space-4);"
+       th:if="${flashMessage}"
+       th:classappend="${flashType == 'success'} ? ' flash-success' : ' flash-error'"
+       th:text="${flashMessage}">
+    </p>
 
-    <section class="toolbar">
-        <a class="button-link" th:href="@{/admin/{slug}/panel(slug=${tenant.slug})}">Open admin panel</a>
-        <a class="button-link" th:href="@{/superadmin/panel/tenants/{tenantId}/edit(tenantId=${tenant.id})}">Edit tenant</a>
-        <a class="button-link" th:href="@{/superadmin/panel/audit(tenantId=${tenant.id})}">View tenant audit</a>
-    </section>
-
-    <section class="detail-grid">
-        <article class="card">
-            <h2>Tenant</h2>
-            <dl class="summary">
-                <div><dt>ID</dt><dd th:text="${tenant.id}">1</dd></div>
-                <div><dt>Slug</dt><dd th:text="${tenant.slug}">dark-kitchen</dd></div>
-                <div><dt>Type</dt><dd th:text="${tenant.type}">FOOD_ORDER</dd></div>
-                <div><dt>Timezone</dt><dd th:text="${tenant.timezone}">Asia/Ho_Chi_Minh</dd></div>
-                <div><dt>Owner Telegram ID</dt><dd th:text="${tenant.ownerTelegramId ?: 'N/A'}">N/A</dd></div>
-                <div><dt>Created</dt><dd th:text="${tenant.createdAt != null ? #temporals.format(tenant.createdAt, 'yyyy-MM-dd HH:mm') : 'N/A'}">2026-03-14 00:00</dd></div>
-                <div><dt>Active</dt><dd th:text="${tenant.active ? 'Yes' : 'No'}">Yes</dd></div>
-            </dl>
-        </article>
-
-        <article class="card">
-            <h2>Integrations</h2>
-            <dl class="summary">
-                <div><dt>Bot token</dt><dd th:text="${tenant.botToken != null ? 'Configured' : 'N/A'}">Configured</dd></div>
-                <div><dt>Primary color</dt><dd th:text="${tenant.config['primary_color'] ?: 'N/A'}">#112233</dd></div>
-                <div><dt>Logo URL</dt><dd th:text="${tenant.config['logo_url'] ?: 'N/A'}">N/A</dd></div>
-                <div><dt>Welcome message</dt><dd th:text="${tenant.config['welcome_message'] ?: 'N/A'}">N/A</dd></div>
-                <div><dt>Checkout name hint</dt><dd th:text="${tenant.config['checkout_name_hint'] ?: 'N/A'}">Your full name</dd></div>
-                <div><dt>Checkout phone hint</dt><dd th:text="${tenant.config['checkout_phone_hint'] ?: 'N/A'}">+84...</dd></div>
-                <div><dt>Checkout note hint</dt><dd th:text="${tenant.config['checkout_note_hint'] ?: 'N/A'}">No onion, gate code, delivery code</dd></div>
-                <div><dt>Payment QR URL</dt><dd th:text="${tenant.config['payment_qr_url'] ?: 'N/A'}">https://cdn.example.com/payment-qr.png</dd></div>
-                <div><dt>Currency</dt><dd th:text="${tenant.config['currency'] ?: 'USD'}">USD</dd></div>
-                <div><dt>Admin username</dt><dd th:text="${tenant.config['admin_username'] ?: 'N/A'}">admin</dd></div>
-            </dl>
-        </article>
-    </section>
     <section class="card">
-        <h2>Quick links</h2>
-        <div class="summary">
-            <div><dt>Tenant admin panel</dt><dd><a th:href="@{/admin/{slug}/panel(slug=${tenant.slug})}" th:text="@{/admin/{slug}/panel(slug=${tenant.slug})}">/admin/dark-kitchen/panel</a></dd></div>
-            <div><dt>Public catalog API</dt><dd><a th:href="@{/t/{slug}/services(slug=${tenant.slug})}" th:text="@{/t/{slug}/services(slug=${tenant.slug})}">/t/dark-kitchen/services</a></dd></div>
+
+        <div class="card-header">
+            <div class="card-title">
+                <h2 th:text="${tenant.name}">Tenant name</h2>
+                <span class="badge"
+                      th:classappend="${tenant.active} ? ' badge-success' : ' badge-muted'"
+                      th:text="${tenant.active} ? 'Active' : 'Inactive'">Active</span>
+                <span class="badge badge-muted" th:text="${tenant.type}">FOOD_ORDER</span>
+            </div>
+            <div class="card-actions">
+                <a class="button-link button-secondary button-compact"
+                   th:href="@{/superadmin/panel/audit(tenantId=${tenant.id})}">Audit log</a>
+                <a class="button-link button-secondary button-compact"
+                   th:href="@{/admin/{slug}/panel(slug=${tenant.slug})}">Admin panel</a>
+                <a class="button-link button-compact"
+                   th:href="@{/superadmin/panel/tenants/{tenantId}/edit(tenantId=${tenant.id})}">Edit tenant</a>
+            </div>
         </div>
+
+        <!-- Identity -->
+        <div class="detail-section">
+            <h3>Identity</h3>
+            <div class="detail-row">
+                <dl class="detail-field">
+                    <dt>ID</dt>
+                    <dd th:text="${tenant.id}">1</dd>
+                </dl>
+                <dl class="detail-field">
+                    <dt>Slug</dt>
+                    <dd th:text="${tenant.slug}">dark-kitchen</dd>
+                </dl>
+                <dl class="detail-field">
+                    <dt>Timezone</dt>
+                    <dd th:text="${tenant.timezone}">Asia/Ho_Chi_Minh</dd>
+                </dl>
+                <dl class="detail-field">
+                    <dt>Owner Telegram ID</dt>
+                    <dd th:text="${tenant.ownerTelegramId ?: '—'}" th:classappend="${tenant.ownerTelegramId == null} ? ' muted'">—</dd>
+                </dl>
+                <dl class="detail-field">
+                    <dt>Created</dt>
+                    <dd th:text="${tenant.createdAt != null ? #temporals.format(tenant.createdAt, 'yyyy-MM-dd HH:mm') : '—'}">2026-01-01 00:00</dd>
+                </dl>
+            </div>
+        </div>
+
+        <!-- Admin & Access -->
+        <div class="detail-section">
+            <h3>Admin &amp; Access</h3>
+            <div class="detail-row">
+                <dl class="detail-field">
+                    <dt>Admin username</dt>
+                    <dd th:text="${tenant.config['admin_username'] ?: '—'}" th:classappend="${tenant.config['admin_username'] == null} ? ' muted'">admin</dd>
+                </dl>
+                <dl class="detail-field">
+                    <dt>Admin password</dt>
+                    <dd>Configured</dd>
+                </dl>
+                <dl class="detail-field">
+                    <dt>Bot token</dt>
+                    <dd th:text="${tenant.botToken != null ? 'Configured' : '—'}"
+                        th:classappend="${tenant.botToken == null} ? ' muted'">Configured</dd>
+                </dl>
+                <dl class="detail-field">
+                    <dt>Currency</dt>
+                    <dd th:text="${tenant.config['currency'] ?: 'USD'}">USD</dd>
+                </dl>
+            </div>
+        </div>
+
+        <!-- Delivery -->
+        <div class="detail-section">
+            <h3>Delivery</h3>
+            <div class="detail-row">
+                <dl class="detail-field">
+                    <dt>Order cutoff time</dt>
+                    <dd th:if="${tenant.config['cutoff_hour'] != null}"
+                        th:text="${tenant.config['cutoff_hour'] + ':' + (tenant.config['cutoff_minute'].length() == 1 ? '0' + tenant.config['cutoff_minute'] : tenant.config['cutoff_minute']) + ' (tenant timezone)'}">18:00 (tenant timezone)</dd>
+                    <dd th:if="${tenant.config['cutoff_hour'] == null}" class="muted">Not configured</dd>
+                </dl>
+            </div>
+        </div>
+
+        <!-- Branding -->
+        <div class="detail-section">
+            <h3>Branding</h3>
+            <div class="detail-row">
+                <dl class="detail-field">
+                    <dt>Primary color</dt>
+                    <dd th:if="${tenant.config['primary_color'] != null}">
+                        <span th:text="${tenant.config['primary_color']}">#112233</span>
+                        <span th:style="'display:inline-block;width:14px;height:14px;border-radius:3px;vertical-align:middle;margin-left:6px;border:1px solid var(--border);background:' + ${tenant.config['primary_color']}"></span>
+                    </dd>
+                    <dd th:if="${tenant.config['primary_color'] == null}" class="muted">—</dd>
+                </dl>
+                <dl class="detail-field">
+                    <dt>Logo URL</dt>
+                    <dd th:if="${tenant.config['logo_url'] != null}">
+                        <a th:href="${tenant.config['logo_url']}" th:text="${tenant.config['logo_url']}" target="_blank" rel="noopener">logo</a>
+                    </dd>
+                    <dd th:if="${tenant.config['logo_url'] == null}" class="muted">—</dd>
+                </dl>
+                <dl class="detail-field" style="grid-column: 1 / -1;">
+                    <dt>Welcome message</dt>
+                    <dd th:text="${tenant.config['welcome_message'] ?: '—'}"
+                        th:classappend="${tenant.config['welcome_message'] == null} ? ' muted'">—</dd>
+                </dl>
+            </div>
+        </div>
+
+        <!-- Checkout hints -->
+        <div class="detail-section">
+            <h3>Checkout hints</h3>
+            <div class="detail-row">
+                <dl class="detail-field">
+                    <dt>Name hint</dt>
+                    <dd th:text="${tenant.config['checkout_name_hint'] ?: '—'}"
+                        th:classappend="${tenant.config['checkout_name_hint'] == null} ? ' muted'">—</dd>
+                </dl>
+                <dl class="detail-field">
+                    <dt>Phone hint</dt>
+                    <dd th:text="${tenant.config['checkout_phone_hint'] ?: '—'}"
+                        th:classappend="${tenant.config['checkout_phone_hint'] == null} ? ' muted'">—</dd>
+                </dl>
+                <dl class="detail-field">
+                    <dt>Note hint</dt>
+                    <dd th:text="${tenant.config['checkout_note_hint'] ?: '—'}"
+                        th:classappend="${tenant.config['checkout_note_hint'] == null} ? ' muted'">—</dd>
+                </dl>
+            </div>
+        </div>
+
+        <!-- Payment -->
+        <div class="detail-section">
+            <h3>Payment</h3>
+            <div class="detail-row">
+                <dl class="detail-field" th:if="${tenant.config['payment_qr_url'] != null}">
+                    <dt>Payment QR</dt>
+                    <dd>
+                        <img th:src="${tenant.config['payment_qr_url']}" alt="Payment QR"
+                             style="display:block;max-width:100px;max-height:100px;border:1px solid var(--border);border-radius:8px;padding:4px;margin-top:4px;">
+                    </dd>
+                </dl>
+                <dl class="detail-field" th:if="${tenant.config['payment_qr_url'] == null}">
+                    <dt>Payment QR</dt>
+                    <dd class="muted">—</dd>
+                </dl>
+            </div>
+        </div>
+
+        <!-- Quick links -->
+        <div class="detail-section">
+            <h3>Quick links</h3>
+            <div class="detail-row">
+                <dl class="detail-field">
+                    <dt>Admin panel</dt>
+                    <dd>
+                        <a th:href="@{/admin/{slug}/panel(slug=${tenant.slug})}"
+                           th:text="'/admin/' + ${tenant.slug} + '/panel'">/admin/…/panel</a>
+                    </dd>
+                </dl>
+                <dl class="detail-field">
+                    <dt>Public catalog</dt>
+                    <dd>
+                        <a th:href="@{/t/{slug}/services(slug=${tenant.slug})}"
+                           th:text="'/t/' + ${tenant.slug} + '/services'">/t/…/services</a>
+                    </dd>
+                </dl>
+            </div>
+        </div>
+
     </section>
 </div>
 </body>

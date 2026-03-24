@@ -4,6 +4,7 @@ import com.yoobu.api.config.MapStructConfig;
 import com.yoobu.api.tenant.dto.TenantConfigResponse;
 import com.yoobu.api.tenant.dto.TenantDetailResponse;
 import com.yoobu.api.tenant.dto.TenantSummaryResponse;
+import java.time.LocalDate;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 
@@ -23,5 +24,8 @@ public interface TenantMapper {
     @Mapping(target = "checkoutPhoneHint", expression = "java(settings.checkout().phoneHint())")
     @Mapping(target = "checkoutNoteHint", expression = "java(settings.checkout().noteHint())")
     @Mapping(target = "paymentQrUrl", expression = "java(settings.payment().qrUrl())")
-    TenantConfigResponse toConfigResponse(Tenant tenant, TenantSettings settings);
+    @Mapping(target = "cutoffHour", expression = "java(settings.delivery().cutoffHour() != null ? Integer.parseInt(settings.delivery().cutoffHour()) : null)")
+    @Mapping(target = "cutoffMinute", expression = "java(settings.delivery().cutoffMinute() != null ? Integer.parseInt(settings.delivery().cutoffMinute()) : null)")
+    @Mapping(target = "earliestDeliveryDate", source = "earliestDeliveryDate")
+    TenantConfigResponse toConfigResponse(Tenant tenant, TenantSettings settings, LocalDate earliestDeliveryDate);
 }

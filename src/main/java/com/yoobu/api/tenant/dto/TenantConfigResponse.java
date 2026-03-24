@@ -1,6 +1,7 @@
 package com.yoobu.api.tenant.dto;
 
 import com.yoobu.api.tenant.TenantType;
+import java.time.LocalDate;
 
 public record TenantConfigResponse(
         String slug,
@@ -13,6 +14,9 @@ public record TenantConfigResponse(
         String checkoutNameHint,
         String checkoutPhoneHint,
         String checkoutNoteHint,
-        String paymentQrUrl
+        String paymentQrUrl,
+        Integer cutoffHour,
+        Integer cutoffMinute,
+        LocalDate earliestDeliveryDate
 ) {
 }

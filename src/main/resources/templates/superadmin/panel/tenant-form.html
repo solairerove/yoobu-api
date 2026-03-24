@@ -80,6 +80,18 @@
 
             <div class="field-row">
                 <label>
+                    <span>Order cutoff hour (0–23, tenant timezone)</span>
+                    <input type="number" th:field="*{cutoffHour}" min="0" max="23" placeholder="HH">
+                </label>
+                <label>
+                    <span>Order cutoff minute (0–59)</span>
+                    <input type="number" th:field="*{cutoffMinute}" min="0" max="59" placeholder="MM">
+                </label>
+            </div>
+            <p class="field-hint">Orders placed at or after this time cannot select today's delivery date. Leave both empty to disable cutoff.</p>
+
+            <div class="field-row">
+                <label>
                     <span>Admin username</span>
                     <input type="text" th:field="*{adminUsername}">
                 </label>
@@ -93,7 +105,7 @@
 
             <div class="field-row">
                 <label>
-                    <span th:text="${formMode == 'edit' ? 'Bot token (edit with care)' : 'Bot token'}">Bot token</span>
+                    <span th:text="${formMode == 'edit' ? 'Bot token (leave blank to keep)' : 'Bot token'}">Bot token</span>
                     <input type="password" th:field="*{botToken}" autocomplete="off">
                 </label>
                 <label>

@@ -246,7 +246,9 @@ public class SuperAdminPanelController {
                 form.getCheckoutNoteHint(),
                 form.getPaymentQrUrl(),
                 form.getAdminUsername(),
-                form.getAdminPassword()
+                form.getAdminPassword(),
+                form.getCutoffHour(),
+                form.getCutoffMinute()
         );
     }
 
@@ -267,7 +269,9 @@ public class SuperAdminPanelController {
                 form.getPaymentQrUrl(),
                 form.getAdminUsername(),
                 form.getAdminPassword(),
-                form.isActive()
+                form.isActive(),
+                form.getCutoffHour(),
+                form.getCutoffMinute()
         );
     }
 
@@ -290,6 +294,8 @@ public class SuperAdminPanelController {
         form.setPaymentQrUrl(config.get(TenantConfigKeys.PAYMENT_QR_URL));
         form.setAdminUsername(config.get(TenantConfigKeys.ADMIN_USERNAME));
         form.setActive(tenant.active());
+        form.setCutoffHour(parseIntOrNull(config.get(TenantConfigKeys.CUTOFF_HOUR)));
+        form.setCutoffMinute(parseIntOrNull(config.get(TenantConfigKeys.CUTOFF_MINUTE)));
         return form;
     }
 
@@ -375,6 +381,17 @@ public class SuperAdminPanelController {
         labels.put("CONFIRM_PAYMENT", "Payment confirmed by client");
         labels.put("CANCEL", "Cancelled");
         return labels;
+    }
+
+    private Integer parseIntOrNull(String value) {
+        if (!StringUtils.hasText(value)) {
+            return null;
+        }
+        try {
+            return Integer.parseInt(value.trim());
+        } catch (NumberFormatException e) {
+            return null;
+        }
     }
 
     private Map<Long, List<String>> buildAuditDiffById(List<AuditLogItemResponse> entries) {

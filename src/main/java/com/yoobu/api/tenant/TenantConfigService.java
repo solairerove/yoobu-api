@@ -1,6 +1,7 @@
 package com.yoobu.api.tenant;
 
 import com.yoobu.api.tenant.dto.TenantConfigResponse;
+import java.time.LocalDate;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -9,12 +10,14 @@ import org.springframework.stereotype.Service;
 public class TenantConfigService {
 
     private final TenantSettingsService tenantSettingsService;
+    private final TenantTimeService tenantTimeService;
     private final TenantMapper tenantMapper;
 
     public TenantConfigResponse getCurrentTenantConfig() {
         Tenant tenant = TenantContext.requireCurrentTenant();
         TenantSettings settings = tenantSettingsService.getCurrentTenantSettings();
+        LocalDate earliestDeliveryDate = tenantTimeService.earliestDeliveryDate(tenant, settings);
 
-        return tenantMapper.toConfigResponse(tenant, settings);
+        return tenantMapper.toConfigResponse(tenant, settings, earliestDeliveryDate);
     }
 }

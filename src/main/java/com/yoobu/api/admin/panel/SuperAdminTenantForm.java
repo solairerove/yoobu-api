@@ -44,6 +44,10 @@ public class SuperAdminTenantForm {
 
     private boolean active = true;
 
+    private Integer cutoffHour;
+
+    private Integer cutoffMinute;
+
     public String getSlug() {
         return slug;
     }
@@ -178,5 +182,21 @@ public class SuperAdminTenantForm {
 
     public void setActive(boolean active) {
         this.active = active;
+    }
+
+    public Integer getCutoffHour() {
+        return cutoffHour;
+    }
+
+    public void setCutoffHour(Integer cutoffHour) {
+        this.cutoffHour = cutoffHour;
+    }
+
+    public Integer getCutoffMinute() {
+        return cutoffMinute;
+    }
+
+    public void setCutoffMinute(Integer cutoffMinute) {
+        this.cutoffMinute = cutoffMinute;
     }
 }

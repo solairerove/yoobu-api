@@ -9,8 +9,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.fasterxml.jackson.databind.JsonNode;
 import com.yoobu.api.IntegrationTestSupport;
 import com.yoobu.api.tenant.TenantType;
+import com.yoobu.api.tenant.dto.CreateTenantRequest;
 import com.yoobu.api.tenant.dto.UpdateTenantRequest;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.context.TestPropertySource;
 
@@ -64,7 +66,9 @@ class ServiceManagementAndValidationIT extends IntegrationTestSupport {
                 "https://cdn.example.com/payment-qr-updated.png",
                 ADMIN_USERNAME,
                 "",
-                true
+                true,
+                null,
+                null
         );
 
         superAdminPutJson("/superadmin/tenants/" + tenantId, updateRequest)
@@ -96,7 +100,9 @@ class ServiceManagementAndValidationIT extends IntegrationTestSupport {
                 "",
                 ADMIN_USERNAME,
                 "",
-                true
+                true,
+                null,
+                null
         );
 
         superAdminPutJson("/superadmin/tenants/" + tenantId, updateRequest)
@@ -259,5 +265,62 @@ class ServiceManagementAndValidationIT extends IntegrationTestSupport {
                 .andExpect(status().isBadRequest())
                 .andExpect(status().reason("Delivery date must be on or after " + LocalDate.now(
                         java.time.ZoneId.of(DEFAULT_TENANT_TIMEZONE))));
+    }
+
+    @Test
+    void tenantPublicConfigReturnsCutoffFieldsAndEarliestDeliveryDateWhenConfigured() throws Exception {
+        // Midnight cutoff means current time is always past it — earliestDeliveryDate is always tomorrow
+        CreateTenantRequest request = new CreateTenantRequest(
+                TENANT_SLUG, "Food Tenant", TenantType.FOOD_ORDER, "food-bot",
+                123456789L, DEFAULT_TENANT_TIMEZONE, "USD",
+                null, null, null, null, null, null, null,
+                ADMIN_USERNAME, ADMIN_PASSWORD,
+                0, 0
+        );
+        superAdminPostJson("/superadmin/tenants", request).andExpect(status().isOk());
+
+        tenantPublicGet(TENANT_SLUG, "/config")
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.cutoffHour").value(0))
+                .andExpect(jsonPath("$.cutoffMinute").value(0))
+                .andExpect(jsonPath("$.earliestDeliveryDate").value(tomorrow().toString()));
+    }
+
+    @Test
+    void tenantPublicConfigReturnsNullCutoffAndTodayAsEarliestDeliveryDateWhenNotConfigured() throws Exception {
+        createFoodOrderTenant(TENANT_SLUG, "Food Tenant", "food-bot", ADMIN_USERNAME, ADMIN_PASSWORD);
+
+        JsonNode config = readJson(tenantPublicGet(TENANT_SLUG, "/config")
+                .andExpect(status().isOk())
+                .andReturn());
+
+        assertTrue(config.get("cutoffHour") == null || config.get("cutoffHour").isNull());
+        assertTrue(config.get("cutoffMinute") == null || config.get("cutoffMinute").isNull());
+        assertEquals(
+                LocalDate.now(ZoneId.of(DEFAULT_TENANT_TIMEZONE)).toString(),
+                config.get("earliestDeliveryDate").asText()
+        );
+    }
+
+    @Test
+    void createBookingRejectsTodayDeliveryWhenCurrentTimeIsPastCutoff() throws Exception {
+        // Midnight cutoff means current time is always past it — today's delivery is always rejected
+        CreateTenantRequest request = new CreateTenantRequest(
+                TENANT_SLUG, "Food Tenant", TenantType.FOOD_ORDER, "food-bot",
+                123456789L, DEFAULT_TENANT_TIMEZONE, "USD",
+                null, null, null, null, null, null, null,
+                ADMIN_USERNAME, ADMIN_PASSWORD,
+                0, 0
+        );
+        superAdminPostJson("/superadmin/tenants", request).andExpect(status().isOk());
+
+        long serviceId = createService(TENANT_SLUG, ADMIN_USERNAME, ADMIN_PASSWORD, "Pizza", "12.50")
+                .get("id").asLong();
+
+        LocalDate today = LocalDate.now(ZoneId.of(DEFAULT_TENANT_TIMEZONE));
+
+        tenantPublicPostJson(TENANT_SLUG, "/bookings", 101L, bookingPayload(serviceId, 1, today))
+                .andExpect(status().isBadRequest())
+                .andExpect(status().reason("Delivery date must be on or after " + tomorrow()));
     }
 }
