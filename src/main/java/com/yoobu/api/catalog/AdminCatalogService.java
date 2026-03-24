@@ -3,6 +3,7 @@ package com.yoobu.api.catalog;
 import com.yoobu.api.audit.AuditLogService;
 import com.yoobu.api.catalog.dto.AdminUpsertServiceRequest;
 import com.yoobu.api.catalog.dto.ServiceResponse;
+import com.yoobu.api.media.MediaStorageService;
 import com.yoobu.api.tenant.Tenant;
 import com.yoobu.api.tenant.TenantContext;
 import com.yoobu.api.tenant.TenantType;
@@ -19,6 +20,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
 @Service
@@ -30,6 +32,7 @@ public class AdminCatalogService {
     private final AuditLogService auditLogService;
     private final CatalogServiceRepository catalogServiceRepository;
     private final CatalogServiceMapper catalogServiceMapper;
+    private final MediaStorageService mediaStorageService;
 
     @Transactional(readOnly = true)
     public List<ServiceResponse> getAdminServices() {
@@ -135,6 +138,38 @@ public class AdminCatalogService {
     }
 
     @Transactional
+    public ServiceResponse uploadServiceImage(Long serviceId, MultipartFile file) {
+        requireFoodOrderTenant();
+
+        CatalogService service = catalogServiceRepository.findByIdAndTenantIdAndStatusNot(
+                        serviceId, TenantContext.getRequiredTenantId(), ServiceStatus.DELETED)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Service not found"));
+
+        String oldImageUrl = service.getImageUrl();
+        String cdnUrl = mediaStorageService.uploadServiceImage(service.getTenant().getId(), serviceId, file);
+
+        service.setImageUrl(cdnUrl);
+        service.setUpdatedAt(OffsetDateTime.now(ZoneOffset.UTC));
+        CatalogService saved = catalogServiceRepository.save(service);
+
+        if (oldImageUrl != null) {
+            mediaStorageService.deleteByUrl(oldImageUrl);
+        }
+
+        auditLogService.logAction(
+                saved.getTenant().getId(),
+                ENTITY_NAME,
+                saved.getId(),
+                "UPLOAD_IMAGE",
+                auditLogService.currentActorId(),
+                Map.of("imageUrl", String.valueOf(oldImageUrl)),
+                Map.of("imageUrl", cdnUrl)
+        );
+
+        return catalogServiceMapper.toResponse(saved);
+    }
+
+    @Transactional
     public void deleteService(Long serviceId) {
         requireFoodOrderTenant();
 
@@ -197,6 +232,7 @@ public class AdminCatalogService {
         snapshot.put("durationMinutes", service.getDurationMinutes());
         snapshot.put("status", service.getStatus());
         snapshot.put("sortOrder", service.getSortOrder());
+        snapshot.put("imageUrl", service.getImageUrl());
         snapshot.put("deletedAt", service.getDeletedAt());
         return snapshot;
     }

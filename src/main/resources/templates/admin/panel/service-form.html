@@ -27,7 +27,8 @@
             Status updated.
         </p>
 
-        <form method="post" th:action="${formAction}" th:object="${serviceForm}">
+        <form method="post" th:action="${formAction}" th:object="${serviceForm}"
+              enctype="multipart/form-data">
             <label>
                 <span>Name</span>
                 <input type="text" th:field="*{name}">
@@ -38,6 +39,22 @@
                 <span>Description</span>
                 <textarea rows="4" th:field="*{description}"></textarea>
             </label>
+
+            <div th:if="${editServiceId != null}">
+                <div th:if="${currentImageUrl}" style="margin-bottom: 0.75rem;">
+                    <p class="field-hint" style="margin-bottom: 0.5rem;">Current image:</p>
+                    <img th:src="${currentImageUrl}" alt="Service image"
+                         style="max-width: 200px; max-height: 150px; display: block; object-fit: cover;
+                                border: 1px solid var(--border); border-radius: 6px;">
+                </div>
+                <div th:if="${currentImageUrl == null}" style="margin-bottom: 0.75rem;">
+                    <p class="field-hint">No image uploaded yet.</p>
+                </div>
+                <label>
+                    <span th:text="${currentImageUrl != null} ? 'Replace image (JPEG, PNG, WebP · max 2 MB)' : 'Upload image (JPEG, PNG, WebP · max 2 MB)'">Upload image</span>
+                    <input type="file" name="imageFile" accept="image/jpeg,image/png,image/webp">
+                </label>
+            </div>
 
             <div class="field-row">
                 <label>
