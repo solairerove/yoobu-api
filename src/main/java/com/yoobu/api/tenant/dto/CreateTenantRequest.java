@@ -20,6 +20,8 @@ public record CreateTenantRequest(
         String checkoutNoteHint,
         String paymentQrUrl,
         @NotBlank String adminUsername,
-        @NotBlank String adminPassword
+        @NotBlank String adminPassword,
+        Integer cutoffHour,
+        Integer cutoffMinute
 ) {
 }

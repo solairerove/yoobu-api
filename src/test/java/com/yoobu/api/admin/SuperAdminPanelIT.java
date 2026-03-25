@@ -111,7 +111,7 @@ class SuperAdminPanelIT extends IntegrationTestSupport {
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("Panel After")))
                 .andExpect(content().string(containsString("panel-admin-2")))
-                .andExpect(content().string(containsString("Yes")))
+                .andExpect(content().string(containsString("Active")))
                 .andExpect(content().string(containsString("https://cdn.example.com/panel-updated.png")))
                 .andExpect(content().string(containsString("Contact person")))
                 .andExpect(content().string(containsString("+1 555...")))

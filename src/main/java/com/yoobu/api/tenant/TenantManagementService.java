@@ -91,6 +91,7 @@ public class TenantManagementService {
 
     @Transactional
     public TenantSummaryResponse createTenant(CreateTenantRequest request) {
+        validateCutoff(request.cutoffHour(), request.cutoffMinute());
         if (tenantRepository.existsBySlug(request.slug())) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Tenant slug already exists");
         }
@@ -125,6 +126,7 @@ public class TenantManagementService {
 
     @Transactional
     public TenantSummaryResponse updateTenant(Long tenantId, UpdateTenantRequest request) {
+        validateCutoff(request.cutoffHour(), request.cutoffMinute());
         Tenant tenant = tenantRepository.findById(tenantId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Tenant not found"));
 
@@ -166,6 +168,13 @@ public class TenantManagementService {
                 paymentQrUrlValidator.normalizePaymentQrUrl(request.paymentQrUrl()),
                 true
         );
+        if (request.cutoffHour() != null) {
+            upsertConfig(existingConfigs, savedTenant, TenantConfigKeys.CUTOFF_HOUR, String.valueOf(request.cutoffHour()), false);
+            upsertConfig(existingConfigs, savedTenant, TenantConfigKeys.CUTOFF_MINUTE, String.valueOf(request.cutoffMinute()), false);
+        } else {
+            upsertConfig(existingConfigs, savedTenant, TenantConfigKeys.CUTOFF_HOUR, null, true);
+            upsertConfig(existingConfigs, savedTenant, TenantConfigKeys.CUTOFF_MINUTE, null, true);
+        }
         auditLogService.logUpdate(
                 savedTenant.getId(),
                 ENTITY_NAME,
@@ -189,7 +198,10 @@ public class TenantManagementService {
     ) {
         tenant.setName(name);
         tenant.setType(type);
-        tenant.setBotToken(normalizeOptional(botToken));
+        String normalizedBotToken = normalizeOptional(botToken);
+        if (normalizedBotToken != null) {
+            tenant.setBotToken(normalizedBotToken);
+        }
         tenant.setOwnerTelegramId(ownerTelegramId);
         tenant.setTimezone(normalizeTimezone(timezone));
         tenant.setActive(active);
@@ -212,6 +224,10 @@ public class TenantManagementService {
                 TenantConfigKeys.PAYMENT_QR_URL,
                 paymentQrUrlValidator.normalizePaymentQrUrl(request.paymentQrUrl())
         );
+        if (request.cutoffHour() != null) {
+            addConfig(configs, tenant, TenantConfigKeys.CUTOFF_HOUR, String.valueOf(request.cutoffHour()));
+            addConfig(configs, tenant, TenantConfigKeys.CUTOFF_MINUTE, String.valueOf(request.cutoffMinute()));
+        }
         return configs;
     }
 
@@ -278,6 +294,19 @@ public class TenantManagementService {
         }
     }
 
+    private void validateCutoff(Integer cutoffHour, Integer cutoffMinute) {
+        if ((cutoffHour == null) != (cutoffMinute == null)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Both cutoffHour and cutoffMinute must be set, or both must be empty");
+        }
+        if (cutoffHour != null && (cutoffHour < 0 || cutoffHour > 23)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "cutoffHour must be 0-23");
+        }
+        if (cutoffMinute != null && (cutoffMinute < 0 || cutoffMinute > 59)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "cutoffMinute must be 0-59");
+        }
+    }
+
     private String normalizeOptional(String value) {
         return StringUtils.hasText(value) ? value.trim() : null;
     }
@@ -304,6 +333,7 @@ public class TenantManagementService {
         TenantSettings.CheckoutSettings checkout = settings.checkout();
         TenantSettings.PricingSettings pricing = settings.pricing();
         TenantSettings.PaymentSettings payment = settings.payment();
+        TenantSettings.DeliverySettings delivery = settings.delivery();
         Map<String, Object> snapshot = new LinkedHashMap<>();
         snapshot.put("id", tenant.getId());
         snapshot.put("slug", tenant.getSlug());
@@ -323,6 +353,8 @@ public class TenantManagementService {
         snapshot.put("checkoutNoteHint", checkout.noteHint());
         snapshot.put("paymentQrUrl", payment.qrUrl());
         snapshot.put("currency", pricing.currency());
+        snapshot.put("cutoffHour", delivery.cutoffHour());
+        snapshot.put("cutoffMinute", delivery.cutoffMinute());
         return snapshot;
     }
 

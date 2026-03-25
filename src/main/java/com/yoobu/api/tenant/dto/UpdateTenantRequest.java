@@ -20,6 +20,8 @@ public record UpdateTenantRequest(
         String paymentQrUrl,
         @NotBlank String adminUsername,
         String adminPassword,
-        @NotNull Boolean active
+        @NotNull Boolean active,
+        Integer cutoffHour,
+        Integer cutoffMinute
 ) {
 }

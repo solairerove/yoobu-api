@@ -13,6 +13,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.yoobu.api.booking.BookingStatus;
 import com.yoobu.api.catalog.ServiceStatus;
 import com.yoobu.api.catalog.dto.AdminUpsertServiceRequest;
+import com.yoobu.api.notification.TelegramBotApiClient;
 import com.yoobu.api.tenant.TenantType;
 import com.yoobu.api.tenant.dto.CreateTenantRequest;
 import java.math.BigDecimal;
@@ -28,6 +29,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
@@ -49,6 +51,10 @@ public abstract class IntegrationTestSupport {
     static {
         POSTGRES.start();
     }
+
+    @MockitoBean
+    @SuppressWarnings("unused")
+    private TelegramBotApiClient telegramBotApiClient;
 
     @Autowired
     protected MockMvc mockMvc;
@@ -129,7 +135,9 @@ public abstract class IntegrationTestSupport {
                 "No onion, gate code, delivery code",
                 "https://cdn.example.com/payment-qr.png",
                 adminUsername,
-                adminPassword
+                adminPassword,
+                null,
+                null
         );
     }
 
