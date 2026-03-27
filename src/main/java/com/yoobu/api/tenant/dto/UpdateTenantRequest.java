@@ -17,6 +17,7 @@ public record UpdateTenantRequest(
         String checkoutNameHint,
         String checkoutPhoneHint,
         String checkoutNoteHint,
+        String checkoutDeliveryHint,
         String paymentQrUrl,
         @NotBlank String adminUsername,
         String adminPassword,

@@ -394,6 +394,7 @@ class BookingLifecycleIT extends IntegrationTestSupport {
                 "Your full name",
                 "+84...",
                 "No onion, gate code, delivery code",
+                "Apartment and entrance instructions",
                 "https://cdn.example.com/payment-qr-updated.png",
                 ADMIN_USERNAME,
                 "",

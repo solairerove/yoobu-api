@@ -23,6 +23,7 @@ public interface TenantMapper {
     @Mapping(target = "checkoutNameHint", expression = "java(settings.checkout().nameHint())")
     @Mapping(target = "checkoutPhoneHint", expression = "java(settings.checkout().phoneHint())")
     @Mapping(target = "checkoutNoteHint", expression = "java(settings.checkout().noteHint())")
+    @Mapping(target = "checkoutDeliveryHint", expression = "java(settings.checkout().deliveryHint())")
     @Mapping(target = "paymentQrUrl", expression = "java(settings.payment().qrUrl())")
     @Mapping(target = "cutoffHour", expression = "java(settings.delivery().cutoffHour() != null ? Integer.parseInt(settings.delivery().cutoffHour()) : null)")
     @Mapping(target = "cutoffMinute", expression = "java(settings.delivery().cutoffMinute() != null ? Integer.parseInt(settings.delivery().cutoffMinute()) : null)")

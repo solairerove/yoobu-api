@@ -35,6 +35,8 @@ public class SuperAdminTenantForm {
 
     private String checkoutNoteHint;
 
+    private String checkoutDeliveryHint;
+
     private String paymentQrUrl;
 
     @NotBlank
@@ -150,6 +152,14 @@ public class SuperAdminTenantForm {
 
     public void setCheckoutNoteHint(String checkoutNoteHint) {
         this.checkoutNoteHint = checkoutNoteHint;
+    }
+
+    public String getCheckoutDeliveryHint() {
+        return checkoutDeliveryHint;
+    }
+
+    public void setCheckoutDeliveryHint(String checkoutDeliveryHint) {
+        this.checkoutDeliveryHint = checkoutDeliveryHint;
     }
 
     public String getPaymentQrUrl() {
