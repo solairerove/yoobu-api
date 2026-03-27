@@ -14,6 +14,7 @@ public record TenantConfigResponse(
         String checkoutNameHint,
         String checkoutPhoneHint,
         String checkoutNoteHint,
+        String checkoutDeliveryHint,
         String paymentQrUrl,
         Integer cutoffHour,
         Integer cutoffMinute,

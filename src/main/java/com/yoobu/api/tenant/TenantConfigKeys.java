@@ -10,6 +10,7 @@ public final class TenantConfigKeys {
     public static final String CHECKOUT_PHONE_HINT = "checkout_phone_hint";
     public static final String CHECKOUT_NOTE_HINT = "checkout_note_hint";
     public static final String CHECKOUT_NAME_HINT = "checkout_name_hint";
+    public static final String CHECKOUT_DELIVERY_HINT = "checkout_delivery_hint";
     public static final String PAYMENT_QR_URL = "payment_qr_url";
     public static final String CURRENCY = "currency";
     public static final String CUTOFF_HOUR = "cutoff_hour";

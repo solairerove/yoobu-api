@@ -244,6 +244,7 @@ public class SuperAdminPanelController {
                 form.getCheckoutNameHint(),
                 form.getCheckoutPhoneHint(),
                 form.getCheckoutNoteHint(),
+                form.getCheckoutDeliveryHint(),
                 form.getPaymentQrUrl(),
                 form.getAdminUsername(),
                 form.getAdminPassword(),
@@ -266,6 +267,7 @@ public class SuperAdminPanelController {
                 form.getCheckoutNameHint(),
                 form.getCheckoutPhoneHint(),
                 form.getCheckoutNoteHint(),
+                form.getCheckoutDeliveryHint(),
                 form.getPaymentQrUrl(),
                 form.getAdminUsername(),
                 form.getAdminPassword(),
@@ -291,6 +293,7 @@ public class SuperAdminPanelController {
         form.setCheckoutNameHint(config.get(TenantConfigKeys.CHECKOUT_NAME_HINT));
         form.setCheckoutPhoneHint(config.get(TenantConfigKeys.CHECKOUT_PHONE_HINT));
         form.setCheckoutNoteHint(config.get(TenantConfigKeys.CHECKOUT_NOTE_HINT));
+        form.setCheckoutDeliveryHint(config.get(TenantConfigKeys.CHECKOUT_DELIVERY_HINT));
         form.setPaymentQrUrl(config.get(TenantConfigKeys.PAYMENT_QR_URL));
         form.setAdminUsername(config.get(TenantConfigKeys.ADMIN_USERNAME));
         form.setActive(tenant.active());

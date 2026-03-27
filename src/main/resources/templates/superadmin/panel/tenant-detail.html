@@ -223,6 +223,11 @@
                     <dd th:text="${tenant.config['checkout_note_hint'] ?: '—'}"
                         th:classappend="${tenant.config['checkout_note_hint'] == null} ? ' muted'">—</dd>
                 </dl>
+                <dl class="detail-field">
+                    <dt>Delivery hint</dt>
+                    <dd th:text="${tenant.config['checkout_delivery_hint'] ?: '—'}"
+                        th:classappend="${tenant.config['checkout_delivery_hint'] == null} ? ' muted'">—</dd>
+                </dl>
             </div>
         </div>
 

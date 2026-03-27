@@ -47,6 +47,7 @@ class TenantSettingsTest {
                 Map.entry(TenantConfigKeys.CHECKOUT_NAME_HINT, "Receiver name"),
                 Map.entry(TenantConfigKeys.CHECKOUT_PHONE_HINT, "+84..."),
                 Map.entry(TenantConfigKeys.CHECKOUT_NOTE_HINT, "No onion, gate code"),
+                Map.entry(TenantConfigKeys.CHECKOUT_DELIVERY_HINT, "Apartment and entrance"),
                 Map.entry(TenantConfigKeys.CURRENCY, "THB"),
                 Map.entry(TenantConfigKeys.CUTOFF_HOUR, "18"),
                 Map.entry(TenantConfigKeys.CUTOFF_MINUTE, "30")
@@ -60,6 +61,7 @@ class TenantSettingsTest {
         assertEquals("Receiver name", settings.checkout().nameHint());
         assertEquals("+84...", settings.checkout().phoneHint());
         assertEquals("No onion, gate code", settings.checkout().noteHint());
+        assertEquals("Apartment and entrance", settings.checkout().deliveryHint());
         assertEquals("THB", settings.pricing().currency());
         assertEquals("18", settings.delivery().cutoffHour());
         assertEquals("30", settings.delivery().cutoffMinute());

@@ -43,6 +43,7 @@ class SuperAdminPanelIT extends IntegrationTestSupport {
                 Map.entry("checkoutNameHint", "Your full name"),
                 Map.entry("checkoutPhoneHint", "+84..."),
                 Map.entry("checkoutNoteHint", "No onion, gate code, delivery code"),
+                Map.entry("checkoutDeliveryHint", "Apartment and entrance instructions"),
                 Map.entry("paymentQrUrl", "https://cdn.example.com/payment-qr.png"),
                 Map.entry("adminUsername", "panel-admin"),
                 Map.entry("adminPassword", "panel-secret")
@@ -69,6 +70,7 @@ class SuperAdminPanelIT extends IntegrationTestSupport {
                 .andExpect(content().string(containsString("Your full name")))
                 .andExpect(content().string(containsString("+84...")))
                 .andExpect(content().string(containsString("No onion, gate code, delivery code")))
+                .andExpect(content().string(containsString("Apartment and entrance instructions")))
                 .andExpect(content().string(containsString("https://cdn.example.com/payment-qr.png")))
                 .andExpect(content().string(containsString("USD")))
                 .andExpect(content().string(containsString("Edit tenant")))
@@ -99,6 +101,7 @@ class SuperAdminPanelIT extends IntegrationTestSupport {
                 Map.entry("checkoutNameHint", "Contact person"),
                 Map.entry("checkoutPhoneHint", "+1 555..."),
                 Map.entry("checkoutNoteHint", "Ring bell twice"),
+                Map.entry("checkoutDeliveryHint", "Building and intercom"),
                 Map.entry("paymentQrUrl", "https://cdn.example.com/payment-qr-updated.png"),
                 Map.entry("adminUsername", "panel-admin-2"),
                 Map.entry("adminPassword", "panel-secret-2"),
@@ -116,6 +119,7 @@ class SuperAdminPanelIT extends IntegrationTestSupport {
                 .andExpect(content().string(containsString("Contact person")))
                 .andExpect(content().string(containsString("+1 555...")))
                 .andExpect(content().string(containsString("Ring bell twice")))
+                .andExpect(content().string(containsString("Building and intercom")))
                 .andExpect(content().string(containsString("https://cdn.example.com/payment-qr-updated.png")))
                 .andExpect(content().string(containsString("THB")));
 
@@ -144,6 +148,7 @@ class SuperAdminPanelIT extends IntegrationTestSupport {
                 Map.entry("checkoutNameHint", "Your full name"),
                 Map.entry("checkoutPhoneHint", "+84..."),
                 Map.entry("checkoutNoteHint", "No onion, gate code, delivery code"),
+                Map.entry("checkoutDeliveryHint", "Apartment and entrance instructions"),
                 Map.entry("paymentQrUrl", "https://cdn.example.com/payment-qr.png"),
                 Map.entry("adminUsername", "panel-admin"),
                 Map.entry("adminPassword", "panel-secret")

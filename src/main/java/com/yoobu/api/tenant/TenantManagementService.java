@@ -161,6 +161,7 @@ public class TenantManagementService {
         upsertConfig(existingConfigs, savedTenant, TenantConfigKeys.CHECKOUT_NAME_HINT, request.checkoutNameHint(), true);
         upsertConfig(existingConfigs, savedTenant, TenantConfigKeys.CHECKOUT_PHONE_HINT, request.checkoutPhoneHint(), true);
         upsertConfig(existingConfigs, savedTenant, TenantConfigKeys.CHECKOUT_NOTE_HINT, request.checkoutNoteHint(), true);
+        upsertConfig(existingConfigs, savedTenant, TenantConfigKeys.CHECKOUT_DELIVERY_HINT, request.checkoutDeliveryHint(), true);
         upsertConfig(
                 existingConfigs,
                 savedTenant,
@@ -218,6 +219,7 @@ public class TenantManagementService {
         addConfig(configs, tenant, TenantConfigKeys.CHECKOUT_NAME_HINT, request.checkoutNameHint());
         addConfig(configs, tenant, TenantConfigKeys.CHECKOUT_PHONE_HINT, request.checkoutPhoneHint());
         addConfig(configs, tenant, TenantConfigKeys.CHECKOUT_NOTE_HINT, request.checkoutNoteHint());
+        addConfig(configs, tenant, TenantConfigKeys.CHECKOUT_DELIVERY_HINT, request.checkoutDeliveryHint());
         addConfig(
                 configs,
                 tenant,
@@ -351,6 +353,7 @@ public class TenantManagementService {
         snapshot.put("checkoutNameHint", checkout.nameHint());
         snapshot.put("checkoutPhoneHint", checkout.phoneHint());
         snapshot.put("checkoutNoteHint", checkout.noteHint());
+        snapshot.put("checkoutDeliveryHint", checkout.deliveryHint());
         snapshot.put("paymentQrUrl", payment.qrUrl());
         snapshot.put("currency", pricing.currency());
         snapshot.put("cutoffHour", delivery.cutoffHour());

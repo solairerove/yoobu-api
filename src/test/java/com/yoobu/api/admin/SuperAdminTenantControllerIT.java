@@ -132,6 +132,7 @@ class SuperAdminTenantControllerIT extends IntegrationTestSupport {
                 "Your full name",
                 "+84...",
                 "No onion, gate code, delivery code",
+                "Apartment and entrance instructions",
                 "not-a-url",
                 "admin",
                 "secret",
@@ -162,6 +163,7 @@ class SuperAdminTenantControllerIT extends IntegrationTestSupport {
                 "Contact person",
                 "+1 555...",
                 "Ring bell twice",
+                "Building and intercom",
                 "bad-url",
                 "admin-after",
                 "secret-after",
@@ -199,6 +201,7 @@ class SuperAdminTenantControllerIT extends IntegrationTestSupport {
                 "Contact person",
                 "+1 555...",
                 "Ring bell twice",
+                "Building and intercom",
                 "https://cdn.example.com/payment-qr-updated.png",
                 "admin-after",
                 "secret-after",
@@ -232,6 +235,7 @@ class SuperAdminTenantControllerIT extends IntegrationTestSupport {
                 .andExpect(jsonPath("$.config.checkout_name_hint").value("Contact person"))
                 .andExpect(jsonPath("$.config.checkout_phone_hint").value("+1 555..."))
                 .andExpect(jsonPath("$.config.checkout_note_hint").value("Ring bell twice"))
+                .andExpect(jsonPath("$.config.checkout_delivery_hint").value("Building and intercom"))
                 .andExpect(jsonPath("$.config.payment_qr_url").value("https://cdn.example.com/payment-qr-updated.png"));
 
         tenantAdminGet("tenant-edit", "/services", "admin-before", "secret-before")
@@ -268,6 +272,7 @@ class SuperAdminTenantControllerIT extends IntegrationTestSupport {
                 "Receiver name",
                 "+66...",
                 "Leave at lobby",
+                "Leave at tower reception",
                 "https://cdn.example.com/payment-qr-updated.png",
                 "admin-after",
                 "",
@@ -291,6 +296,7 @@ class SuperAdminTenantControllerIT extends IntegrationTestSupport {
                 .andExpect(jsonPath("$.config.checkout_name_hint").value("Receiver name"))
                 .andExpect(jsonPath("$.config.checkout_phone_hint").value("+66..."))
                 .andExpect(jsonPath("$.config.checkout_note_hint").value("Leave at lobby"))
+                .andExpect(jsonPath("$.config.checkout_delivery_hint").value("Leave at tower reception"))
                 .andExpect(jsonPath("$.config.payment_qr_url").value("https://cdn.example.com/payment-qr-updated.png"));
 
         tenantAdminGet("tenant-keep-pass", "/services", "admin-before", "secret-before")
@@ -310,6 +316,7 @@ class SuperAdminTenantControllerIT extends IntegrationTestSupport {
                 TenantType.FOOD_ORDER,
                 "",
                 null,
+                "",
                 "",
                 "",
                 "",
@@ -347,6 +354,7 @@ class SuperAdminTenantControllerIT extends IntegrationTestSupport {
                 .andExpect(jsonPath("$.config.checkout_name_hint").doesNotExist())
                 .andExpect(jsonPath("$.config.checkout_phone_hint").doesNotExist())
                 .andExpect(jsonPath("$.config.checkout_note_hint").doesNotExist())
+                .andExpect(jsonPath("$.config.checkout_delivery_hint").doesNotExist())
                 .andExpect(jsonPath("$.config.payment_qr_url").doesNotExist());
 
         ResponseStatusException publicAccessFailure = assertTenantNotFound(() ->
@@ -368,7 +376,7 @@ class SuperAdminTenantControllerIT extends IntegrationTestSupport {
                 123456789L,
                 DEFAULT_TENANT_TIMEZONE,
                 "USD",
-                null, null, null, null, null, null,
+                null, null, null, null, null, null, null,
                 null,
                 "admin",
                 "secret",
@@ -407,7 +415,7 @@ class SuperAdminTenantControllerIT extends IntegrationTestSupport {
                 123456789L,
                 DEFAULT_TENANT_TIMEZONE,
                 "USD",
-                null, null, null, null, null, null,
+                null, null, null, null, null, null, null,
                 null,
                 "admin",
                 "",
@@ -440,7 +448,7 @@ class SuperAdminTenantControllerIT extends IntegrationTestSupport {
                 123456789L,
                 DEFAULT_TENANT_TIMEZONE,
                 "USD",
-                null, null, null, null, null, null,
+                null, null, null, null, null, null, null,
                 null,
                 "admin",
                 "secret",
@@ -462,7 +470,7 @@ class SuperAdminTenantControllerIT extends IntegrationTestSupport {
                 123456789L,
                 DEFAULT_TENANT_TIMEZONE,
                 "USD",
-                null, null, null, null, null, null,
+                null, null, null, null, null, null, null,
                 null,
                 "admin",
                 "",
@@ -490,7 +498,7 @@ class SuperAdminTenantControllerIT extends IntegrationTestSupport {
                 123456789L,
                 DEFAULT_TENANT_TIMEZONE,
                 "USD",
-                null, null, null, null, null, null,
+                null, null, null, null, null, null, null,
                 null,
                 "admin",
                 "secret",
@@ -515,7 +523,7 @@ class SuperAdminTenantControllerIT extends IntegrationTestSupport {
                 123456789L,
                 DEFAULT_TENANT_TIMEZONE,
                 "USD",
-                null, null, null, null, null, null,
+                null, null, null, null, null, null, null,
                 null,
                 "admin",
                 "",
@@ -539,7 +547,7 @@ class SuperAdminTenantControllerIT extends IntegrationTestSupport {
                 123456789L,
                 DEFAULT_TENANT_TIMEZONE,
                 "USD",
-                null, null, null, null, null, null,
+                null, null, null, null, null, null, null,
                 null,
                 "admin",
                 "secret",
@@ -562,7 +570,7 @@ class SuperAdminTenantControllerIT extends IntegrationTestSupport {
                 123456789L,
                 DEFAULT_TENANT_TIMEZONE,
                 "USD",
-                null, null, null, null, null, null,
+                null, null, null, null, null, null, null,
                 null,
                 "admin",
                 "secret",

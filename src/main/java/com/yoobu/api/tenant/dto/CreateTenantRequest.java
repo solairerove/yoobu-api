@@ -18,6 +18,7 @@ public record CreateTenantRequest(
         String checkoutNameHint,
         String checkoutPhoneHint,
         String checkoutNoteHint,
+        String checkoutDeliveryHint,
         String paymentQrUrl,
         @NotBlank String adminUsername,
         @NotBlank String adminPassword,

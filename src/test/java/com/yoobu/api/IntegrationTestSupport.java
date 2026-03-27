@@ -133,6 +133,7 @@ public abstract class IntegrationTestSupport {
                 "Your full name",
                 "+84...",
                 "No onion, gate code, delivery code",
+                "Apartment and entrance instructions",
                 "https://cdn.example.com/payment-qr.png",
                 adminUsername,
                 adminPassword,
