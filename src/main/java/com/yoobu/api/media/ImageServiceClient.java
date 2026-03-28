@@ -15,6 +15,8 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.HttpServerErrorException;
+import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.multipart.MultipartFile;
@@ -106,13 +108,20 @@ public class ImageServiceClient {
             try {
                 return operation.get();
             } catch (HttpClientErrorException e) {
+                // 4xx: image service rejected the request — don't retry
                 String body = e.getResponseBodyAsString();
-                log.error("Image service returned error: status={}, body={}", e.getStatusCode(), body);
+                log.error("Image service rejected request: status={}, body={}", e.getStatusCode(), body);
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST, extractErrorMessage(body));
-            } catch (RestClientException e) {
+            } catch (HttpServerErrorException e) {
+                // 5xx from image service itself (e.g. R2 failure) — don't retry, propagate error
+                String body = e.getResponseBodyAsString();
+                log.error("Image service upstream error: status={}, body={}", e.getStatusCode(), body);
+                throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, extractErrorMessage(body));
+            } catch (ResourceAccessException e) {
+                // Network/timeout — service may be starting up, retry
                 lastException = e;
                 if (i < RETRY_DELAYS_SECONDS.length) {
-                    log.warn("Image service unavailable (attempt {}/{}), retrying in {}s: {}",
+                    log.warn("Image service unreachable (attempt {}/{}), retrying in {}s: {}",
                             i + 1, RETRY_DELAYS_SECONDS.length + 1, RETRY_DELAYS_SECONDS[i], e.getMessage());
                     try {
                         Thread.sleep(RETRY_DELAYS_SECONDS[i] * 1000L);
@@ -123,7 +132,7 @@ public class ImageServiceClient {
                 }
             }
         }
-        log.error("Image service unavailable after all retries: {}", lastException != null ? lastException.getMessage() : "unknown");
+        log.error("Image service unreachable after all retries: {}", lastException != null ? lastException.getMessage() : "unknown");
         throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "Image service unavailable");
     }
 
