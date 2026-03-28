@@ -3,7 +3,7 @@ package com.yoobu.api.catalog;
 import com.yoobu.api.audit.AuditLogService;
 import com.yoobu.api.catalog.dto.AdminUpsertServiceRequest;
 import com.yoobu.api.catalog.dto.ServiceResponse;
-import com.yoobu.api.media.MediaStorageService;
+import com.yoobu.api.media.ImageServiceClient;
 import com.yoobu.api.tenant.Tenant;
 import com.yoobu.api.tenant.TenantContext;
 import com.yoobu.api.tenant.TenantType;
@@ -32,7 +32,7 @@ public class AdminCatalogService {
     private final AuditLogService auditLogService;
     private final CatalogServiceRepository catalogServiceRepository;
     private final CatalogServiceMapper catalogServiceMapper;
-    private final MediaStorageService mediaStorageService;
+    private final ImageServiceClient imageServiceClient;
 
     @Transactional(readOnly = true)
     public List<ServiceResponse> getAdminServices() {
@@ -146,14 +146,14 @@ public class AdminCatalogService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Service not found"));
 
         String oldImageUrl = service.getImageUrl();
-        String cdnUrl = mediaStorageService.uploadServiceImage(service.getTenant().getId(), serviceId, file);
+        String cdnUrl = imageServiceClient.upload(service.getTenant().getId(), "services/" + serviceId, file);
 
         service.setImageUrl(cdnUrl);
         service.setUpdatedAt(OffsetDateTime.now(ZoneOffset.UTC));
         CatalogService saved = catalogServiceRepository.save(service);
 
         if (oldImageUrl != null) {
-            mediaStorageService.deleteByUrl(oldImageUrl);
+            imageServiceClient.deleteByUrl(oldImageUrl);
         }
 
         auditLogService.logAction(

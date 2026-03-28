@@ -22,11 +22,9 @@ app:
   superadmin:
     username: ${SUPERADMIN_USER:superadmin}
     password: ${SUPERADMIN_PASS:superadmin}
-  media:
-    r2-endpoint: ${R2_ENDPOINT:http://localhost:9000}
-    r2-access-key: ${R2_ACCESS_KEY:minioadmin}
-    r2-secret-key: ${R2_SECRET_KEY:minioadmin}
-    r2-bucket: ${R2_BUCKET:yoobu-media}
+  image-service:
+    url: ${IMAGE_SERVICE_URL:http://localhost:3000}
+    api-key: ${INTERNAL_API_KEY:dev-internal-key-change-in-prod}
     cdn-base-url: ${CDN_BASE_URL:http://localhost:9000}
 
 server:
