@@ -4,7 +4,7 @@ import com.yoobu.api.audit.AuditLogChangeFormatter;
 import com.yoobu.api.audit.AuditLogCsvExporter;
 import com.yoobu.api.audit.AuditLogService;
 import com.yoobu.api.audit.dto.AuditLogItemResponse;
-import com.yoobu.api.media.MediaStorageService;
+import com.yoobu.api.media.ImageServiceClient;
 import com.yoobu.api.tenant.TenantManagementService;
 import com.yoobu.api.tenant.TenantConfigKeys;
 import com.yoobu.api.tenant.TenantSettings;
@@ -63,7 +63,7 @@ public class SuperAdminPanelController {
     private final AuditLogService auditLogService;
     private final AuditLogChangeFormatter auditLogChangeFormatter;
     private final AuditLogCsvExporter auditLogCsvExporter;
-    private final MediaStorageService mediaStorageService;
+    private final ImageServiceClient imageServiceClient;
 
     @GetMapping({"", "/"})
     public String panelHome() {
@@ -192,9 +192,9 @@ public class SuperAdminPanelController {
         try {
             TenantDetailResponse tenant = tenantManagementService.getTenant(tenantId);
             String oldUrl = tenant.config().get(TenantConfigKeys.PAYMENT_QR_URL);
-            String cdnUrl = mediaStorageService.uploadPaymentQr(tenantId, file);
+            String cdnUrl = imageServiceClient.upload(tenantId, "payment/qr", file);
             if (oldUrl != null) {
-                mediaStorageService.deleteByUrl(oldUrl);
+                imageServiceClient.deleteByUrl(oldUrl);
             }
             tenantManagementService.updatePaymentQrUrl(tenantId, cdnUrl);
             redirectAttributes.addFlashAttribute("flashMessage", "Payment QR updated.");
