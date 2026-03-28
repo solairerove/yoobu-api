@@ -51,8 +51,8 @@ public class ImageServiceClient {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Failed to read file");
         }
         String filename = file.getOriginalFilename() != null ? file.getOriginalFilename() : "file";
-        log.info("Uploading image to image-service: tenantId={}, uploadPath={}, filename={}, size={}bytes",
-                tenantId, uploadPath, filename, bytes.length);
+        log.info("Uploading image to image-service: url={}, tenantId={}, uploadPath={}, filename={}, size={}bytes",
+                properties.url() + "/upload", tenantId, uploadPath, filename, bytes.length);
 
         return withRetry(() -> {
             MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
