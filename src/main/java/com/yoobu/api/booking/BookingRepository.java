@@ -39,4 +39,6 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
             LocalDate deliveryDate,
             Pageable pageable
     );
+
+    long countByTenantIdAndDeletedAtIsNullAndStatus(Long tenantId, BookingStatus status);
 }

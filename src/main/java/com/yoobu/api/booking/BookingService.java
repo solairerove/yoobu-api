@@ -290,6 +290,18 @@ public class BookingService {
         return List.copyOf(allowedStatuses);
     }
 
+    public Map<BookingStatus, Long> getActiveStatusCounts() {
+        Long tenantId = TenantContext.requireCurrentTenant().getId();
+        Map<BookingStatus, Long> counts = new LinkedHashMap<>();
+        for (BookingStatus status : EnumSet.of(BookingStatus.NEW, BookingStatus.PAYMENT_PENDING, BookingStatus.CONFIRMED, BookingStatus.DELIVERING)) {
+            long count = bookingRepository.countByTenantIdAndDeletedAtIsNullAndStatus(tenantId, status);
+            if (count > 0) {
+                counts.put(status, count);
+            }
+        }
+        return counts;
+    }
+
     private Tenant requireFoodOrderTenant() {
         Tenant tenant = TenantContext.requireCurrentTenant();
         if (tenant.getType() != TenantType.FOOD_ORDER) {
