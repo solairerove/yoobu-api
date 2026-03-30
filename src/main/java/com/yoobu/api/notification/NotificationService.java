@@ -66,7 +66,8 @@ public class NotificationService {
             sb.append("Phone: %s\n".formatted(booking.getCustomerPhone()));
         }
         sb.append("Total: %s %s\n".formatted(booking.getTotalPrice(), booking.getCurrency()));
-        sb.append("Delivery: %s".formatted(booking.getDeliveryDate()));
+        sb.append("Delivery: %s\n".formatted(booking.getDeliveryDate()));
+        sb.append("Address: %s".formatted(booking.getDeliveryAddress()));
         if (StringUtils.hasText(booking.getNote())) {
             sb.append("\nNote: %s".formatted(booking.getNote()));
         }

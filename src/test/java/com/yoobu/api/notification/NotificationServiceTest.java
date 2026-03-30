@@ -122,6 +122,7 @@ class NotificationServiceTest {
         assertTrue(text.contains("Pizza × 2"));
         assertTrue(text.contains("Soup × 3"));
         assertTrue(text.contains("USD"));
+        assertTrue(text.contains("Address: 123 Main St"));
     }
 
     @Test
@@ -177,6 +178,7 @@ class NotificationServiceTest {
         booking.setTotalPrice(new BigDecimal("50.00"));
         booking.setCurrency("USD");
         booking.setDeliveryDate(LocalDate.of(2026, 3, 25));
+        booking.setDeliveryAddress("123 Main St");
         booking.setNote(null);
         return booking;
     }
