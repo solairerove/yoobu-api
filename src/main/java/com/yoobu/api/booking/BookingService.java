@@ -72,13 +72,14 @@ public class BookingService {
         booking.setStatus(BookingStatus.NEW);
         booking.setNote(request.note());
         booking.setDeliveryDate(request.deliveryDate());
+        booking.setCurrency(currency);
         booking.setCreatedAt(now);
         booking.setUpdatedAt(now);
 
         Booking savedBooking = bookingRepository.save(booking);
 
         List<BookingItem> bookingItems = request.items().stream()
-                .map(item -> toBookingItem(savedBooking, item, tenant.getId(), currency))
+                .map(item -> toBookingItem(savedBooking, item, tenant.getId()))
                 .toList();
 
         bookingItemRepository.saveAll(bookingItems);
@@ -88,6 +89,7 @@ public class BookingService {
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         savedBooking.setTotalPrice(totalPrice);
+        savedBooking.setPaymentQrUrl(buildPaymentQrUrl(savedBooking.getId(), totalPrice, tenantSettings));
         savedBooking.setUpdatedAt(now);
 
         Booking persistedBooking = bookingRepository.save(savedBooking);
@@ -102,7 +104,7 @@ public class BookingService {
         List<BookingCreatedEvent.OrderItem> orderItems = bookingItems.stream()
                 .map(item -> new BookingCreatedEvent.OrderItem(item.getService().getName(), item.getQuantity()))
                 .toList();
-        eventPublisher.publishEvent(new BookingCreatedEvent(persistedBooking, currency, orderItems, tenant));
+        eventPublisher.publishEvent(new BookingCreatedEvent(persistedBooking, orderItems, tenant));
 
         return toResponse(persistedBooking, bookingItems);
     }
@@ -178,8 +180,7 @@ public class BookingService {
                 toAuditSnapshot(savedBooking)
         );
 
-        List<BookingItem> items = bookingItemRepository.findByBookingIdOrderByIdAsc(savedBooking.getId());
-        eventPublisher.publishEvent(new PaymentConfirmedEvent(savedBooking, resolveBookingCurrency(items), tenant));
+        eventPublisher.publishEvent(new PaymentConfirmedEvent(savedBooking, tenant));
 
         return toResponse(savedBooking);
     }
@@ -340,7 +341,7 @@ public class BookingService {
                 .orElseThrow(this::bookingNotFound);
     }
 
-    private BookingItem toBookingItem(Booking booking, BookingItemRequest item, Long tenantId, String currency) {
+    private BookingItem toBookingItem(Booking booking, BookingItemRequest item, Long tenantId) {
         CatalogService service = catalogServiceRepository.findByIdAndTenantIdAndStatus(
                         item.serviceId(), tenantId, com.yoobu.api.catalog.ServiceStatus.ACTIVE)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Service not found"));
@@ -354,7 +355,6 @@ public class BookingService {
         bookingItem.setService(service);
         bookingItem.setQuantity(item.quantity());
         bookingItem.setUnitPrice(service.getPrice());
-        bookingItem.setCurrency(currency);
         return bookingItem;
     }
 
@@ -374,7 +374,19 @@ public class BookingService {
     }
 
     private BookingResponse toResponse(Booking booking, List<BookingItem> items) {
-        return bookingMapper.toResponse(booking, items, resolveBookingCurrency(items));
+        return bookingMapper.toResponse(booking, items);
+    }
+
+    private String buildPaymentQrUrl(Long bookingId, BigDecimal totalPrice, TenantSettings settings) {
+        TenantSettings.PaymentSettings payment = settings.payment();
+        if (StringUtils.hasText(payment.bankBin()) && StringUtils.hasText(payment.accountNumber())) {
+            return "https://img.vietqr.io/image/%s-%s-compact2.png?amount=%s&addInfo=NUM-%d"
+                    .formatted(payment.bankBin(), payment.accountNumber(), totalPrice.stripTrailingZeros().toPlainString(), bookingId);
+        }
+        if (StringUtils.hasText(payment.qrUrl())) {
+            return payment.qrUrl();
+        }
+        return null;
     }
 
     private Map<String, Object> toAuditSnapshot(Booking booking) {
@@ -389,7 +401,6 @@ public class BookingService {
                     itemSnapshot.put("serviceName", item.getService().getName());
                     itemSnapshot.put("quantity", item.getQuantity());
                     itemSnapshot.put("unitPrice", item.getUnitPrice());
-                    itemSnapshot.put("currency", item.getCurrency());
                     return itemSnapshot;
                 })
                 .toList();
@@ -405,6 +416,7 @@ public class BookingService {
         snapshot.put("status", booking.getStatus());
         snapshot.put("trackingUrl", booking.getTrackingUrl());
         snapshot.put("note", booking.getNote());
+        snapshot.put("currency", booking.getCurrency());
         snapshot.put("totalPrice", booking.getTotalPrice());
         snapshot.put("deliveryDate", booking.getDeliveryDate());
         snapshot.put("deletedAt", booking.getDeletedAt());
@@ -429,15 +441,6 @@ public class BookingService {
         String configuredCurrency = settings.pricing().currency();
         if (StringUtils.hasText(configuredCurrency)) {
             return configuredCurrency.trim();
-        }
-        return TenantSettings.DEFAULT_CURRENCY;
-    }
-
-    private String resolveBookingCurrency(List<BookingItem> items) {
-        for (BookingItem item : items) {
-            if (StringUtils.hasText(item.getCurrency())) {
-                return item.getCurrency().trim();
-            }
         }
         return TenantSettings.DEFAULT_CURRENCY;
     }

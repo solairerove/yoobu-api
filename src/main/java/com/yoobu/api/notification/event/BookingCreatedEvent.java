@@ -6,7 +6,6 @@ import java.util.List;
 
 public record BookingCreatedEvent(
         Booking booking,
-        String currency,
         List<OrderItem> items,
         Tenant tenant
 ) {

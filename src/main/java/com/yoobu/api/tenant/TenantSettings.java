@@ -70,7 +70,11 @@ public final class TenantSettings {
     }
 
     public PaymentSettings payment() {
-        return new PaymentSettings(values.get(TenantConfigKeys.PAYMENT_QR_URL));
+        return new PaymentSettings(
+                values.get(TenantConfigKeys.PAYMENT_QR_URL),
+                values.get(TenantConfigKeys.PAYMENT_BANK_BIN),
+                values.get(TenantConfigKeys.PAYMENT_ACCOUNT_NUMBER)
+        );
     }
 
     public record AdminSettings(
@@ -107,7 +111,9 @@ public final class TenantSettings {
     }
 
     public record PaymentSettings(
-            String qrUrl
+            String qrUrl,
+            String bankBin,
+            String accountNumber
     ) {
     }
 }

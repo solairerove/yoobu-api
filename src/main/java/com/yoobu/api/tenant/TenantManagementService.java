@@ -169,6 +169,8 @@ public class TenantManagementService {
                 paymentQrUrlValidator.normalizePaymentQrUrl(request.paymentQrUrl()),
                 true
         );
+        upsertConfig(existingConfigs, savedTenant, TenantConfigKeys.PAYMENT_BANK_BIN, normalizeOptional(request.paymentBankBin()), true);
+        upsertConfig(existingConfigs, savedTenant, TenantConfigKeys.PAYMENT_ACCOUNT_NUMBER, normalizeOptional(request.paymentAccountNumber()), true);
         if (request.cutoffHour() != null) {
             upsertConfig(existingConfigs, savedTenant, TenantConfigKeys.CUTOFF_HOUR, String.valueOf(request.cutoffHour()), false);
             upsertConfig(existingConfigs, savedTenant, TenantConfigKeys.CUTOFF_MINUTE, String.valueOf(request.cutoffMinute()), false);
@@ -226,6 +228,8 @@ public class TenantManagementService {
                 TenantConfigKeys.PAYMENT_QR_URL,
                 paymentQrUrlValidator.normalizePaymentQrUrl(request.paymentQrUrl())
         );
+        addConfig(configs, tenant, TenantConfigKeys.PAYMENT_BANK_BIN, normalizeOptional(request.paymentBankBin()));
+        addConfig(configs, tenant, TenantConfigKeys.PAYMENT_ACCOUNT_NUMBER, normalizeOptional(request.paymentAccountNumber()));
         if (request.cutoffHour() != null) {
             addConfig(configs, tenant, TenantConfigKeys.CUTOFF_HOUR, String.valueOf(request.cutoffHour()));
             addConfig(configs, tenant, TenantConfigKeys.CUTOFF_MINUTE, String.valueOf(request.cutoffMinute()));
@@ -355,6 +359,8 @@ public class TenantManagementService {
         snapshot.put("checkoutNoteHint", checkout.noteHint());
         snapshot.put("checkoutDeliveryHint", checkout.deliveryHint());
         snapshot.put("paymentQrUrl", payment.qrUrl());
+        snapshot.put("paymentBankBin", payment.bankBin());
+        snapshot.put("paymentAccountNumber", payment.accountNumber());
         snapshot.put("currency", pricing.currency());
         snapshot.put("cutoffHour", delivery.cutoffHour());
         snapshot.put("cutoffMinute", delivery.cutoffMinute());

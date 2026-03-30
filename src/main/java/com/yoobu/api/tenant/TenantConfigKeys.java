@@ -12,6 +12,8 @@ public final class TenantConfigKeys {
     public static final String CHECKOUT_NAME_HINT = "checkout_name_hint";
     public static final String CHECKOUT_DELIVERY_HINT = "checkout_delivery_hint";
     public static final String PAYMENT_QR_URL = "payment_qr_url";
+    public static final String PAYMENT_BANK_BIN = "payment_bank_bin";
+    public static final String PAYMENT_ACCOUNT_NUMBER = "payment_account_number";
     public static final String CURRENCY = "currency";
     public static final String CUTOFF_HOUR = "cutoff_hour";
     public static final String CUTOFF_MINUTE = "cutoff_minute";

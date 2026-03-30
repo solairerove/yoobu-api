@@ -86,6 +86,12 @@
         </div>
     </section>
 
+    <section class="card" th:if="${booking.paymentQrUrl != null}">
+        <h2>Payment QR</h2>
+        <img th:src="${booking.paymentQrUrl}" alt="Payment QR"
+             style="max-width: 200px; max-height: 200px; display: block; border: 1px solid var(--border); border-radius: 6px; padding: 4px;">
+    </section>
+
     <section class="card">
         <h2>Items</h2>
         <div class="table-wrap">
@@ -101,7 +107,7 @@
             <tr th:each="item : ${booking.items}">
                 <td th:text="${item.serviceName}">Pizza</td>
                 <td th:text="${item.quantity}">2</td>
-                <td th:text="${@adminPanelViewFormats.money(item.unitPrice, item.currency)}">USD 12.50</td>
+                <td th:text="${@adminPanelViewFormats.money(item.unitPrice, booking.currency)}">USD 12.50</td>
             </tr>
             </tbody>
         </table>

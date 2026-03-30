@@ -41,7 +41,4 @@ public class BookingItem {
     @Column(name = "unit_price", nullable = false, precision = 10, scale = 2)
     private BigDecimal unitPrice;
 
-    @Column(nullable = false, length = 10)
-    private String currency;
-
 }

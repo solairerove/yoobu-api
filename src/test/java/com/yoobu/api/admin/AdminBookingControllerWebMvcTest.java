@@ -126,8 +126,9 @@ class AdminBookingControllerWebMvcTest {
                 "USD",
                 LocalDate.of(2026, 3, 22),
                 "note",
-                List.of(new BookingItemResponse("Pizza", 1, new BigDecimal("12.50"), "USD")),
-                OffsetDateTime.of(2026, 3, 20, 12, 0, 0, 0, ZoneOffset.UTC)
+                List.of(new BookingItemResponse("Pizza", 1, new BigDecimal("12.50"))),
+                OffsetDateTime.of(2026, 3, 20, 12, 0, 0, 0, ZoneOffset.UTC),
+                null
         );
     }
 

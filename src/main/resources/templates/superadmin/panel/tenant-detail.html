@@ -246,6 +246,16 @@
                     <dt>Payment QR</dt>
                     <dd class="muted">—</dd>
                 </dl>
+                <dl class="detail-field">
+                    <dt>Bank BIN</dt>
+                    <dd th:text="${tenant.config['payment_bank_bin'] ?: '—'}"
+                        th:classappend="${tenant.config['payment_bank_bin'] == null} ? ' muted'">—</dd>
+                </dl>
+                <dl class="detail-field">
+                    <dt>Account number</dt>
+                    <dd th:text="${tenant.config['payment_account_number'] ?: '—'}"
+                        th:classappend="${tenant.config['payment_account_number'] == null} ? ' muted'">—</dd>
+                </dl>
             </div>
         </div>
 
