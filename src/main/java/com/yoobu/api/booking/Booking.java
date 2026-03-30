@@ -66,6 +66,12 @@ public class Booking {
     @Column(name = "total_price", precision = 10, scale = 2)
     private BigDecimal totalPrice;
 
+    @Column(nullable = false, length = 10)
+    private String currency;
+
+    @Column(name = "payment_qr_url", columnDefinition = "TEXT")
+    private String paymentQrUrl;
+
     @Column(name = "delivery_date")
     private LocalDate deliveryDate;
 

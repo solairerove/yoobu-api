@@ -126,6 +126,7 @@ public class AdminPanelBookingController {
         model.addAttribute("statusOptionsByBookingId", statusOptionsByBookingId);
         model.addAttribute("bookingPage", bookingPage);
         model.addAttribute("size", bookingPage.getSize());
+        model.addAttribute("activeStatusCounts", bookingService.getActiveStatusCounts());
     }
 
     private String bookingsRedirect(String slug) {

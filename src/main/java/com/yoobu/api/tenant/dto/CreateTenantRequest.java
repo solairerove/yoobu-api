@@ -20,6 +20,8 @@ public record CreateTenantRequest(
         String checkoutNoteHint,
         String checkoutDeliveryHint,
         String paymentQrUrl,
+        String paymentBankBin,
+        String paymentAccountNumber,
         @NotBlank String adminUsername,
         @NotBlank String adminPassword,
         Integer cutoffHour,

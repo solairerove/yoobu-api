@@ -18,8 +18,7 @@ public class BookingNotificationListener {
     @Async("notificationExecutor")
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     void onBookingCreated(BookingCreatedEvent event) {
-        notificationService.notifyAdminNewOrder(
-                event.booking(), event.currency(), event.items(), event.tenant());
+        notificationService.notifyAdminNewOrder(event.booking(), event.items(), event.tenant());
     }
 
     @Async("notificationExecutor")
@@ -32,7 +31,6 @@ public class BookingNotificationListener {
     @Async("notificationExecutor")
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     void onPaymentConfirmed(PaymentConfirmedEvent event) {
-        notificationService.notifyAdminPaymentConfirmed(
-                event.booking(), event.currency(), event.tenant());
+        notificationService.notifyAdminPaymentConfirmed(event.booking(), event.tenant());
     }
 }

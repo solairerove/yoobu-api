@@ -246,6 +246,8 @@ public class SuperAdminPanelController {
                 form.getCheckoutNoteHint(),
                 form.getCheckoutDeliveryHint(),
                 form.getPaymentQrUrl(),
+                form.getPaymentBankBin(),
+                form.getPaymentAccountNumber(),
                 form.getAdminUsername(),
                 form.getAdminPassword(),
                 form.getCutoffHour(),
@@ -269,6 +271,8 @@ public class SuperAdminPanelController {
                 form.getCheckoutNoteHint(),
                 form.getCheckoutDeliveryHint(),
                 form.getPaymentQrUrl(),
+                form.getPaymentBankBin(),
+                form.getPaymentAccountNumber(),
                 form.getAdminUsername(),
                 form.getAdminPassword(),
                 form.isActive(),
@@ -295,6 +299,8 @@ public class SuperAdminPanelController {
         form.setCheckoutNoteHint(config.get(TenantConfigKeys.CHECKOUT_NOTE_HINT));
         form.setCheckoutDeliveryHint(config.get(TenantConfigKeys.CHECKOUT_DELIVERY_HINT));
         form.setPaymentQrUrl(config.get(TenantConfigKeys.PAYMENT_QR_URL));
+        form.setPaymentBankBin(config.get(TenantConfigKeys.PAYMENT_BANK_BIN));
+        form.setPaymentAccountNumber(config.get(TenantConfigKeys.PAYMENT_ACCOUNT_NUMBER));
         form.setAdminUsername(config.get(TenantConfigKeys.ADMIN_USERNAME));
         form.setActive(tenant.active());
         form.setCutoffHour(parseIntOrNull(config.get(TenantConfigKeys.CUTOFF_HOUR)));

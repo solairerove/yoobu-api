@@ -112,7 +112,7 @@ class NotificationServiceTest {
                 new BookingCreatedEvent.OrderItem("Soup", 3)
         );
 
-        notificationService.notifyAdminNewOrder(booking(1L, 100L, null), "USD", items, tenant("bot-token", 777L));
+        notificationService.notifyAdminNewOrder(booking(1L, 100L, null), items, tenant("bot-token", 777L));
 
         assertEquals(1, telegramClient.calls.size());
         var call = telegramClient.calls.getFirst();
@@ -122,12 +122,13 @@ class NotificationServiceTest {
         assertTrue(text.contains("Pizza × 2"));
         assertTrue(text.contains("Soup × 3"));
         assertTrue(text.contains("USD"));
+        assertTrue(text.contains("Address: 123 Main St"));
     }
 
     @Test
     void notifyAdminNewOrder_nullOwnerTelegramId_noMessage() {
         notificationService.notifyAdminNewOrder(
-                booking(1L, 100L, null), "USD", List.of(), tenant("bot-token", null));
+                booking(1L, 100L, null), List.of(), tenant("bot-token", null));
 
         assertTrue(telegramClient.calls.isEmpty());
     }
@@ -135,7 +136,7 @@ class NotificationServiceTest {
     @Test
     void notifyAdminNewOrder_nullBotToken_noMessage() {
         notificationService.notifyAdminNewOrder(
-                booking(1L, 100L, null), "USD", List.of(), tenant(null, 777L));
+                booking(1L, 100L, null), List.of(), tenant(null, 777L));
 
         assertTrue(telegramClient.calls.isEmpty());
     }
@@ -144,8 +145,9 @@ class NotificationServiceTest {
 
     @Test
     void notifyAdminPaymentConfirmed_sendsToOwner() {
-        notificationService.notifyAdminPaymentConfirmed(
-                booking(1L, 100L, null), "EUR", tenant("bot-token", 777L));
+        Booking b = booking(1L, 100L, null);
+        b.setCurrency("EUR");
+        notificationService.notifyAdminPaymentConfirmed(b, tenant("bot-token", 777L));
 
         assertEquals(1, telegramClient.calls.size());
         var call = telegramClient.calls.getFirst();
@@ -159,7 +161,7 @@ class NotificationServiceTest {
     @Test
     void notifyAdminPaymentConfirmed_nullOwnerTelegramId_noMessage() {
         notificationService.notifyAdminPaymentConfirmed(
-                booking(1L, 100L, null), "EUR", tenant("bot-token", null));
+                booking(1L, 100L, null), tenant("bot-token", null));
 
         assertTrue(telegramClient.calls.isEmpty());
     }
@@ -174,7 +176,9 @@ class NotificationServiceTest {
         booking.setCustomerName("Alex");
         booking.setCustomerPhone("+123456789");
         booking.setTotalPrice(new BigDecimal("50.00"));
+        booking.setCurrency("USD");
         booking.setDeliveryDate(LocalDate.of(2026, 3, 25));
+        booking.setDeliveryAddress("123 Main St");
         booking.setNote(null);
         return booking;
     }

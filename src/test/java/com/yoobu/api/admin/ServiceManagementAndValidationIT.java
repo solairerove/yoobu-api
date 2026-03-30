@@ -66,6 +66,8 @@ class ServiceManagementAndValidationIT extends IntegrationTestSupport {
                 "No onion, gate code, delivery code",
                 "Apartment and entrance instructions",
                 "https://cdn.example.com/payment-qr-updated.png",
+                null,
+                null,
                 ADMIN_USERNAME,
                 "",
                 true,
@@ -101,6 +103,8 @@ class ServiceManagementAndValidationIT extends IntegrationTestSupport {
                 "No onion, gate code, delivery code",
                 "Apartment and entrance instructions",
                 "",
+                null,
+                null,
                 ADMIN_USERNAME,
                 "",
                 true,
@@ -276,7 +280,7 @@ class ServiceManagementAndValidationIT extends IntegrationTestSupport {
         CreateTenantRequest request = new CreateTenantRequest(
                 TENANT_SLUG, "Food Tenant", TenantType.FOOD_ORDER, "food-bot",
                 123456789L, DEFAULT_TENANT_TIMEZONE, "USD",
-                null, null, null, null, null, null, null, null,
+                null, null, null, null, null, null, null, null, null, null,
                 ADMIN_USERNAME, ADMIN_PASSWORD,
                 0, 0
         );
@@ -311,7 +315,7 @@ class ServiceManagementAndValidationIT extends IntegrationTestSupport {
         CreateTenantRequest request = new CreateTenantRequest(
                 TENANT_SLUG, "Food Tenant", TenantType.FOOD_ORDER, "food-bot",
                 123456789L, DEFAULT_TENANT_TIMEZONE, "USD",
-                null, null, null, null, null, null, null, null,
+                null, null, null, null, null, null, null, null, null, null,
                 ADMIN_USERNAME, ADMIN_PASSWORD,
                 0, 0
         );

@@ -10,10 +10,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.util.Base64;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpHeaders;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.AuthorityUtils;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -23,7 +20,6 @@ import org.springframework.web.filter.OncePerRequestFilter;
 @RequiredArgsConstructor
 public class TenantBasicAuthenticationFilter extends OncePerRequestFilter {
 
-    private static final String BASIC_PREFIX = "Basic ";
     private static final String REALM_PREFIX = "Yoobu Tenant Admin: ";
 
     private final TenantSettingsService tenantSettingsService;
@@ -37,8 +33,9 @@ public class TenantBasicAuthenticationFilter extends OncePerRequestFilter {
             FilterChain filterChain
     ) throws ServletException, IOException {
         Tenant tenant = TenantContext.requireCurrentTenant();
+        String realm = realm(tenant.getSlug());
 
-        Credentials credentials = extractCredentials(request, response, tenant.getSlug());
+        BasicAuthParser.Credentials credentials = BasicAuthParser.parse(request, response, realm);
         if (credentials == null) {
             return;
         }
@@ -47,13 +44,13 @@ public class TenantBasicAuthenticationFilter extends OncePerRequestFilter {
         String expectedUsername = admin.username();
         String expectedPasswordHash = admin.passwordHash();
         if (expectedUsername == null || expectedPasswordHash == null) {
-            BasicAuthChallenge.send(response, realm(tenant.getSlug()), "Admin credentials are not configured");
+            BasicAuthChallenge.send(response, realm, "Admin credentials are not configured");
             return;
         }
 
         UsernamePasswordAuthenticationToken authentication = authenticate(credentials, expectedUsername, expectedPasswordHash);
         if (authentication == null) {
-            BasicAuthChallenge.send(response, realm(tenant.getSlug()), "Invalid admin credentials");
+            BasicAuthChallenge.send(response, realm, "Invalid admin credentials");
             return;
         }
 
@@ -66,39 +63,8 @@ public class TenantBasicAuthenticationFilter extends OncePerRequestFilter {
         }
     }
 
-    private Credentials extractCredentials(
-            HttpServletRequest request,
-            HttpServletResponse response,
-            String slug
-    ) throws IOException {
-        String authorization = request.getHeader(HttpHeaders.AUTHORIZATION);
-        if (authorization == null || !authorization.startsWith(BASIC_PREFIX)) {
-            BasicAuthChallenge.send(response, realm(slug), "Missing Basic authorization header");
-            return null;
-        }
-
-        String decoded;
-        try {
-            decoded = new String(
-                    Base64.getDecoder().decode(authorization.substring(BASIC_PREFIX.length())),
-                    StandardCharsets.UTF_8
-            );
-        } catch (IllegalArgumentException ex) {
-            BasicAuthChallenge.send(response, realm(slug), "Invalid Basic authorization header");
-            return null;
-        }
-
-        int separatorIndex = decoded.indexOf(':');
-        if (separatorIndex <= 0) {
-            BasicAuthChallenge.send(response, realm(slug), "Invalid Basic authorization header");
-            return null;
-        }
-
-        return new Credentials(decoded.substring(0, separatorIndex), decoded.substring(separatorIndex + 1));
-    }
-
     private UsernamePasswordAuthenticationToken authenticate(
-            Credentials credentials,
+            BasicAuthParser.Credentials credentials,
             String expectedUsername,
             String expectedPasswordHash
     ) {
@@ -126,8 +92,5 @@ public class TenantBasicAuthenticationFilter extends OncePerRequestFilter {
 
     private String realm(String slug) {
         return REALM_PREFIX + slug;
-    }
-
-    private record Credentials(String username, String password) {
     }
 }

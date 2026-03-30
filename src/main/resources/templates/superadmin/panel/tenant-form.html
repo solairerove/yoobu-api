@@ -150,7 +150,7 @@
             </div>
 
             <label>
-                <span>Payment QR URL</span>
+                <span>Payment QR URL <span class="field-hint">(static fallback)</span></span>
                 <input type="text" th:field="*{paymentQrUrl}" placeholder="https://cdn.example.com/payment-qr.png">
             </label>
             <div th:if="${formMode == 'edit' and currentQrUrl != null}" style="margin-top: 0.5rem; margin-bottom: 0.25rem;">
@@ -158,6 +158,16 @@
                 <img th:src="${currentQrUrl}" alt="Payment QR"
                      style="max-width: 140px; max-height: 140px; display: block; border: 1px solid var(--border); border-radius: 6px; padding: 4px;">
             </div>
+
+            <label>
+                <span>Payment bank BIN <span class="field-hint">(for dynamic VietQR)</span></span>
+                <input type="text" th:field="*{paymentBankBin}" placeholder="970436">
+            </label>
+
+            <label>
+                <span>Payment account number <span class="field-hint">(for dynamic VietQR)</span></span>
+                <input type="text" th:field="*{paymentAccountNumber}" placeholder="1059202107">
+            </label>
 
             <label th:if="${formMode == 'edit'}">
                 <span>Active</span>

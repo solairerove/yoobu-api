@@ -39,6 +39,10 @@ public class SuperAdminTenantForm {
 
     private String paymentQrUrl;
 
+    private String paymentBankBin;
+
+    private String paymentAccountNumber;
+
     @NotBlank
     private String adminUsername;
 
@@ -168,6 +172,22 @@ public class SuperAdminTenantForm {
 
     public void setPaymentQrUrl(String paymentQrUrl) {
         this.paymentQrUrl = paymentQrUrl;
+    }
+
+    public String getPaymentBankBin() {
+        return paymentBankBin;
+    }
+
+    public void setPaymentBankBin(String paymentBankBin) {
+        this.paymentBankBin = paymentBankBin;
+    }
+
+    public String getPaymentAccountNumber() {
+        return paymentAccountNumber;
+    }
+
+    public void setPaymentAccountNumber(String paymentAccountNumber) {
+        this.paymentAccountNumber = paymentAccountNumber;
     }
 
     public String getAdminUsername() {

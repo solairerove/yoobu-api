@@ -19,13 +19,21 @@
         </nav>
     </header>
 
-    <section class="card" th:if="${flashMessage}">
-        <p class="flash"
-           th:classappend="${flashType == 'success'} ? ' flash-success' : ' flash-error'"
-           th:text="${flashMessage}">
-            Status updated.
-        </p>
-    </section>
+    <div class="flash-banner"
+         th:if="${flashMessage}"
+         th:classappend="${flashType == 'success'} ? ' flash-success' : ' flash-error'">
+        <p th:text="${flashMessage}">Status updated.</p>
+    </div>
+
+    <div class="status-bar" th:if="${not #maps.isEmpty(activeStatusCounts)}">
+        <span class="status-bar-label">Open</span>
+        <span th:each="entry : ${activeStatusCounts}"
+              class="badge"
+              th:classappend="'badge-status-' + ${#strings.replace(#strings.toLowerCase(entry.key.name()), '_', '-')}"
+              th:text="${entry.value + ' ' + #strings.replace(#strings.capitalize(#strings.toLowerCase(entry.key.name())), '_', ' ')}">
+            3 New
+        </span>
+    </div>
 
     <section class="card">
         <form class="filters" method="get" th:action="@{/admin/{slug}/panel/bookings(slug=${slug})}">
@@ -76,7 +84,7 @@
                         <label class="sr-only" th:for="${'booking-status-' + booking.id}">
                             <span th:text="${'Status for booking ' + booking.id}">Status for booking</span>
                         </label>
-                        <select name="status" th:id="${'booking-status-' + booking.id}">
+                        <select name="status" class="status-select" th:id="${'booking-status-' + booking.id}">
                             <option th:each="statusOption : ${statusOptionsByBookingId[booking.id]}"
                                     th:value="${statusOption}"
                                     th:text="${statusOption}"
@@ -113,5 +121,12 @@
         </div>
     </section>
 </div>
+<script>
+    document.querySelectorAll('select.status-select').forEach(function (sel) {
+        function sync() { sel.dataset.status = sel.value.toLowerCase(); }
+        sync();
+        sel.addEventListener('change', sync);
+    });
+</script>
 </body>
 </html>

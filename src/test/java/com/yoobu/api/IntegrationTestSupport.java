@@ -135,6 +135,8 @@ public abstract class IntegrationTestSupport {
                 "No onion, gate code, delivery code",
                 "Apartment and entrance instructions",
                 "https://cdn.example.com/payment-qr.png",
+                null,
+                null,
                 adminUsername,
                 adminPassword,
                 null,

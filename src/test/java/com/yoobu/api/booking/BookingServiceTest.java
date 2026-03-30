@@ -236,11 +236,10 @@ class BookingServiceTest {
                 BookingMapper.class.getClassLoader(),
                 new Class<?>[]{BookingMapper.class},
                 (proxy, method, args) -> {
-                    if ("toResponse".equals(method.getName()) && args.length == 3) {
+                    if ("toResponse".equals(method.getName()) && args.length == 2) {
                         Booking booking = (Booking) args[0];
                         @SuppressWarnings("unchecked")
                         List<BookingItem> items = (List<BookingItem>) args[1];
-                        String currency = (String) args[2];
                         return new BookingResponse(
                                 booking.getId(),
                                 booking.getType(),
@@ -250,18 +249,18 @@ class BookingServiceTest {
                                 booking.getCustomerPhone(),
                                 booking.getDeliveryAddress(),
                                 booking.getTotalPrice(),
-                                currency,
+                                booking.getCurrency(),
                                 booking.getDeliveryDate(),
                                 booking.getNote(),
                                 items.stream()
                                         .map(item -> new BookingItemResponse(
                                                 item.getService().getName(),
                                                 item.getQuantity(),
-                                                item.getUnitPrice(),
-                                                item.getCurrency()
+                                                item.getUnitPrice()
                                         ))
                                         .toList(),
-                                booking.getCreatedAt()
+                                booking.getCreatedAt(),
+                                booking.getPaymentQrUrl()
                         );
                     }
                     if ("toString".equals(method.getName())) {
@@ -278,6 +277,7 @@ class BookingServiceTest {
         booking.setTenant(foodTenant(77L));
         booking.setStatus(status);
         booking.setType(BookingType.ORDER);
+        booking.setCurrency("USD");
         booking.setCreatedAt(OffsetDateTime.now());
         booking.setUpdatedAt(OffsetDateTime.now());
         return booking;

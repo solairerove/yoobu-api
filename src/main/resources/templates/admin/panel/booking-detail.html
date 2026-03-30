@@ -19,18 +19,23 @@
         </nav>
     </header>
 
-    <section class="card" th:if="${flashMessage}">
-        <p class="flash"
-           th:classappend="${flashType == 'success'} ? ' flash-success' : ' flash-error'"
-           th:text="${flashMessage}">
-            Status updated.
-        </p>
-    </section>
+    <div class="flash-banner"
+         th:if="${flashMessage}"
+         th:classappend="${flashType == 'success'} ? ' flash-success' : ' flash-error'">
+        <p th:text="${flashMessage}">Status updated.</p>
+    </div>
 
     <section class="card">
         <h2>Summary</h2>
         <dl class="summary">
-            <div><dt>Status</dt><dd th:text="${booking.status}">NEW</dd></div>
+            <div>
+                <dt>Status</dt>
+                <dd>
+                    <span class="badge"
+                          th:classappend="'badge-status-' + ${#strings.replace(#strings.toLowerCase(booking.status.name()), '_', '-')}"
+                          th:text="${#strings.replace(#strings.capitalize(#strings.toLowerCase(booking.status.name())), '_', ' ')}">New</span>
+                </dd>
+            </div>
             <div><dt>Customer</dt><dd th:text="${booking.customerName}">Alice</dd></div>
             <div><dt>Delivery address</dt><dd th:text="${booking.deliveryAddress ?: 'N/A'}">123 Main St</dd></div>
             <div><dt>Delivery date</dt><dd th:text="${booking.deliveryDate}">2026-03-14</dd></div>
@@ -54,7 +59,7 @@
                   th:object="${statusForm}">
                 <label>
                     <span>Status</span>
-                    <select th:field="*{status}" id="status-select">
+                    <select th:field="*{status}" id="status-select" class="status-select">
                         <option th:each="statusOption : ${statusOptions}"
                                 th:value="${statusOption}"
                                 th:text="${statusOption}"></option>
@@ -81,6 +86,12 @@
         </div>
     </section>
 
+    <section class="card" th:if="${booking.paymentQrUrl != null}">
+        <h2>Payment QR</h2>
+        <img th:src="${booking.paymentQrUrl}" alt="Payment QR"
+             style="max-width: 200px; max-height: 200px; display: block; border: 1px solid var(--border); border-radius: 6px; padding: 4px;">
+    </section>
+
     <section class="card">
         <h2>Items</h2>
         <div class="table-wrap">
@@ -96,7 +107,7 @@
             <tr th:each="item : ${booking.items}">
                 <td th:text="${item.serviceName}">Pizza</td>
                 <td th:text="${item.quantity}">2</td>
-                <td th:text="${@adminPanelViewFormats.money(item.unitPrice, item.currency)}">USD 12.50</td>
+                <td th:text="${@adminPanelViewFormats.money(item.unitPrice, booking.currency)}">USD 12.50</td>
             </tr>
             </tbody>
         </table>
@@ -112,13 +123,15 @@
             return;
         }
 
+        const syncColor = () => { statusSelect.dataset.status = statusSelect.value.toLowerCase(); };
         const toggleTrackingField = () => {
             const delivering = statusSelect.value === 'DELIVERING';
             trackingGroup.classList.toggle('is-collapsed', !delivering);
             trackingInput.disabled = !delivering;
         };
 
-        statusSelect.addEventListener('change', toggleTrackingField);
+        statusSelect.addEventListener('change', () => { syncColor(); toggleTrackingField(); });
+        syncColor();
         toggleTrackingField();
     })();
 </script>

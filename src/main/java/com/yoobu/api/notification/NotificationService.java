@@ -26,20 +26,20 @@ public class NotificationService {
         telegramClient.sendMessage(tenant.getBotToken(), booking.getTelegramUserId(), text);
     }
 
-    void notifyAdminNewOrder(Booking booking, String currency, List<BookingCreatedEvent.OrderItem> items, Tenant tenant) {
+    void notifyAdminNewOrder(Booking booking, List<BookingCreatedEvent.OrderItem> items, Tenant tenant) {
         if (!StringUtils.hasText(tenant.getBotToken()) || tenant.getOwnerTelegramId() == null) {
             return;
         }
         telegramClient.sendMessage(tenant.getBotToken(), tenant.getOwnerTelegramId(),
-                adminNewOrderText(booking, currency, items));
+                adminNewOrderText(booking, items));
     }
 
-    void notifyAdminPaymentConfirmed(Booking booking, String currency, Tenant tenant) {
+    void notifyAdminPaymentConfirmed(Booking booking, Tenant tenant) {
         if (!StringUtils.hasText(tenant.getBotToken()) || tenant.getOwnerTelegramId() == null) {
             return;
         }
         telegramClient.sendMessage(tenant.getBotToken(), tenant.getOwnerTelegramId(),
-                adminPaymentConfirmedText(booking, currency));
+                adminPaymentConfirmedText(booking));
     }
 
     private String customerStatusText(Booking booking, BookingStatus status) {
@@ -58,15 +58,16 @@ public class NotificationService {
         };
     }
 
-    private String adminNewOrderText(Booking booking, String currency, List<BookingCreatedEvent.OrderItem> items) {
+    private String adminNewOrderText(Booking booking, List<BookingCreatedEvent.OrderItem> items) {
         StringBuilder sb = new StringBuilder();
         sb.append("🆕 <b>New order #%d</b>\n".formatted(booking.getId()));
         sb.append("Customer: %s\n".formatted(booking.getCustomerName()));
         if (StringUtils.hasText(booking.getCustomerPhone())) {
             sb.append("Phone: %s\n".formatted(booking.getCustomerPhone()));
         }
-        sb.append("Total: %s %s\n".formatted(booking.getTotalPrice(), currency));
-        sb.append("Delivery: %s".formatted(booking.getDeliveryDate()));
+        sb.append("Total: %s %s\n".formatted(booking.getTotalPrice(), booking.getCurrency()));
+        sb.append("Delivery: %s\n".formatted(booking.getDeliveryDate()));
+        sb.append("Address: %s".formatted(booking.getDeliveryAddress()));
         if (StringUtils.hasText(booking.getNote())) {
             sb.append("\nNote: %s".formatted(booking.getNote()));
         }
@@ -79,12 +80,12 @@ public class NotificationService {
         return sb.toString();
     }
 
-    private String adminPaymentConfirmedText(Booking booking, String currency) {
+    private String adminPaymentConfirmedText(Booking booking) {
         return "💰 <b>Payment confirmed</b>\nOrder #%d\nCustomer: %s\nTotal: %s %s".formatted(
                 booking.getId(),
                 booking.getCustomerName(),
                 booking.getTotalPrice(),
-                currency
+                booking.getCurrency()
         );
     }
 }

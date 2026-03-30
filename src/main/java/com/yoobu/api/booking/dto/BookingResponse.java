@@ -20,6 +20,7 @@ public record BookingResponse(
         LocalDate deliveryDate,
         String note,
         List<BookingItemResponse> items,
-        OffsetDateTime createdAt
+        OffsetDateTime createdAt,
+        String paymentQrUrl
 ) {
 }

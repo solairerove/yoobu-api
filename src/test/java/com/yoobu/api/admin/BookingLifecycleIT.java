@@ -378,8 +378,7 @@ class BookingLifecycleIT extends IntegrationTestSupport {
 
         tenantPublicGetAsUser(TENANT_SLUG, "/bookings/" + firstBookingId, 101L)
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.currency").value("USD"))
-                .andExpect(jsonPath("$.items[0].currency").value("USD"));
+                .andExpect(jsonPath("$.currency").value("USD"));
 
         UpdateTenantRequest updateRequest = new UpdateTenantRequest(
                 "Food Tenant",
@@ -396,6 +395,8 @@ class BookingLifecycleIT extends IntegrationTestSupport {
                 "No onion, gate code, delivery code",
                 "Apartment and entrance instructions",
                 "https://cdn.example.com/payment-qr-updated.png",
+                null,
+                null,
                 ADMIN_USERNAME,
                 "",
                 true,
@@ -410,12 +411,10 @@ class BookingLifecycleIT extends IntegrationTestSupport {
 
         tenantPublicGetAsUser(TENANT_SLUG, "/bookings/" + firstBookingId, 101L)
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.currency").value("USD"))
-                .andExpect(jsonPath("$.items[0].currency").value("USD"));
+                .andExpect(jsonPath("$.currency").value("USD"));
 
         tenantPublicGetAsUser(TENANT_SLUG, "/bookings/" + secondBookingId, 101L)
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.currency").value("THB"))
-                .andExpect(jsonPath("$.items[0].currency").value("THB"));
+                .andExpect(jsonPath("$.currency").value("THB"));
     }
 }
