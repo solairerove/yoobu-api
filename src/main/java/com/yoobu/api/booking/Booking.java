@@ -1,6 +1,5 @@
 package com.yoobu.api.booking;
 
-import com.yoobu.api.catalog.CatalogService;
 import com.yoobu.api.tenant.Tenant;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -74,13 +73,6 @@ public class Booking {
 
     @Column(name = "delivery_date")
     private LocalDate deliveryDate;
-
-    @Column(name = "slot_id")
-    private Long slotId;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "service_id")
-    private CatalogService service;
 
     @Column(name = "deleted_at")
     private OffsetDateTime deletedAt;

@@ -15,6 +15,10 @@ spring:
           time_zone: UTC
   flyway:
     locations: classpath:db/migration
+  cache:
+    type: caffeine
+    caffeine:
+      spec: maximumSize=1000,expireAfterWrite=60s
 
 app:
   cors:
@@ -25,7 +29,7 @@ app:
   image-service:
     url: ${IMAGE_SERVICE_URL:http://localhost:3000}
     api-key: ${INTERNAL_API_KEY:dev-internal-key-change-in-prod}
-    cdn-base-url: ${CDN_BASE_URL:http://localhost:9000}
+    cdn-base-url: ${CDN_BASE_URL:http://localhost:9000/yoobu-media}
 
 server:
   port: ${PORT:8080}
