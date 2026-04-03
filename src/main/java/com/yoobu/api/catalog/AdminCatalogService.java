@@ -3,6 +3,7 @@ package com.yoobu.api.catalog;
 import com.yoobu.api.audit.AuditLogService;
 import com.yoobu.api.catalog.dto.AdminUpsertServiceRequest;
 import com.yoobu.api.catalog.dto.ServiceResponse;
+import com.yoobu.api.config.CacheNames;
 import com.yoobu.api.media.ImageServiceClient;
 import com.yoobu.api.tenant.Tenant;
 import com.yoobu.api.tenant.TenantContext;
@@ -13,6 +14,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -82,6 +84,7 @@ public class AdminCatalogService {
         return catalogServiceMapper.toResponse(service);
     }
 
+    @CacheEvict(value = CacheNames.TENANT_SERVICES, key = "T(com.yoobu.api.tenant.TenantContext).getRequiredTenantId()")
     @Transactional
     public ServiceResponse createService(AdminUpsertServiceRequest request) {
         Tenant tenant = requireFoodOrderTenant();
@@ -107,6 +110,7 @@ public class AdminCatalogService {
         return catalogServiceMapper.toResponse(savedService);
     }
 
+    @CacheEvict(value = CacheNames.TENANT_SERVICES, key = "T(com.yoobu.api.tenant.TenantContext).getRequiredTenantId()")
     @Transactional
     public ServiceResponse updateService(Long serviceId, AdminUpsertServiceRequest request) {
         requireFoodOrderTenant();
@@ -137,6 +141,7 @@ public class AdminCatalogService {
         return catalogServiceMapper.toResponse(savedService);
     }
 
+    @CacheEvict(value = CacheNames.TENANT_SERVICES, key = "T(com.yoobu.api.tenant.TenantContext).getRequiredTenantId()")
     @Transactional
     public ServiceResponse uploadServiceImage(Long serviceId, MultipartFile file) {
         requireFoodOrderTenant();
@@ -169,6 +174,7 @@ public class AdminCatalogService {
         return catalogServiceMapper.toResponse(saved);
     }
 
+    @CacheEvict(value = CacheNames.TENANT_SERVICES, key = "T(com.yoobu.api.tenant.TenantContext).getRequiredTenantId()")
     @Transactional
     public void deleteService(Long serviceId) {
         requireFoodOrderTenant();
@@ -192,6 +198,7 @@ public class AdminCatalogService {
                 oldSnapshot,
                 toAuditSnapshot(savedService)
         );
+        imageServiceClient.deleteByUrl(service.getImageUrl());
     }
 
     private ServiceStatus resolveUpsertStatus(ServiceStatus status) {

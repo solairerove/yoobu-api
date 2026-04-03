@@ -22,6 +22,8 @@ import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.Base64;
 import java.util.Map;
+import org.springframework.cache.Cache;
+import org.springframework.cache.CacheManager;
 import org.springframework.test.web.servlet.ResultActions;
 import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -65,6 +67,9 @@ public abstract class IntegrationTestSupport {
     @Autowired
     private JdbcTemplate jdbcTemplate;
 
+    @Autowired(required = false)
+    private CacheManager cacheManager;
+
     @DynamicPropertySource
     static void registerProperties(DynamicPropertyRegistry registry) {
         registry.add("spring.datasource.url", POSTGRES::getJdbcUrl);
@@ -82,6 +87,12 @@ public abstract class IntegrationTestSupport {
     @BeforeEach
     void cleanDatabase() {
         jdbcTemplate.execute("TRUNCATE TABLE booking_item, booking, service, tenant_config, tenant, audit_log RESTART IDENTITY CASCADE");
+        if (cacheManager != null) {
+            cacheManager.getCacheNames().forEach(name -> {
+                Cache cache = cacheManager.getCache(name);
+                if (cache != null) cache.clear();
+            });
+        }
     }
 
     protected String basicAuth(String username, String password) {

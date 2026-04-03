@@ -1,6 +1,7 @@
 package com.yoobu.api.tenant;
 
 import com.yoobu.api.audit.AuditLogService;
+import com.yoobu.api.config.CacheNames;
 import com.yoobu.api.tenant.dto.CreateTenantRequest;
 import com.yoobu.api.tenant.dto.TenantDetailResponse;
 import com.yoobu.api.tenant.dto.TenantSummaryResponse;
@@ -13,6 +14,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -75,6 +77,7 @@ public class TenantManagementService {
         return tenantMapper.toDetailResponse(tenant, settings.asMap());
     }
 
+    @CacheEvict(value = CacheNames.TENANT_CONFIG, key = "#tenantId")
     @Transactional
     public void updatePaymentQrUrl(Long tenantId, String cdnUrl) {
         Tenant tenant = tenantRepository.findById(tenantId)
@@ -124,6 +127,7 @@ public class TenantManagementService {
         return tenantMapper.toSummaryResponse(savedTenant);
     }
 
+    @CacheEvict(value = CacheNames.TENANT_CONFIG, key = "#tenantId")
     @Transactional
     public TenantSummaryResponse updateTenant(Long tenantId, UpdateTenantRequest request) {
         validateCutoff(request.cutoffHour(), request.cutoffMinute());
