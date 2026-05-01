@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="'Analytics | ' + ${slug}">Analytics</title>
+    <link rel="stylesheet" th:href="@{/css/admin-panel.css}">
+</head>
+<body>
+<div class="shell">
+    <header class="page-header">
+        <div>
+            <p class="eyebrow">Admin panel</p>
+            <h1 th:text="'Analytics for ' + ${slug}">Analytics</h1>
+        </div>
+        <nav class="nav">
+            <a class="nav-link" th:href="@{/admin/{slug}/panel/bookings(slug=${slug})}">Bookings</a>
+            <a class="nav-link" th:href="@{/admin/{slug}/panel/services(slug=${slug})}">Services</a>
+            <a class="nav-link active" th:href="@{/admin/{slug}/panel/analytics(slug=${slug})}">Analytics</a>
+        </nav>
+    </header>
+
+    <div class="stat-grid">
+        <div class="stat-card">
+            <p class="stat-period">Today</p>
+            <p class="stat-value" th:text="${analytics.today.orderCount}">0</p>
+            <p class="stat-label">orders</p>
+            <p class="stat-revenue"
+               th:text="${@adminPanelViewFormats.money(analytics.today.revenue, analytics.today.currency)}">VND 0</p>
+        </div>
+        <div class="stat-card">
+            <p class="stat-period">Last 7 days</p>
+            <p class="stat-value" th:text="${analytics.week.orderCount}">0</p>
+            <p class="stat-label">orders</p>
+            <p class="stat-revenue"
+               th:text="${@adminPanelViewFormats.money(analytics.week.revenue, analytics.week.currency)}">VND 0</p>
+        </div>
+        <div class="stat-card">
+            <p class="stat-period">Last 30 days</p>
+            <p class="stat-value" th:text="${analytics.month.orderCount}">0</p>
+            <p class="stat-label">orders</p>
+            <p class="stat-revenue"
+               th:text="${@adminPanelViewFormats.money(analytics.month.revenue, analytics.month.currency)}">VND 0</p>
+        </div>
+    </div>
+
+    <section class="card">
+        <h2>Top buyers</h2>
+        <p class="field-hint">Ranked by total amount spent. Showing top 10 customers of all time.</p>
+        <div class="table-wrap">
+            <table>
+                <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Customer</th>
+                    <th>Telegram ID</th>
+                    <th>Orders</th>
+                    <th>Total spent</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:if="${#lists.isEmpty(analytics.topBuyers)}">
+                    <td colspan="5" class="empty">No orders yet.</td>
+                </tr>
+                <tr th:each="buyer, stat : ${analytics.topBuyers}">
+                    <td class="rank-cell" th:text="${stat.count}">1</td>
+                    <td th:text="${buyer.customerName}">Alice</td>
+                    <td class="mono" th:text="${buyer.telegramUserId}">123456789</td>
+                    <td th:text="${buyer.orderCount}">5</td>
+                    <td th:text="${@adminPanelViewFormats.money(buyer.totalSpent, buyer.currency)}">VND 0</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+</div>
+</body>
+</html>

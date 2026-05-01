@@ -1,11 +1,15 @@
 package com.yoobu.api.booking;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 public interface BookingRepository extends JpaRepository<Booking, Long> {
 
@@ -41,4 +45,31 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
     );
 
     long countByTenantIdAndDeletedAtIsNullAndStatus(Long tenantId, BookingStatus status);
+
+    @Query("""
+            SELECT COUNT(b) FROM Booking b
+            WHERE b.tenant.id = :tenantId AND b.deletedAt IS NULL
+              AND b.createdAt >= :from AND b.createdAt < :to
+            """)
+    long countBookingsInPeriod(@Param("tenantId") Long tenantId,
+                               @Param("from") OffsetDateTime from,
+                               @Param("to") OffsetDateTime to);
+
+    @Query("""
+            SELECT SUM(b.totalPrice) FROM Booking b
+            WHERE b.tenant.id = :tenantId AND b.deletedAt IS NULL
+              AND b.createdAt >= :from AND b.createdAt < :to
+            """)
+    BigDecimal sumRevenueInPeriod(@Param("tenantId") Long tenantId,
+                                  @Param("from") OffsetDateTime from,
+                                  @Param("to") OffsetDateTime to);
+
+    @Query("""
+            SELECT b.telegramUserId, MAX(b.customerName), COUNT(b), SUM(b.totalPrice)
+            FROM Booking b
+            WHERE b.tenant.id = :tenantId AND b.deletedAt IS NULL
+            GROUP BY b.telegramUserId
+            ORDER BY SUM(b.totalPrice) DESC
+            """)
+    List<Object[]> findTopBuyersRaw(@Param("tenantId") Long tenantId, Pageable pageable);
 }
