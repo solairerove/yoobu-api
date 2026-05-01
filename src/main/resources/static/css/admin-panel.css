@@ -627,6 +627,72 @@ select[data-status="cancelled"] {
     color: #5a4b3d;
 }
 
+/* ── Analytics stat cards ──────────────────────────────── */
+
+.stat-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--space-4);
+    margin-top: var(--space-4);
+}
+
+.stat-card {
+    padding: 24px 22px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow);
+}
+
+.stat-period {
+    margin: 0 0 var(--space-2);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+}
+
+.stat-value {
+    margin: 0;
+    font-size: clamp(36px, 5vw, 52px);
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    color: var(--primary);
+    line-height: 1;
+}
+
+.stat-label {
+    margin: 4px 0 var(--space-3);
+    font-size: 13px;
+    color: var(--text-muted);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+
+.stat-revenue {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text);
+    border-top: 1px solid var(--border);
+    padding-top: var(--space-2);
+}
+
+.rank-cell {
+    color: var(--text-muted);
+    font-weight: 700;
+    font-size: 13px;
+    width: 32px;
+}
+
+.mono {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 13px;
+    color: var(--text-muted);
+}
+
 @media (max-width: 900px) {
     .page-header,
     .toolbar,
@@ -645,6 +711,10 @@ select[data-status="cancelled"] {
 }
 
 @media (max-width: 720px) {
+    .stat-grid {
+        grid-template-columns: 1fr;
+    }
+
     .shell {
         padding: 20px 14px 28px;
     }

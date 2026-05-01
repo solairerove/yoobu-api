@@ -1,9 +1,12 @@
 package com.yoobu.api.booking;
 
 import com.yoobu.api.audit.AuditLogService;
+import com.yoobu.api.booking.dto.BookingAnalytics;
 import com.yoobu.api.booking.dto.BookingItemRequest;
 import com.yoobu.api.booking.dto.BookingResponse;
 import com.yoobu.api.booking.dto.CreateBookingRequest;
+import com.yoobu.api.booking.dto.PeriodStats;
+import com.yoobu.api.booking.dto.TopBuyer;
 import com.yoobu.api.catalog.CatalogService;
 import com.yoobu.api.catalog.CatalogServiceRepository;
 import com.yoobu.api.notification.event.BookingCreatedEvent;
@@ -20,7 +23,9 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.time.ZoneId;
 import java.time.ZoneOffset;
+import java.time.ZonedDateTime;
 import java.util.EnumSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -301,6 +306,48 @@ public class BookingService {
             }
         }
         return counts;
+    }
+
+    public BookingAnalytics getAnalytics() {
+        Tenant tenant = TenantContext.requireCurrentTenant();
+        Long tenantId = tenant.getId();
+        TenantSettings settings = tenantSettingsService.getSettings(tenantId);
+        String currency = resolveBookingCurrency(settings);
+
+        OffsetDateTime now = nowUtc();
+        ZoneId zone = StringUtils.hasText(tenant.getTimezone())
+                ? ZoneId.of(tenant.getTimezone())
+                : ZoneOffset.UTC;
+
+        ZonedDateTime nowInZone = now.atZoneSameInstant(zone);
+        OffsetDateTime startOfToday = nowInZone.toLocalDate().atStartOfDay(zone).toOffsetDateTime();
+        OffsetDateTime sevenDaysAgo = now.minusDays(7);
+        OffsetDateTime thirtyDaysAgo = now.minusDays(30);
+
+        PeriodStats today = periodStats(tenantId, startOfToday, now, currency);
+        PeriodStats week = periodStats(tenantId, sevenDaysAgo, now, currency);
+        PeriodStats month = periodStats(tenantId, thirtyDaysAgo, now, currency);
+        List<TopBuyer> topBuyers = loadTopBuyers(tenantId, currency);
+
+        return new BookingAnalytics(today, week, month, topBuyers);
+    }
+
+    private PeriodStats periodStats(Long tenantId, OffsetDateTime from, OffsetDateTime to, String currency) {
+        long count = bookingRepository.countBookingsInPeriod(tenantId, from, to);
+        BigDecimal revenue = bookingRepository.sumRevenueInPeriod(tenantId, from, to);
+        return new PeriodStats(count, revenue != null ? revenue : BigDecimal.ZERO, currency);
+    }
+
+    private List<TopBuyer> loadTopBuyers(Long tenantId, String currency) {
+        return bookingRepository.findTopBuyersRaw(tenantId, PageRequest.of(0, 10)).stream()
+                .map(row -> new TopBuyer(
+                        (Long) row[0],
+                        (String) row[1],
+                        ((Number) row[2]).longValue(),
+                        row[3] != null ? (BigDecimal) row[3] : BigDecimal.ZERO,
+                        currency
+                ))
+                .toList();
     }
 
     private Tenant requireFoodOrderTenant() {
