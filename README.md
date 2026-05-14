@@ -16,12 +16,52 @@ Default locale: en_US, platform encoding: UTF-8
 OS name: "mac os x", version: "26.3.1", arch: "aarch64", family: "mac"
 ```
 
-### How to run
+### Local development (infra in Docker, app on host)
+
+Create the shared Docker network once (if it doesn't exist yet):
 
 ```shell
-mvn clean verify
-mvn clean install && java -jar target/yoobu-api-0.0.1-SNAPSHOT.jar --spring.profiles.active=dev
+docker network create yoobu-net
+```
+
+Start only the database:
+
+```shell
+docker compose up -d
+```
+
+Then run the app locally — all env vars have sensible defaults for this setup:
+
+```shell
 mvn spring-boot:run
+# or
+mvn clean install && java -jar target/yoobu-api-0.0.1-SNAPSHOT.jar
+```
+
+### Full stack in Docker
+
+Run everything (PostgreSQL + Java app) in Docker — useful when working on a 3rd-party service that needs this API up:
+
+```shell
+docker-compose --profile full up -d
+```
+
+The first run builds the image from the `Dockerfile` (includes Maven build, takes a few minutes). Subsequent starts are instant.
+
+Tear everything down:
+
+```shell
+docker-compose --profile full down
+```
+
+### Tests
+
+```shell
+# All tests (unit + integration via Testcontainers)
+mvn clean verify
+
+# Unit tests only
+mvn test
 ```
 
 ### Railway

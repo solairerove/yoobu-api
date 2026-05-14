@@ -18,6 +18,33 @@ services:
       timeout: 5s
       retries: 5
       start_period: 10s
+    networks:
+      - yoobu-net
+
+  app:
+    profiles: [full]
+    build: .
+    container_name: yoobu-app
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      DB_URL: jdbc:postgresql://postgres:5432/yoobu
+      DB_USER: yoobu
+      DB_PASS: yoobu
+      SUPERADMIN_USER: superadmin
+      SUPERADMIN_PASS: superadmin
+      IMAGE_SERVICE_URL: http://yoobu-media:3000
+      CDN_BASE_URL: http://localhost:9000/yoobu-media
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - yoobu-net
 
 volumes:
   yoobu-postgres-data:
+
+networks:
+  yoobu-net:
+    external: true
