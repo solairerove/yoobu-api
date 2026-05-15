@@ -27,6 +27,8 @@ public class SuperAdminTenantForm {
 
     private String logoUrl;
 
+    private String bannerUrl;
+
     private String welcomeMessage;
 
     private String checkoutNameHint;
@@ -124,6 +126,14 @@ public class SuperAdminTenantForm {
 
     public void setLogoUrl(String logoUrl) {
         this.logoUrl = logoUrl;
+    }
+
+    public String getBannerUrl() {
+        return bannerUrl;
+    }
+
+    public void setBannerUrl(String bannerUrl) {
+        this.bannerUrl = bannerUrl;
     }
 
     public String getWelcomeMessage() {

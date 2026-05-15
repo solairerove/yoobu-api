@@ -86,6 +86,24 @@ public class TenantManagementService {
         upsertConfig(configs, tenant, TenantConfigKeys.PAYMENT_QR_URL, cdnUrl, false);
     }
 
+    @CacheEvict(value = CacheNames.TENANT_CONFIG, key = "#tenantId")
+    @Transactional
+    public void updateLogoUrl(Long tenantId, String cdnUrl) {
+        Tenant tenant = tenantRepository.findById(tenantId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Tenant not found"));
+        Map<String, TenantConfig> configs = loadConfigsByKey(tenantId);
+        upsertConfig(configs, tenant, TenantConfigKeys.LOGO_URL, cdnUrl, false);
+    }
+
+    @CacheEvict(value = CacheNames.TENANT_CONFIG, key = "#tenantId")
+    @Transactional
+    public void updateBannerUrl(Long tenantId, String cdnUrl) {
+        Tenant tenant = tenantRepository.findById(tenantId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Tenant not found"));
+        Map<String, TenantConfig> configs = loadConfigsByKey(tenantId);
+        upsertConfig(configs, tenant, TenantConfigKeys.BANNER_URL, cdnUrl, false);
+    }
+
     @Transactional(readOnly = true)
     public boolean isSlugAvailable(String slug) {
         String normalizedSlug = normalizeOptional(slug);
@@ -161,6 +179,7 @@ public class TenantManagementService {
         }
         upsertConfig(existingConfigs, savedTenant, TenantConfigKeys.PRIMARY_COLOR, request.primaryColor(), true);
         upsertConfig(existingConfigs, savedTenant, TenantConfigKeys.LOGO_URL, request.logoUrl(), true);
+        upsertConfig(existingConfigs, savedTenant, TenantConfigKeys.BANNER_URL, request.bannerUrl(), true);
         upsertConfig(existingConfigs, savedTenant, TenantConfigKeys.WELCOME_MESSAGE, request.welcomeMessage(), true);
         upsertConfig(existingConfigs, savedTenant, TenantConfigKeys.CHECKOUT_NAME_HINT, request.checkoutNameHint(), true);
         upsertConfig(existingConfigs, savedTenant, TenantConfigKeys.CHECKOUT_PHONE_HINT, request.checkoutPhoneHint(), true);
@@ -221,6 +240,7 @@ public class TenantManagementService {
         addConfig(configs, tenant, TenantConfigKeys.CURRENCY, resolveCurrency(request.currency()));
         addConfig(configs, tenant, TenantConfigKeys.PRIMARY_COLOR, request.primaryColor());
         addConfig(configs, tenant, TenantConfigKeys.LOGO_URL, request.logoUrl());
+        addConfig(configs, tenant, TenantConfigKeys.BANNER_URL, request.bannerUrl());
         addConfig(configs, tenant, TenantConfigKeys.WELCOME_MESSAGE, request.welcomeMessage());
         addConfig(configs, tenant, TenantConfigKeys.CHECKOUT_NAME_HINT, request.checkoutNameHint());
         addConfig(configs, tenant, TenantConfigKeys.CHECKOUT_PHONE_HINT, request.checkoutPhoneHint());
@@ -357,6 +377,7 @@ public class TenantManagementService {
         snapshot.put("adminPasswordConfigured", admin.passwordConfigured());
         snapshot.put("primaryColor", branding.primaryColor());
         snapshot.put("logoUrl", branding.logoUrl());
+        snapshot.put("bannerUrl", branding.bannerUrl());
         snapshot.put("welcomeMessage", branding.welcomeMessage());
         snapshot.put("checkoutNameHint", checkout.nameHint());
         snapshot.put("checkoutPhoneHint", checkout.phoneHint());

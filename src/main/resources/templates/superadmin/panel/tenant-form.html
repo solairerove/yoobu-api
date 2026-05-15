@@ -123,6 +123,23 @@
                     <span>Logo URL</span>
                     <input type="text" th:field="*{logoUrl}">
                 </label>
+                <label>
+                    <span>Banner URL</span>
+                    <input type="text" th:field="*{bannerUrl}">
+                </label>
+            </div>
+            <div th:if="${formMode == 'edit' and (currentLogoUrl != null or currentBannerUrl != null)}"
+                 style="display: flex; gap: 1.5rem; align-items: flex-start; margin-top: 0.75rem; margin-bottom: 0.25rem; flex-wrap: wrap;">
+                <div th:if="${currentLogoUrl != null}" style="display: flex; flex-direction: column; gap: 0.4rem;">
+                    <span class="field-hint">Logo</span>
+                    <img th:src="${currentLogoUrl}" alt="Tenant logo"
+                         style="width: 96px; height: 96px; object-fit: cover; border: 1px solid var(--border); border-radius: 50%;">
+                </div>
+                <div th:if="${currentBannerUrl != null}" style="display: flex; flex-direction: column; gap: 0.4rem;">
+                    <span class="field-hint">Banner</span>
+                    <img th:src="${currentBannerUrl}" alt="Tenant banner"
+                         style="width: 480px; height: 96px; object-fit: cover; border: 1px solid var(--border); border-radius: 6px;">
+                </div>
             </div>
 
             <label>
@@ -184,7 +201,7 @@
 
     <section class="card" th:if="${formMode == 'edit'}">
         <h2 style="margin-top: 0; margin-bottom: 1rem; font-size: 1rem;">Upload Payment QR image</h2>
-        <p class="field-hint">Upload a new QR image to replace the URL above. Accepted: JPEG, PNG, WebP · max 2 MB.</p>
+        <p class="field-hint">Upload a new QR image to replace the URL above. Accepted: JPEG, PNG, WebP · max 4 MB.</p>
         <form method="post"
               enctype="multipart/form-data"
               th:action="@{/superadmin/panel/tenants/{tenantId}/payment-qr(tenantId=${tenantId})}">
@@ -194,6 +211,38 @@
             </label>
             <div class="actions">
                 <button type="submit">Upload &amp; update QR</button>
+            </div>
+        </form>
+    </section>
+
+    <section class="card" th:if="${formMode == 'edit'}">
+        <h2 style="margin-top: 0; margin-bottom: 1rem; font-size: 1rem;">Upload Logo</h2>
+        <p class="field-hint">Recommended: 512×512 px square (CSS crops to circle). Accepted: JPEG, PNG, WebP · max 4 MB.</p>
+        <form method="post"
+              enctype="multipart/form-data"
+              th:action="@{/superadmin/panel/tenants/{tenantId}/logo(tenantId=${tenantId})}">
+            <label>
+                <span>Logo image file</span>
+                <input type="file" name="file" accept="image/jpeg,image/png,image/webp" required>
+            </label>
+            <div class="actions">
+                <button type="submit">Upload &amp; update logo</button>
+            </div>
+        </form>
+    </section>
+
+    <section class="card" th:if="${formMode == 'edit'}">
+        <h2 style="margin-top: 0; margin-bottom: 1rem; font-size: 1rem;">Upload Banner</h2>
+        <p class="field-hint">Recommended: 1440×288 px (5:1 ratio). Accepted: JPEG, PNG, WebP · max 4 MB.</p>
+        <form method="post"
+              enctype="multipart/form-data"
+              th:action="@{/superadmin/panel/tenants/{tenantId}/banner(tenantId=${tenantId})}">
+            <label>
+                <span>Banner image file</span>
+                <input type="file" name="file" accept="image/jpeg,image/png,image/webp" required>
+            </label>
+            <div class="actions">
+                <button type="submit">Upload &amp; update banner</button>
             </div>
         </form>
     </section>

@@ -35,7 +35,7 @@ Then run the app locally — all env vars have sensible defaults for this setup:
 ```shell
 mvn spring-boot:run
 # or
-mvn clean install && java -jar target/yoobu-api-0.0.1-SNAPSHOT.jar
+mvn clean install && java -jar target/yoobu-api-0.0.1-SNAPSHOT.jar --spring.profiles.active=dev
 ```
 
 ### Full stack in Docker

@@ -140,6 +140,7 @@ public abstract class IntegrationTestSupport {
                 null,
                 "#112233",
                 "https://cdn.example.com/logo.png",
+                null,
                 "Hello from test",
                 "Your full name",
                 "+84...",

@@ -34,8 +34,11 @@ services:
       DB_PASS: yoobu
       SUPERADMIN_USER: superadmin
       SUPERADMIN_PASS: superadmin
+      SPRING_PROFILES_ACTIVE: dev
       IMAGE_SERVICE_URL: http://yoobu-media:3000
       CDN_BASE_URL: http://localhost:9000/yoobu-media
+    volumes:
+      - maven-cache:/root/.m2
     depends_on:
       postgres:
         condition: service_healthy
@@ -44,6 +47,7 @@ services:
 
 volumes:
   yoobu-postgres-data:
+  maven-cache:
 
 networks:
   yoobu-net:
