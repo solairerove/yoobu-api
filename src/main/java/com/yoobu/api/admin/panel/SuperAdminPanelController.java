@@ -180,7 +180,55 @@ public class SuperAdminPanelController {
         model.addAttribute("tenantForm", toForm(tenant));
         model.addAttribute("tenantId", tenantId);
         model.addAttribute("currentQrUrl", tenant.config().get(TenantConfigKeys.PAYMENT_QR_URL));
+        model.addAttribute("currentLogoUrl", tenant.config().get(TenantConfigKeys.LOGO_URL));
+        model.addAttribute("currentBannerUrl", tenant.config().get(TenantConfigKeys.BANNER_URL));
         return populateFormModel(model, EDIT_MODE);
+    }
+
+    @PostMapping("/tenants/{tenantId}/logo")
+    public String uploadLogo(
+            @PathVariable Long tenantId,
+            @RequestParam("file") MultipartFile file,
+            RedirectAttributes redirectAttributes
+    ) {
+        try {
+            TenantDetailResponse tenant = tenantManagementService.getTenant(tenantId);
+            String oldUrl = tenant.config().get(TenantConfigKeys.LOGO_URL);
+            String cdnUrl = imageServiceClient.upload(tenantId, "config/logo", file);
+            tenantManagementService.updateLogoUrl(tenantId, cdnUrl);
+            if (oldUrl != null) {
+                imageServiceClient.deleteByUrl(oldUrl);
+            }
+            redirectAttributes.addFlashAttribute("flashMessage", "Logo updated.");
+            redirectAttributes.addFlashAttribute("flashType", FLASH_TYPE_SUCCESS);
+        } catch (ResponseStatusException ex) {
+            redirectAttributes.addFlashAttribute("flashMessage", ex.getReason());
+            redirectAttributes.addFlashAttribute("flashType", "error");
+        }
+        return "redirect:/superadmin/panel/tenants/" + tenantId + "/edit";
+    }
+
+    @PostMapping("/tenants/{tenantId}/banner")
+    public String uploadBanner(
+            @PathVariable Long tenantId,
+            @RequestParam("file") MultipartFile file,
+            RedirectAttributes redirectAttributes
+    ) {
+        try {
+            TenantDetailResponse tenant = tenantManagementService.getTenant(tenantId);
+            String oldUrl = tenant.config().get(TenantConfigKeys.BANNER_URL);
+            String cdnUrl = imageServiceClient.upload(tenantId, "config/banner", file);
+            tenantManagementService.updateBannerUrl(tenantId, cdnUrl);
+            if (oldUrl != null) {
+                imageServiceClient.deleteByUrl(oldUrl);
+            }
+            redirectAttributes.addFlashAttribute("flashMessage", "Banner updated.");
+            redirectAttributes.addFlashAttribute("flashType", FLASH_TYPE_SUCCESS);
+        } catch (ResponseStatusException ex) {
+            redirectAttributes.addFlashAttribute("flashMessage", ex.getReason());
+            redirectAttributes.addFlashAttribute("flashType", "error");
+        }
+        return "redirect:/superadmin/panel/tenants/" + tenantId + "/edit";
     }
 
     @PostMapping("/tenants/{tenantId}/payment-qr")
@@ -193,10 +241,10 @@ public class SuperAdminPanelController {
             TenantDetailResponse tenant = tenantManagementService.getTenant(tenantId);
             String oldUrl = tenant.config().get(TenantConfigKeys.PAYMENT_QR_URL);
             String cdnUrl = imageServiceClient.upload(tenantId, "payment/qr", file);
+            tenantManagementService.updatePaymentQrUrl(tenantId, cdnUrl);
             if (oldUrl != null) {
                 imageServiceClient.deleteByUrl(oldUrl);
             }
-            tenantManagementService.updatePaymentQrUrl(tenantId, cdnUrl);
             redirectAttributes.addFlashAttribute("flashMessage", "Payment QR updated.");
             redirectAttributes.addFlashAttribute("flashType", FLASH_TYPE_SUCCESS);
         } catch (ResponseStatusException ex) {
@@ -240,6 +288,7 @@ public class SuperAdminPanelController {
                 form.getCurrency(),
                 form.getPrimaryColor(),
                 form.getLogoUrl(),
+                form.getBannerUrl(),
                 form.getWelcomeMessage(),
                 form.getCheckoutNameHint(),
                 form.getCheckoutPhoneHint(),
@@ -265,6 +314,7 @@ public class SuperAdminPanelController {
                 form.getCurrency(),
                 form.getPrimaryColor(),
                 form.getLogoUrl(),
+                form.getBannerUrl(),
                 form.getWelcomeMessage(),
                 form.getCheckoutNameHint(),
                 form.getCheckoutPhoneHint(),
@@ -293,6 +343,7 @@ public class SuperAdminPanelController {
         form.setCurrency(config.getOrDefault(TenantConfigKeys.CURRENCY, TenantSettings.DEFAULT_CURRENCY));
         form.setPrimaryColor(config.get(TenantConfigKeys.PRIMARY_COLOR));
         form.setLogoUrl(config.get(TenantConfigKeys.LOGO_URL));
+        form.setBannerUrl(config.get(TenantConfigKeys.BANNER_URL));
         form.setWelcomeMessage(config.get(TenantConfigKeys.WELCOME_MESSAGE));
         form.setCheckoutNameHint(config.get(TenantConfigKeys.CHECKOUT_NAME_HINT));
         form.setCheckoutPhoneHint(config.get(TenantConfigKeys.CHECKOUT_PHONE_HINT));

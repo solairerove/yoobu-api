@@ -60,6 +60,7 @@ class ServiceManagementAndValidationIT extends IntegrationTestSupport {
                 "USD",
                 "#112233",
                 "https://cdn.example.com/logo.png",
+                null,
                 "Hello from test",
                 "Your full name",
                 "+84...",
@@ -97,6 +98,7 @@ class ServiceManagementAndValidationIT extends IntegrationTestSupport {
                 "USD",
                 "#112233",
                 "https://cdn.example.com/logo.png",
+                null,
                 "Hello from test",
                 "Your full name",
                 "+84...",
@@ -280,7 +282,7 @@ class ServiceManagementAndValidationIT extends IntegrationTestSupport {
         CreateTenantRequest request = new CreateTenantRequest(
                 TENANT_SLUG, "Food Tenant", TenantType.FOOD_ORDER, "food-bot",
                 123456789L, DEFAULT_TENANT_TIMEZONE, "USD",
-                null, null, null, null, null, null, null, null, null, null,
+                null, null, null, null, null, null, null, null, null, null, null,
                 ADMIN_USERNAME, ADMIN_PASSWORD,
                 0, 0
         );
@@ -315,7 +317,7 @@ class ServiceManagementAndValidationIT extends IntegrationTestSupport {
         CreateTenantRequest request = new CreateTenantRequest(
                 TENANT_SLUG, "Food Tenant", TenantType.FOOD_ORDER, "food-bot",
                 123456789L, DEFAULT_TENANT_TIMEZONE, "USD",
-                null, null, null, null, null, null, null, null, null, null,
+                null, null, null, null, null, null, null, null, null, null, null,
                 ADMIN_USERNAME, ADMIN_PASSWORD,
                 0, 0
         );

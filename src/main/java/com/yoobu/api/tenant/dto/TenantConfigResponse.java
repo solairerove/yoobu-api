@@ -10,6 +10,7 @@ public record TenantConfigResponse(
         String currency,
         String primaryColor,
         String logoUrl,
+        String bannerUrl,
         String welcomeMessage,
         String checkoutNameHint,
         String checkoutPhoneHint,

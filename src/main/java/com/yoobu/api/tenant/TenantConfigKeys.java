@@ -6,6 +6,7 @@ public final class TenantConfigKeys {
     public static final String ADMIN_PASSWORD = "admin_password";
     public static final String PRIMARY_COLOR = "primary_color";
     public static final String LOGO_URL = "logo_url";
+    public static final String BANNER_URL = "banner_url";
     public static final String WELCOME_MESSAGE = "welcome_message";
     public static final String CHECKOUT_PHONE_HINT = "checkout_phone_hint";
     public static final String CHECKOUT_NOTE_HINT = "checkout_note_hint";

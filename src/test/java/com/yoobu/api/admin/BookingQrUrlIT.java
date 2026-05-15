@@ -72,6 +72,7 @@ class BookingQrUrlIT extends IntegrationTestSupport {
                 null,
                 "#112233",
                 null,
+                null,
                 "Welcome",
                 "Your name",
                 "+84...",

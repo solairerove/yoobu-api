@@ -52,7 +52,7 @@ public class ImageServiceClient {
         } catch (IOException e) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Failed to read file");
         }
-        String filename = file.getOriginalFilename() != null ? file.getOriginalFilename() : "file";
+        String filename = sanitizeFilename(file.getOriginalFilename());
         log.info("Uploading image to image-service: url={}, tenantId={}, uploadPath={}, filename={}, size={}bytes",
                 properties.url() + "/upload", tenantId, uploadPath, filename, bytes.length);
 
@@ -145,6 +145,15 @@ public class ImageServiceClient {
             }
         } catch (Exception ignored) {}
         return "Image upload failed";
+    }
+
+    private static String sanitizeFilename(String original) {
+        if (original == null || original.isBlank()) return "upload";
+        int dot = original.lastIndexOf('.');
+        String base = dot > 0 ? original.substring(0, dot) : original;
+        String ext = dot > 0 ? original.substring(dot) : "";
+        String safe = base.replaceAll("[^A-Za-z0-9._-]", "_");
+        return safe + ext;
     }
 
     private record ImageUploadResponse(String url) {}
