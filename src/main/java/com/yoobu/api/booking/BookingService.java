@@ -9,9 +9,7 @@ import com.yoobu.api.booking.dto.PeriodStats;
 import com.yoobu.api.booking.dto.TopBuyer;
 import com.yoobu.api.catalog.CatalogService;
 import com.yoobu.api.catalog.CatalogServiceRepository;
-import com.yoobu.api.notification.event.BookingCreatedEvent;
-import com.yoobu.api.notification.event.BookingStatusChangedEvent;
-import com.yoobu.api.notification.event.PaymentConfirmedEvent;
+import com.yoobu.api.notification.NotificationOutboxService;
 import com.yoobu.api.tenant.Tenant;
 import com.yoobu.api.tenant.TenantContext;
 import com.yoobu.api.tenant.TenantSettings;
@@ -31,7 +29,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -57,7 +54,7 @@ public class BookingService {
     private final CatalogServiceRepository catalogServiceRepository;
     private final TenantSettingsService tenantSettingsService;
     private final TenantTimeService tenantTimeService;
-    private final ApplicationEventPublisher eventPublisher;
+    private final NotificationOutboxService notificationOutboxService;
 
     @Transactional
     public BookingResponse createFoodOrder(CreateBookingRequest request, Long telegramUserId) {
@@ -106,10 +103,10 @@ public class BookingService {
                 toAuditSnapshot(persistedBooking, bookingItems)
         );
 
-        List<BookingCreatedEvent.OrderItem> orderItems = bookingItems.stream()
-                .map(item -> new BookingCreatedEvent.OrderItem(item.getService().getName(), item.getQuantity()))
+        List<NotificationOutboxService.OrderItem> orderItems = bookingItems.stream()
+                .map(item -> new NotificationOutboxService.OrderItem(item.getService().getName(), item.getQuantity()))
                 .toList();
-        eventPublisher.publishEvent(new BookingCreatedEvent(persistedBooking, orderItems, tenant));
+        notificationOutboxService.enqueueBookingCreated(persistedBooking, orderItems, tenant);
 
         return toResponse(persistedBooking, bookingItems);
     }
@@ -185,7 +182,7 @@ public class BookingService {
                 toAuditSnapshot(savedBooking)
         );
 
-        eventPublisher.publishEvent(new PaymentConfirmedEvent(savedBooking, tenant));
+        notificationOutboxService.enqueuePaymentConfirmed(savedBooking, tenant);
 
         return toResponse(savedBooking);
     }
@@ -275,7 +272,7 @@ public class BookingService {
                 toAuditSnapshot(savedBooking)
         );
 
-        eventPublisher.publishEvent(new BookingStatusChangedEvent(savedBooking, oldStatus, status, tenant));
+        notificationOutboxService.enqueueStatusChanged(savedBooking, status, tenant);
 
         return toResponse(savedBooking);
     }

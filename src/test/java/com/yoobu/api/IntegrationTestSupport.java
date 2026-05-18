@@ -13,7 +13,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.yoobu.api.booking.BookingStatus;
 import com.yoobu.api.catalog.ServiceStatus;
 import com.yoobu.api.catalog.dto.AdminUpsertServiceRequest;
-import com.yoobu.api.notification.TelegramBotApiClient;
 import com.yoobu.api.tenant.TenantType;
 import com.yoobu.api.tenant.dto.CreateTenantRequest;
 import java.math.BigDecimal;
@@ -54,10 +53,6 @@ public abstract class IntegrationTestSupport {
         POSTGRES.start();
     }
 
-    @MockitoBean
-    @SuppressWarnings("unused")
-    private TelegramBotApiClient telegramBotApiClient;
-
     @Autowired
     protected MockMvc mockMvc;
 
@@ -86,7 +81,7 @@ public abstract class IntegrationTestSupport {
 
     @BeforeEach
     void cleanDatabase() {
-        jdbcTemplate.execute("TRUNCATE TABLE booking_item, booking, service, tenant_config, tenant, audit_log RESTART IDENTITY CASCADE");
+        jdbcTemplate.execute("TRUNCATE TABLE booking_item, booking, service, tenant_config, tenant, audit_log, notification_outbox RESTART IDENTITY CASCADE");
         if (cacheManager != null) {
             cacheManager.getCacheNames().forEach(name -> {
                 Cache cache = cacheManager.getCache(name);
