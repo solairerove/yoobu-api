@@ -69,6 +69,7 @@ class BookingServiceTest {
                 bookingItemRepository.proxy,
                 bookingMapper,
                 catalogServiceRepository.proxy,
+                mock(com.yoobu.api.catalog.ProductVariantRepository.class),
                 tenantSettingsService,
                 tenantTimeService,
                 mock(NotificationOutboxService.class)
@@ -229,6 +230,34 @@ class BookingServiceTest {
         assertFalse(statuses.contains(BookingStatus.DONE));
     }
 
+    @Test
+    void getAnalyticsAssemblesStatsFromRepositoryCalls() {
+        bookingRepository.stubbedCount = 4;
+        bookingRepository.stubbedRevenue = new BigDecimal("99.50");
+        tenantSettingsService.settings = TenantSettings.fromMap(Map.of(TenantConfigKeys.CURRENCY, "EUR"));
+
+        var analytics = bookingService.getAnalytics();
+
+        assertEquals(4, analytics.today().orderCount());
+        assertEquals(new BigDecimal("99.50"), analytics.today().revenue());
+        assertEquals("EUR", analytics.today().currency());
+        assertEquals(4, analytics.week().orderCount());
+        assertEquals(4, analytics.month().orderCount());
+        assertTrue(analytics.topBuyers().isEmpty());
+    }
+
+    @Test
+    void getAnalyticsFallsBackToZeroRevenueWhenRepositoryReturnsNull() {
+        bookingRepository.stubbedCount = 0;
+        bookingRepository.stubbedRevenue = null;
+
+        var analytics = bookingService.getAnalytics();
+
+        assertEquals(BigDecimal.ZERO, analytics.today().revenue());
+        assertEquals(BigDecimal.ZERO, analytics.week().revenue());
+        assertEquals(BigDecimal.ZERO, analytics.month().revenue());
+    }
+
     private static BookingMapper mapper() {
         return (BookingMapper) Proxy.newProxyInstance(
                 BookingMapper.class.getClassLoader(),
@@ -254,7 +283,9 @@ class BookingServiceTest {
                                         .map(item -> new BookingItemResponse(
                                                 item.getService().getName(),
                                                 item.getQuantity(),
-                                                item.getUnitPrice()
+                                                item.getUnitPrice(),
+                                                item.getVariantSize(),
+                                                item.getVariantColor()
                                         ))
                                         .toList(),
                                 booking.getCreatedAt(),
@@ -405,6 +436,9 @@ class BookingServiceTest {
         private boolean saveAndFlushCalled;
         private String lastPageQueryMethod;
         private Pageable lastPageable;
+        private long stubbedCount = 0;
+        private BigDecimal stubbedRevenue = BigDecimal.ZERO;
+        private List<Object[]> stubbedTopBuyers = List.of();
         private final BookingRepository proxy = (BookingRepository) Proxy.newProxyInstance(
                 BookingRepository.class.getClassLoader(),
                 new Class<?>[]{BookingRepository.class},
@@ -417,6 +451,9 @@ class BookingServiceTest {
                     case "findByTenantIdAndDeletedAtIsNullAndDeliveryDate" -> capturePage(method.getName(), (Pageable) args[2]);
                     case "findByTenantIdAndDeletedAtIsNullAndStatusAndDeliveryDate" ->
                             capturePage(method.getName(), (Pageable) args[3]);
+                    case "countBookingsInPeriod" -> stubbedCount;
+                    case "sumRevenueInPeriod" -> stubbedRevenue;
+                    case "findTopBuyersRaw" -> stubbedTopBuyers;
                     case "toString" -> "BookingRepositoryStub";
                     default -> throw new UnsupportedOperationException("Unexpected call: " + method.getName());
                 }

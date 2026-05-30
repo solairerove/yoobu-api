@@ -54,11 +54,14 @@
                     <span th:text="${currentImageUrl != null} ? 'Replace image (JPEG, PNG, WebP · max 4 MB)' : 'Upload image (JPEG, PNG, WebP · max 4 MB)'">Upload image</span>
                     <input type="file" name="imageFile" accept="image/jpeg,image/png,image/webp">
                 </label>
+                <div th:if="${tenantType == 'ECOMMERCE'}" style="margin-top: 0.4rem;">
+                    <p class="field-hint">Used as the product preview. Variants can have their own images too.</p>
+                </div>
             </div>
 
             <div class="field-row">
                 <label>
-                    <span>Price</span>
+                    <span th:text="${tenantType == 'ECOMMERCE'} ? 'Price (optional — set per variant)' : 'Price'">Price</span>
                     <input type="number" step="0.01" min="0" th:field="*{price}">
                 </label>
                 <label>
@@ -109,6 +112,61 @@
                 <button type="submit" class="button-danger">Delete service</button>
             </div>
         </form>
+    </section>
+
+    <section class="card"
+             th:if="${tenantType == 'ECOMMERCE' and editServiceId != null}">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem;">
+            <h2 style="margin: 0;">Variants</h2>
+            <a class="button-link"
+               th:href="@{/admin/{slug}/panel/services/{serviceId}/variants/new(slug=${slug}, serviceId=${editServiceId})}">
+                Add variant
+            </a>
+        </div>
+
+        <div class="table-wrap">
+        <table>
+            <thead>
+            <tr>
+                <th>Size</th>
+                <th>Color</th>
+                <th>Price</th>
+                <th>Stock</th>
+                <th>Sort</th>
+                <th>Adjust stock</th>
+                <th></th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:if="${#lists.isEmpty(variants)}">
+                <td colspan="7" class="empty">No variants yet. Add the first one.</td>
+            </tr>
+            <tr th:each="variant : ${variants}">
+                <td th:text="${variant.size ?: '—'}">XL</td>
+                <td th:text="${variant.color ?: '—'}">Black</td>
+                <td th:text="${@adminPanelViewFormats.money(variant.price, currency)}">USD 25.00</td>
+                <td>
+                    <span th:text="${variant.stock == 0} ? 'Sold out' : ${variant.stock}"
+                          th:classappend="${variant.stock == 0} ? ' stock-zero' : (${variant.stock <= 3} ? ' stock-low' : '')">3</span>
+                </td>
+                <td th:text="${variant.sortOrder}">0</td>
+                <td>
+                    <form class="inline-stock-form" method="post"
+                          th:action="@{/admin/{slug}/panel/services/{serviceId}/variants/{variantId}/stock(slug=${slug}, serviceId=${editServiceId}, variantId=${variant.id})}">
+                        <input type="number" name="delta" value="0" style="width: 4rem;">
+                        <button type="submit" class="button-secondary button-compact">Apply</button>
+                    </form>
+                </td>
+                <td>
+                    <a class="table-link"
+                       th:href="@{/admin/{slug}/panel/services/{serviceId}/variants/{variantId}/edit(slug=${slug}, serviceId=${editServiceId}, variantId=${variant.id})}">
+                        Edit
+                    </a>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+        </div>
     </section>
 </div>
 </body>

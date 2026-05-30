@@ -98,14 +98,20 @@
         <table>
             <thead>
             <tr>
-                <th>Service</th>
+                <th>Item</th>
                 <th>Quantity</th>
                 <th>Unit price</th>
             </tr>
             </thead>
             <tbody>
             <tr th:each="item : ${booking.items}">
-                <td th:text="${item.serviceName}">Pizza</td>
+                <td>
+                    <span th:text="${item.serviceName}">Pizza</span>
+                    <span th:if="${item.variantColor != null or item.variantSize != null}"
+                          style="color: var(--text-muted); font-size: 0.85em;">
+                        (<span th:if="${item.variantColor != null}" th:text="${item.variantColor}">Black</span><span th:if="${item.variantColor != null and item.variantSize != null}">, </span><span th:if="${item.variantSize != null}" th:text="${item.variantSize}">XL</span>)
+                    </span>
+                </td>
                 <td th:text="${item.quantity}">2</td>
                 <td th:text="${@adminPanelViewFormats.money(item.unitPrice, booking.currency)}">USD 12.50</td>
             </tr>

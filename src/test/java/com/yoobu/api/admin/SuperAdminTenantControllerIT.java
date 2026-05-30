@@ -252,7 +252,7 @@ class SuperAdminTenantControllerIT extends IntegrationTestSupport {
 
         tenantAdminGet("tenant-edit", "/services", "admin-after", "secret-after")
                 .andExpect(status().isBadRequest())
-                .andExpect(status().reason("Tenant does not support food ordering"));
+                .andExpect(status().reason("Tenant does not support catalog management"));
 
         var auditLog = latestAuditLog("tenant", "UPDATE");
         assertEquals("UPDATE", auditLog.get("action").asText());

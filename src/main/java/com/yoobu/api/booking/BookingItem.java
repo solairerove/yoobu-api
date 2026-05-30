@@ -1,6 +1,7 @@
 package com.yoobu.api.booking;
 
 import com.yoobu.api.catalog.CatalogService;
+import com.yoobu.api.catalog.ProductVariant;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -35,10 +36,19 @@ public class BookingItem {
     @JoinColumn(name = "service_id", nullable = false)
     private CatalogService service;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "variant_id")
+    private ProductVariant variant;
+
+    @Column(name = "variant_size", length = 20)
+    private String variantSize;
+
+    @Column(name = "variant_color", length = 50)
+    private String variantColor;
+
     @Column(nullable = false)
     private int quantity;
 
     @Column(name = "unit_price", nullable = false, precision = 10, scale = 2)
     private BigDecimal unitPrice;
-
 }

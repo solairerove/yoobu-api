@@ -1,6 +1,9 @@
 package com.yoobu.api.catalog;
 
 import com.yoobu.api.catalog.dto.AdminUpsertServiceRequest;
+import com.yoobu.api.catalog.dto.AdminUpsertVariantRequest;
+import com.yoobu.api.catalog.dto.AdjustStockRequest;
+import com.yoobu.api.catalog.dto.ProductVariantResponse;
 import com.yoobu.api.catalog.dto.ServiceResponse;
 import jakarta.validation.Valid;
 import java.util.List;
@@ -56,5 +59,57 @@ public class AdminCatalogController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void deleteService(@PathVariable Long serviceId) {
         adminCatalogService.deleteService(serviceId);
+    }
+
+    // --- Variant endpoints ---
+
+    @GetMapping("/{serviceId}/variants")
+    public List<ProductVariantResponse> getVariants(@PathVariable Long serviceId) {
+        return adminCatalogService.getVariants(serviceId);
+    }
+
+    @PostMapping("/{serviceId}/variants")
+    @ResponseStatus(HttpStatus.CREATED)
+    public ProductVariantResponse createVariant(
+            @PathVariable Long serviceId,
+            @Valid @RequestBody AdminUpsertVariantRequest request
+    ) {
+        return adminCatalogService.createVariant(serviceId, request);
+    }
+
+    @PutMapping("/{serviceId}/variants/{variantId}")
+    public ProductVariantResponse updateVariant(
+            @PathVariable Long serviceId,
+            @PathVariable Long variantId,
+            @Valid @RequestBody AdminUpsertVariantRequest request
+    ) {
+        return adminCatalogService.updateVariant(serviceId, variantId, request);
+    }
+
+    @DeleteMapping("/{serviceId}/variants/{variantId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void deleteVariant(
+            @PathVariable Long serviceId,
+            @PathVariable Long variantId
+    ) {
+        adminCatalogService.deleteVariant(serviceId, variantId);
+    }
+
+    @PostMapping("/{serviceId}/variants/{variantId}/images")
+    public ProductVariantResponse addVariantImage(
+            @PathVariable Long serviceId,
+            @PathVariable Long variantId,
+            @RequestParam("file") MultipartFile file
+    ) {
+        return adminCatalogService.addVariantImage(serviceId, variantId, file);
+    }
+
+    @PutMapping("/{serviceId}/variants/{variantId}/stock")
+    public ProductVariantResponse adjustStock(
+            @PathVariable Long serviceId,
+            @PathVariable Long variantId,
+            @Valid @RequestBody AdjustStockRequest request
+    ) {
+        return adminCatalogService.adjustStock(serviceId, variantId, request.delta());
     }
 }

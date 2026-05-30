@@ -14,5 +14,7 @@ public interface BookingMapper {
     BookingResponse toResponse(Booking booking, List<BookingItem> items);
 
     @Mapping(target = "serviceName", source = "service.name")
+    @Mapping(target = "variantSize", source = "variantSize")
+    @Mapping(target = "variantColor", source = "variantColor")
     BookingItemResponse toResponse(BookingItem item);
 }
