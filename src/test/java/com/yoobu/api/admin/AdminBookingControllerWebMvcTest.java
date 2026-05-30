@@ -126,7 +126,7 @@ class AdminBookingControllerWebMvcTest {
                 "USD",
                 LocalDate.of(2026, 3, 22),
                 "note",
-                List.of(new BookingItemResponse("Pizza", 1, new BigDecimal("12.50"))),
+                List.of(new BookingItemResponse("Pizza", 1, new BigDecimal("12.50"), null, null)),
                 OffsetDateTime.of(2026, 3, 20, 12, 0, 0, 0, ZoneOffset.UTC),
                 null
         );
@@ -158,7 +158,7 @@ class AdminBookingControllerWebMvcTest {
         private BookingResponse response;
 
         RecordingBookingService() {
-            super(null, null, null, null, null, null, null, null);
+            super(null, null, null, null, null, null, null, null, null);
         }
 
         @Override

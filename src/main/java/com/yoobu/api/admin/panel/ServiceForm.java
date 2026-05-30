@@ -12,7 +12,6 @@ public class ServiceForm {
 
     private String description;
 
-    @NotNull
     private BigDecimal price;
 
     private String unit;

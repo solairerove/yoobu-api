@@ -37,7 +37,7 @@ class TenantFoodOrderConstraintsIT extends IntegrationTestSupport {
                 serviceRequest("Consultation", "50.00")
         )
                 .andExpect(status().isBadRequest())
-                .andExpect(status().reason("Tenant does not support food ordering"));
+                .andExpect(status().reason("Tenant does not support catalog management"));
 
         tenantPublicPostJson(APPOINTMENT_TENANT_SLUG, "/bookings", 123L, bookingPayload(999L, 1))
                 .andExpect(status().isBadRequest())

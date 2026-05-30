@@ -164,7 +164,7 @@ class BookingControllerWebMvcTest {
                 "USD",
                 java.time.LocalDate.of(2026, 3, 22),
                 "note",
-                List.of(new BookingItemResponse("Pizza", 1, new java.math.BigDecimal("12.50"))),
+                List.of(new BookingItemResponse("Pizza", 1, new java.math.BigDecimal("12.50"), null, null)),
                 OffsetDateTime.of(2026, 3, 20, 12, 0, 0, 0, ZoneOffset.UTC),
                 null
         );
@@ -202,7 +202,7 @@ class BookingControllerWebMvcTest {
         private List<BookingResponse> myBookings = List.of();
 
         RecordingBookingService() {
-            super(null, null, null, null, null, null, null, null);
+            super(null, null, null, null, null, null, null, null, null);
         }
 
         @Override

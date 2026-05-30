@@ -5,10 +5,14 @@ import com.yoobu.api.booking.dto.BookingAnalytics;
 import com.yoobu.api.booking.dto.BookingItemRequest;
 import com.yoobu.api.booking.dto.BookingResponse;
 import com.yoobu.api.booking.dto.CreateBookingRequest;
+import com.yoobu.api.booking.dto.CreateEcommerceOrderRequest;
+import com.yoobu.api.booking.dto.EcommerceBookingItemRequest;
 import com.yoobu.api.booking.dto.PeriodStats;
 import com.yoobu.api.booking.dto.TopBuyer;
 import com.yoobu.api.catalog.CatalogService;
 import com.yoobu.api.catalog.CatalogServiceRepository;
+import com.yoobu.api.catalog.ProductVariant;
+import com.yoobu.api.catalog.ProductVariantRepository;
 import com.yoobu.api.notification.NotificationOutboxService;
 import com.yoobu.api.tenant.Tenant;
 import com.yoobu.api.tenant.TenantContext;
@@ -28,7 +32,11 @@ import java.util.EnumSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import lombok.RequiredArgsConstructor;
+import com.yoobu.api.config.CacheNames;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -52,6 +60,7 @@ public class BookingService {
     private final BookingItemRepository bookingItemRepository;
     private final BookingMapper bookingMapper;
     private final CatalogServiceRepository catalogServiceRepository;
+    private final ProductVariantRepository productVariantRepository;
     private final TenantSettingsService tenantSettingsService;
     private final TenantTimeService tenantTimeService;
     private final NotificationOutboxService notificationOutboxService;
@@ -81,15 +90,12 @@ public class BookingService {
         Booking savedBooking = bookingRepository.save(booking);
 
         List<BookingItem> bookingItems = request.items().stream()
-                .map(item -> toBookingItem(savedBooking, item, tenant.getId()))
+                .map(item -> toFoodBookingItem(savedBooking, item, tenant.getId()))
                 .toList();
 
         bookingItemRepository.saveAll(bookingItems);
 
-        BigDecimal totalPrice = bookingItems.stream()
-                .map(item -> item.getUnitPrice().multiply(BigDecimal.valueOf(item.getQuantity())))
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-
+        BigDecimal totalPrice = sumTotal(bookingItems);
         savedBooking.setTotalPrice(totalPrice);
         savedBooking.setPaymentQrUrl(buildPaymentQrUrl(savedBooking.getId(), totalPrice, tenantSettings));
         savedBooking.setUpdatedAt(now);
@@ -111,9 +117,61 @@ public class BookingService {
         return toResponse(persistedBooking, bookingItems);
     }
 
+    @Transactional
+    @CacheEvict(value = CacheNames.TENANT_SERVICES, key = "T(com.yoobu.api.tenant.TenantContext).getRequiredTenantId()")
+    public BookingResponse createEcommerceOrder(CreateEcommerceOrderRequest request, Long telegramUserId) {
+        Tenant tenant = requireEcommerceTenant();
+        TenantSettings tenantSettings = tenantSettingsService.getSettings(tenant.getId());
+        String currency = resolveBookingCurrency(tenantSettings);
+        OffsetDateTime now = nowUtc();
+
+        Booking booking = new Booking();
+        booking.setTenant(tenant);
+        booking.setType(BookingType.ORDER);
+        booking.setTelegramUserId(telegramUserId);
+        booking.setCustomerName(request.customerName());
+        booking.setCustomerPhone(request.customerPhone());
+        booking.setDeliveryAddress(request.deliveryAddress());
+        booking.setStatus(BookingStatus.NEW);
+        booking.setNote(request.note());
+        booking.setDeliveryDate(request.deliveryDate());
+        booking.setCurrency(currency);
+        booking.setCreatedAt(now);
+        booking.setUpdatedAt(now);
+
+        Booking savedBooking = bookingRepository.save(booking);
+
+        List<BookingItem> bookingItems = request.items().stream()
+                .map(item -> toEcommerceBookingItem(savedBooking, item, tenant.getId()))
+                .toList();
+
+        bookingItemRepository.saveAll(bookingItems);
+
+        BigDecimal totalPrice = sumTotal(bookingItems);
+        savedBooking.setTotalPrice(totalPrice);
+        savedBooking.setPaymentQrUrl(buildPaymentQrUrl(savedBooking.getId(), totalPrice, tenantSettings));
+        savedBooking.setUpdatedAt(now);
+
+        Booking persistedBooking = bookingRepository.save(savedBooking);
+        auditLogService.logCreate(
+                tenant.getId(),
+                ENTITY_NAME,
+                persistedBooking.getId(),
+                telegramUserId.toString(),
+                toAuditSnapshot(persistedBooking, bookingItems)
+        );
+
+        List<NotificationOutboxService.OrderItem> orderItems = bookingItems.stream()
+                .map(item -> new NotificationOutboxService.OrderItem(itemDisplayName(item), item.getQuantity()))
+                .toList();
+        notificationOutboxService.enqueueBookingCreated(persistedBooking, orderItems, tenant);
+
+        return toResponse(persistedBooking, bookingItems);
+    }
+
     @Transactional(readOnly = true)
     public List<BookingResponse> getMyBookings(Long telegramUserId) {
-        requireFoodOrderTenant();
+        requireOrderTenant();
 
         List<Booking> bookings = bookingRepository.findByTenantIdAndTelegramUserIdAndDeletedAtIsNullOrderByCreatedAtDesc(
                 TenantContext.getRequiredTenantId(),
@@ -124,22 +182,27 @@ public class BookingService {
 
     @Transactional(readOnly = true)
     public BookingResponse getMyBooking(Long bookingId, Long telegramUserId) {
-        requireFoodOrderTenant();
+        requireOrderTenant();
         return toResponse(findCustomerBooking(bookingId, telegramUserId));
     }
 
     @Transactional
+    @CacheEvict(value = CacheNames.TENANT_SERVICES, key = "T(com.yoobu.api.tenant.TenantContext).getRequiredTenantId()")
     public BookingResponse cancelMyBooking(Long bookingId, Long telegramUserId) {
-        requireFoodOrderTenant();
+        requireOrderTenant();
         Booking booking = findCustomerBooking(bookingId, telegramUserId);
 
         if (booking.getStatus() == BookingStatus.DONE) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Completed booking cannot be cancelled");
         }
 
-        Map<String, Object> oldSnapshot = toAuditSnapshot(booking);
+        List<BookingItem> items = bookingItemRepository.findByBookingIdOrderByIdAsc(bookingId);
+        Map<String, Object> oldSnapshot = toAuditSnapshot(booking, items);
+
         booking.setStatus(BookingStatus.CANCELLED);
         booking.setUpdatedAt(nowUtc());
+
+        restoreVariantStock(items);
 
         Booking savedBooking = persistBookingWithConflictGuard(booking);
         auditLogService.logAction(
@@ -149,15 +212,15 @@ public class BookingService {
                 "CANCEL",
                 telegramUserId.toString(),
                 oldSnapshot,
-                toAuditSnapshot(savedBooking)
+                toAuditSnapshot(savedBooking, items)
         );
 
-        return toResponse(savedBooking);
+        return toResponse(savedBooking, items);
     }
 
     @Transactional
     public BookingResponse confirmMyBookingPayment(Long bookingId, Long telegramUserId) {
-        Tenant tenant = requireFoodOrderTenant();
+        Tenant tenant = requireOrderTenant();
         Booking booking = findCustomerBooking(bookingId, telegramUserId);
 
         if (booking.getStatus() != BookingStatus.NEW) {
@@ -189,7 +252,7 @@ public class BookingService {
 
     @Transactional(readOnly = true)
     public List<BookingResponse> getAdminBookings(BookingStatus status, LocalDate deliveryDate) {
-        requireFoodOrderTenant();
+        requireOrderTenant();
 
         Long tenantId = TenantContext.getRequiredTenantId();
         List<Booking> bookings;
@@ -211,7 +274,7 @@ public class BookingService {
 
     @Transactional(readOnly = true)
     public Page<BookingResponse> getAdminBookingsPage(BookingStatus status, LocalDate deliveryDate, int page, int size) {
-        requireFoodOrderTenant();
+        requireOrderTenant();
 
         Long tenantId = TenantContext.getRequiredTenantId();
         Pageable pageable = PageRequest.of(
@@ -238,7 +301,7 @@ public class BookingService {
 
     @Transactional(readOnly = true)
     public BookingResponse getAdminBooking(Long bookingId) {
-        requireFoodOrderTenant();
+        requireOrderTenant();
         return toResponse(findAdminBooking(bookingId));
     }
 
@@ -249,10 +312,9 @@ public class BookingService {
 
     @Transactional
     public BookingResponse updateBookingStatus(Long bookingId, BookingStatus status, String trackingUrl) {
-        Tenant tenant = requireFoodOrderTenant();
+        Tenant tenant = requireOrderTenant();
         Booking booking = findAdminBooking(bookingId);
         validateStatusTransition(booking.getStatus(), status);
-        BookingStatus oldStatus = booking.getStatus();
         Map<String, Object> oldSnapshot = toAuditSnapshot(booking);
 
         booking.setStatus(status);
@@ -355,11 +417,24 @@ public class BookingService {
         return tenant;
     }
 
+    private Tenant requireEcommerceTenant() {
+        Tenant tenant = TenantContext.requireCurrentTenant();
+        if (tenant.getType() != TenantType.ECOMMERCE) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Tenant does not support ecommerce ordering");
+        }
+        return tenant;
+    }
+
+    private Tenant requireOrderTenant() {
+        Tenant tenant = TenantContext.requireCurrentTenant();
+        if (tenant.getType() != TenantType.FOOD_ORDER && tenant.getType() != TenantType.ECOMMERCE) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Tenant does not support orders");
+        }
+        return tenant;
+    }
+
     private void validateDeliveryDate(LocalDate deliveryDate, Tenant tenant, TenantSettings tenantSettings) {
-        LocalDate earliestAllowedDate = tenantTimeService.earliestDeliveryDate(
-                tenant,
-                tenantSettings
-        );
+        LocalDate earliestAllowedDate = tenantTimeService.earliestDeliveryDate(tenant, tenantSettings);
         if (deliveryDate.isBefore(earliestAllowedDate)) {
             throw new ResponseStatusException(
                     HttpStatus.BAD_REQUEST,
@@ -385,7 +460,7 @@ public class BookingService {
                 .orElseThrow(this::bookingNotFound);
     }
 
-    private BookingItem toBookingItem(Booking booking, BookingItemRequest item, Long tenantId) {
+    private BookingItem toFoodBookingItem(Booking booking, BookingItemRequest item, Long tenantId) {
         CatalogService service = catalogServiceRepository.findByIdAndTenantIdAndStatus(
                         item.serviceId(), tenantId, com.yoobu.api.catalog.ServiceStatus.ACTIVE)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Service not found"));
@@ -400,6 +475,71 @@ public class BookingService {
         bookingItem.setQuantity(item.quantity());
         bookingItem.setUnitPrice(service.getPrice());
         return bookingItem;
+    }
+
+    private BookingItem toEcommerceBookingItem(Booking booking, EcommerceBookingItemRequest item, Long tenantId) {
+        ProductVariant variant = productVariantRepository.findByIdAndServiceTenantId(item.variantId(), tenantId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Variant not found"));
+
+        if (variant.getStock() < item.quantity()) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "Not enough stock for variant: " + variantLabel(variant)
+            );
+        }
+
+        variant.setStock(variant.getStock() - item.quantity());
+        variant.setUpdatedAt(nowUtc());
+        try {
+            productVariantRepository.saveAndFlush(variant);
+        } catch (OptimisticLockingFailureException ex) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "Stock was updated by another request. Please retry.",
+                    ex
+            );
+        }
+
+        BookingItem bookingItem = new BookingItem();
+        bookingItem.setBooking(booking);
+        bookingItem.setService(variant.getService());
+        bookingItem.setVariant(variant);
+        bookingItem.setVariantSize(variant.getSize());
+        bookingItem.setVariantColor(variant.getColor());
+        bookingItem.setQuantity(item.quantity());
+        bookingItem.setUnitPrice(variant.getPrice());
+        return bookingItem;
+    }
+
+    private void restoreVariantStock(List<BookingItem> items) {
+        for (BookingItem item : items) {
+            if (item.getVariant() != null) {
+                ProductVariant variant = item.getVariant();
+                variant.setStock(variant.getStock() + item.getQuantity());
+                variant.setUpdatedAt(nowUtc());
+                productVariantRepository.save(variant);
+            }
+        }
+    }
+
+    private String itemDisplayName(BookingItem item) {
+        String name = item.getService().getName();
+        String label = Stream.of(item.getVariantColor(), item.getVariantSize())
+                .filter(StringUtils::hasText)
+                .collect(Collectors.joining(", "));
+        return StringUtils.hasText(label) ? name + " (" + label + ")" : name;
+    }
+
+    private String variantLabel(ProductVariant variant) {
+        return Stream.of(variant.getColor(), variant.getSize())
+                .filter(StringUtils::hasText)
+                .collect(Collectors.joining(", "));
+    }
+
+    private BigDecimal sumTotal(List<BookingItem> items) {
+        return items.stream()
+                .map(item -> item.getUnitPrice().multiply(BigDecimal.valueOf(item.getQuantity())))
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
     private BookingResponse toResponse(Booking booking) {
@@ -443,6 +583,9 @@ public class BookingService {
                     Map<String, Object> itemSnapshot = new LinkedHashMap<>();
                     itemSnapshot.put("serviceId", item.getService().getId());
                     itemSnapshot.put("serviceName", item.getService().getName());
+                    itemSnapshot.put("variantId", item.getVariant() != null ? item.getVariant().getId() : null);
+                    itemSnapshot.put("variantSize", item.getVariantSize());
+                    itemSnapshot.put("variantColor", item.getVariantColor());
                     itemSnapshot.put("quantity", item.getQuantity());
                     itemSnapshot.put("unitPrice", item.getUnitPrice());
                     return itemSnapshot;
@@ -474,10 +617,10 @@ public class BookingService {
                 .toList();
 
         return bookingItemRepository.findByBookingIdInOrderByBookingIdAscIdAsc(bookingIds).stream()
-                .collect(java.util.stream.Collectors.groupingBy(
+                .collect(Collectors.groupingBy(
                         item -> item.getBooking().getId(),
                         LinkedHashMap::new,
-                        java.util.stream.Collectors.toList()
+                        Collectors.toList()
                 ));
     }
 

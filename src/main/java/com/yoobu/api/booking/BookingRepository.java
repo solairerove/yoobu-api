@@ -49,6 +49,7 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
     @Query("""
             SELECT COUNT(b) FROM Booking b
             WHERE b.tenant.id = :tenantId AND b.deletedAt IS NULL
+              AND b.status = com.yoobu.api.booking.BookingStatus.DONE
               AND b.createdAt >= :from AND b.createdAt < :to
             """)
     long countBookingsInPeriod(@Param("tenantId") Long tenantId,
@@ -58,6 +59,7 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
     @Query("""
             SELECT SUM(b.totalPrice) FROM Booking b
             WHERE b.tenant.id = :tenantId AND b.deletedAt IS NULL
+              AND b.status = com.yoobu.api.booking.BookingStatus.DONE
               AND b.createdAt >= :from AND b.createdAt < :to
             """)
     BigDecimal sumRevenueInPeriod(@Param("tenantId") Long tenantId,
@@ -68,6 +70,7 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
             SELECT b.telegramUserId, MAX(b.customerName), COUNT(b), SUM(b.totalPrice)
             FROM Booking b
             WHERE b.tenant.id = :tenantId AND b.deletedAt IS NULL
+              AND b.status = com.yoobu.api.booking.BookingStatus.DONE
             GROUP BY b.telegramUserId
             ORDER BY SUM(b.totalPrice) DESC
             """)

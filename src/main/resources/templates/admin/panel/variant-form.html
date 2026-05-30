@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="${formTitle} + ' | ' + ${slug}">Variant form</title>
+    <link rel="stylesheet" th:href="@{/css/admin-panel.css}">
+</head>
+<body>
+<div class="shell shell-narrow">
+    <header class="page-header">
+        <div>
+            <p class="eyebrow">Admin panel</p>
+            <h1 th:text="${formTitle}">Variant form</h1>
+        </div>
+        <nav class="nav">
+            <a class="nav-link" th:href="@{/admin/{slug}/panel/bookings(slug=${slug})}">Bookings</a>
+            <a class="nav-link active" th:href="@{/admin/{slug}/panel/services(slug=${slug})}">Services</a>
+        </nav>
+    </header>
+
+    <section class="card">
+        <p class="flash"
+           th:if="${flashMessage}"
+           th:classappend="${flashType == 'success'} ? ' flash-success' : ' flash-error'"
+           th:text="${flashMessage}">
+            Status updated.
+        </p>
+
+        <form method="post" th:action="${formAction}" th:object="${variantForm}">
+            <div class="field-row">
+                <label>
+                    <span>Size (e.g. S, M, L, XL, XXL)</span>
+                    <input type="text" th:field="*{size}" maxlength="20" placeholder="XL">
+                </label>
+                <label>
+                    <span>Color</span>
+                    <input type="text" th:field="*{color}" maxlength="50" placeholder="Black">
+                </label>
+            </div>
+
+            <div class="field-row">
+                <label>
+                    <span>Price</span>
+                    <input type="number" step="0.01" min="0" th:field="*{price}">
+                </label>
+                <label>
+                    <span>Stock</span>
+                    <input type="number" min="0" th:field="*{stock}">
+                </label>
+            </div>
+            <p class="error" th:if="${#fields.hasErrors('price')}" th:errors="*{price}">Price error</p>
+            <p class="error" th:if="${#fields.hasErrors('stock')}" th:errors="*{stock}">Stock error</p>
+
+            <label>
+                <span>Sort order</span>
+                <input type="number" th:field="*{sortOrder}">
+            </label>
+
+            <div class="actions">
+                <a class="secondary-link"
+                   th:href="@{/admin/{slug}/panel/services/{serviceId}/edit(slug=${slug}, serviceId=${serviceId})}">
+                    Cancel
+                </a>
+                <button type="submit" th:text="${submitLabel}">Save</button>
+            </div>
+        </form>
+    </section>
+
+    <section class="card" th:if="${editVariantId != null}">
+        <div style="display: flex; align-items: baseline; gap: 0.5rem; margin-bottom: 1rem;">
+            <h2 style="margin: 0;">Images</h2>
+            <span class="field-hint"
+                  th:text="'(' + ${#lists.size(variantImages)} + ' / 5)'">0 / 5</span>
+        </div>
+
+        <div class="variant-gallery" th:if="${not #lists.isEmpty(variantImages)}">
+            <div th:each="img : ${variantImages}"
+                 class="variant-gallery-thumb"
+                 th:data-src="${img.imageUrl}"
+                 onclick="openLightbox(this)">
+                <img th:src="${img.imageUrl}" alt="Variant image">
+                <form method="post"
+                      th:action="@{/admin/{slug}/panel/services/{serviceId}/variants/{variantId}/images/{imageId}/delete(slug=${slug}, serviceId=${serviceId}, variantId=${editVariantId}, imageId=${img.id})}"
+                      onsubmit="event.stopPropagation(); return confirm('Remove this image?');">
+                    <button type="submit" class="thumb-delete" title="Remove">&#x2715;</button>
+                </form>
+            </div>
+            <div th:if="${#lists.size(variantImages) < 5}"
+                 class="variant-gallery-empty" title="Add image below">&#43;</div>
+        </div>
+
+        <p th:if="${#lists.isEmpty(variantImages)}" class="field-hint" style="margin-bottom: 1rem;">
+            No images yet. Upload the first one below.
+        </p>
+
+        <div th:if="${#lists.size(variantImages) < 5}" style="margin-top: 0.75rem;">
+            <form method="post"
+                  th:action="@{/admin/{slug}/panel/services/{serviceId}/variants/{variantId}/images(slug=${slug}, serviceId=${serviceId}, variantId=${editVariantId})}"
+                  enctype="multipart/form-data"
+                  style="display: flex; align-items: flex-end; gap: 0.75rem; flex-wrap: wrap;">
+                <label style="flex: 1; min-width: 200px; margin: 0;">
+                    <span>Add image (JPEG, PNG, WebP &middot; max 4 MB)</span>
+                    <input type="file" name="imageFile" accept="image/jpeg,image/png,image/webp" required>
+                </label>
+                <button type="submit" class="button-secondary" style="white-space: nowrap;">Upload</button>
+            </form>
+        </div>
+        <p th:if="${#lists.size(variantImages) >= 5}" class="field-hint">
+            Maximum 5 images reached. Remove one to add another.
+        </p>
+    </section>
+
+    <section class="card" th:if="${editVariantId != null}">
+        <form method="post"
+              th:action="@{/admin/{slug}/panel/services/{serviceId}/variants/{variantId}/delete(slug=${slug}, serviceId=${serviceId}, variantId=${editVariantId})}">
+            <div class="actions actions-danger">
+                <button type="submit" class="button-danger"
+                        onclick="return confirm('Delete this variant?')">Delete variant</button>
+            </div>
+        </form>
+    </section>
+</div>
+
+<!-- Lightbox -->
+<div id="lightbox" class="lightbox-overlay" role="dialog" aria-modal="true">
+    <div class="lightbox-inner">
+        <button class="lightbox-close" onclick="closeLightbox()" aria-label="Close">&#x2715;</button>
+        <button id="lightbox-prev" class="lightbox-nav lightbox-prev" onclick="prevImage()" aria-label="Previous">&#x2039;</button>
+        <img id="lightbox-img" class="lightbox-img" src="" alt="Variant image">
+        <button id="lightbox-next" class="lightbox-nav lightbox-next" onclick="nextImage()" aria-label="Next">&#x203a;</button>
+        <span id="lightbox-counter" class="lightbox-counter"></span>
+    </div>
+</div>
+
+<script>
+    (() => {
+        const thumbs = Array.from(document.querySelectorAll('.variant-gallery-thumb'));
+        const images = thumbs.map(el => el.dataset.src);
+        const overlay = document.getElementById('lightbox');
+        const lightboxImg = document.getElementById('lightbox-img');
+        const counter = document.getElementById('lightbox-counter');
+        const prevBtn = document.getElementById('lightbox-prev');
+        const nextBtn = document.getElementById('lightbox-next');
+        let currentIdx = 0;
+
+        function update() {
+            lightboxImg.src = images[currentIdx];
+            counter.textContent = (currentIdx + 1) + ' / ' + images.length;
+            prevBtn.style.display = images.length > 1 ? '' : 'none';
+            nextBtn.style.display = images.length > 1 ? '' : 'none';
+        }
+
+        window.openLightbox = function(el) {
+            const src = el.dataset.src;
+            currentIdx = images.indexOf(src);
+            if (currentIdx < 0) currentIdx = 0;
+            update();
+            overlay.classList.add('is-open');
+        };
+
+        window.closeLightbox = function() {
+            overlay.classList.remove('is-open');
+        };
+
+        window.prevImage = function() {
+            currentIdx = (currentIdx - 1 + images.length) % images.length;
+            update();
+        };
+
+        window.nextImage = function() {
+            currentIdx = (currentIdx + 1) % images.length;
+            update();
+        };
+
+        overlay.addEventListener('click', e => {
+            if (e.target === overlay) closeLightbox();
+        });
+
+        document.addEventListener('keydown', e => {
+            if (!overlay.classList.contains('is-open')) return;
+            if (e.key === 'Escape') closeLightbox();
+            if (e.key === 'ArrowLeft') prevImage();
+            if (e.key === 'ArrowRight') nextImage();
+        });
+    })();
+</script>
+</body>
+</html>

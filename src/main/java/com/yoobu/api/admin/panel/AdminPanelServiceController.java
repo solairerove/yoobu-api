@@ -4,6 +4,7 @@ import com.yoobu.api.catalog.AdminCatalogService;
 import com.yoobu.api.catalog.ServiceStatus;
 import com.yoobu.api.catalog.dto.AdminUpsertServiceRequest;
 import com.yoobu.api.catalog.dto.ServiceResponse;
+import com.yoobu.api.tenant.TenantContext;
 import com.yoobu.api.tenant.TenantSettingsService;
 import jakarta.validation.Valid;
 import java.util.List;
@@ -215,6 +216,11 @@ public class AdminPanelServiceController {
         model.addAttribute("serviceStatuses", SERVICE_STATUSES);
         model.addAttribute("formAction", formAction(slug, serviceId));
         model.addAttribute("currentImageUrl", currentImageUrl);
+        model.addAttribute("tenantType", TenantContext.requireCurrentTenant().getType().name());
+        model.addAttribute("currency", tenantSettingsService.getCurrentTenantSettings().pricing().currency());
+        if (serviceId != null) {
+            model.addAttribute("variants", adminCatalogService.getAdminService(serviceId).variants());
+        }
         return SERVICE_FORM_VIEW;
     }
 
