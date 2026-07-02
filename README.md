@@ -1,5 +1,8 @@
 Saas for SME
 
+Telegram [food ordering miniapp](@yoobu_demo_bot)
+
+Telegram [ecommerce miniapp](@stg_dennis_tennis_bot)
 ___
 
 ### Env
